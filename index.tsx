@@ -6,6 +6,13 @@ import playerImgSrc2 from './assets/images/player_tier2.png';
 import playerImgSrc3 from './assets/images/player_tier3.png';
 import playerImgSrc4 from './assets/images/player_tier4.png';
 
+// --- NEU: Gegner-Bilder importieren (bitte Dateinamen anpassen) ---
+import gruntImgSrc from './assets/images/enemy_grunt.png';
+import tankImgSrc from './assets/images/enemy_tank.png';
+import weaverImgSrc from './assets/images/enemy_weaver.png';
+import shooterImgSrc from './assets/images/enemy_shooter.png';
+import bossJuggernautImgSrc from './assets/images/enemy_boss_juggernaut.png';
+
 // --- ECHTE BILD-OBJEKTE ERSTELLEN ---
 const createImage = (src: string) => {
     const img = new Image();
@@ -16,6 +23,13 @@ const playerImg1 = createImage(playerImgSrc1);
 const playerImg2 = createImage(playerImgSrc2);
 const playerImg3 = createImage(playerImgSrc3);
 const playerImg4 = createImage(playerImgSrc4);
+
+// --- NEU: Gegner-Bild-Objekte erstellen ---
+const gruntImg = createImage(gruntImgSrc);
+const tankImg = createImage(tankImgSrc);
+const weaverImg = createImage(weaverImgSrc);
+const shooterImg = createImage(shooterImgSrc);
+const bossJuggernautImg = createImage(bossJuggernautImgSrc);
 
 // --- TYPE DEFINITIONS ---
 interface IKeyMap { [key: string]: boolean; }
@@ -121,9 +135,8 @@ class Player extends EntityFamily {
         ctx.globalAlpha = this.isGhosted() ? 0.5 : 1;
 
         const t = this.powerUpManager.weaponTier;
-        let currentImage: HTMLImageElement; // DIESE ZEILE IST DIE KORREKTE
+        let currentImage: HTMLImageElement;
 
-        // Wähle das richtige Bild basierend auf dem Waffen-Level aus
         switch (t) {
             case 1:
                 currentImage = playerImg1;
@@ -138,7 +151,7 @@ class Player extends EntityFamily {
                 currentImage = playerImg4;
                 break;
             default:
-                currentImage = playerImg1; 
+                currentImage = playerImg1;
         }
 
         const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2);
@@ -225,7 +238,7 @@ class PowerUpManager {
             }
         }
     }
-    
+
     setWeaponTierTimer(): void {
         if (this.weaponTier <= 1) {
             this.weaponTier = 1;
@@ -254,7 +267,7 @@ class PowerUpManager {
     }
 
     isActive(type: string): boolean { return this.timers[type] > 0; }
-    
+
     onPlayerHit(): void {
         if (this.weaponTier > 1) {
             this.weaponTier--;
@@ -269,7 +282,7 @@ class PowerUpManager {
     collectUltra(type: string): void {
         this.collectToInventory(type, this.ultraInventory, 2);
     }
-    
+
     private collectToInventory(type: string, inventory: IInventoryItem[], maxSize: number): void {
         const existing = inventory.find(item => item.type === type);
         if (existing) {
@@ -290,7 +303,7 @@ class PowerUpManager {
         } else {
              this.activate(special.type, 0);
         }
-        
+
         special.count--;
         if (special.count <= 0) {
             this.specialInventory.splice(slotIndex, 1);
@@ -303,7 +316,7 @@ class PowerUpManager {
         if (!ultra || this.ultraWeapon) return;
 
         this.activate(ultra.type);
-        
+
         ultra.count--;
         if (ultra.count <= 0) {
             this.ultraInventory.splice(slotIndex, 1);
@@ -352,7 +365,7 @@ class PowerUpManager {
     shoot(): void {
         const p = this.player;
         p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150;
-        
+
         if (this.ultraWeapon) {
             switch (this.ultraWeapon) {
                 case 'LASER_BEAM':
@@ -472,7 +485,7 @@ class HomingMissile extends Projectile {
     constructor(game: Game, x: number, y: number) {
         super(game, x, y, (Math.random() - 0.5) * 200, -300);
         this.type = 'HOMING_MISSILE';
-        this.damage = 3; 
+        this.damage = 3;
         this.width = 8;
         this.height = 16;
     }
@@ -506,7 +519,7 @@ class HomingMissile extends Projectile {
 
         if (this.target && this.target.isAlive()) {
             const speed = 400;
-            const turnFactor = 5; 
+            const turnFactor = 5;
             const dt_s = dt / 1000;
 
             const targetX = this.target.pos.x + this.target.width / 2;
@@ -517,7 +530,7 @@ class HomingMissile extends Projectile {
             const mag = Math.hypot(desiredVelX, desiredVelY);
             const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0;
             const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0;
-            
+
             this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s;
             this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s;
         }
@@ -622,51 +635,42 @@ class Enemy extends EntityFamily {
 }
 
 class Grunt extends Enemy {
+    // --- NEU: Bild-Eigenschaft hinzufügen ---
+    private image: HTMLImageElement;
+
     constructor(game: Game) {
-        super(game, Math.random() * (game.width - 40), -30, 36, 24, 1, 10, 'GRUNT');
+        // --- AKTUALISIERT: Breite und Höhe an das Bild anpassen ---
+        super(game, Math.random() * (game.width - 40), -40, 40, 36, 1, 10, 'GRUNT');
         this.speed = 100 * game.enemySpeedMultiplier;
         this.collisionDamage = 35;
+        // --- NEU: Bild zuweisen ---
+        this.image = gruntImg;
     }
+    // --- AKTUALISIERT: draw-Methode zum Zeichnen des Bildes ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
-        ctx.fillStyle = '#9b59b6';
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y);
-        ctx.lineTo(x, y + h * 0.6);
-        ctx.lineTo(x + w * 0.2, y + h);
-        ctx.lineTo(x + w * 0.8, y + h);
-        ctx.lineTo(x + w, y + h * 0.6);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = 'black';
-        ctx.fillRect(x + w * 0.4, y + h * 0.4, w * 0.2, h * 0.2);
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
         this.drawHealthBar(ctx);
         ctx.restore();
     }
 }
 
 class Tank extends Enemy {
+    // --- NEU: Bild-Eigenschaft hinzufügen ---
+    private image: HTMLImageElement;
+
     constructor(game: Game) {
-        super(game, Math.random() * (game.width - 50), -40, 50, 40, 3, 30, 'TANK');
+        // --- AKTUALISIERT: Breite und Höhe an das Bild anpassen ---
+        super(game, Math.random() * (game.width - 50), -50, 50, 48, 3, 30, 'TANK');
         this.speed = 60 * game.enemySpeedMultiplier;
         this.collisionDamage = 50;
+        // --- NEU: Bild zuweisen ---
+        this.image = tankImg;
     }
+    // --- AKTUALISIERT: draw-Methode zum Zeichnen des Bildes ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
-        ctx.fillStyle = '#c0392b';
-        ctx.beginPath();
-        ctx.moveTo(x, y + h);
-        ctx.lineTo(x, y + 10);
-        ctx.lineTo(x + 10, y);
-        ctx.lineTo(x + w - 10, y);
-        ctx.lineTo(x + w, y + 10);
-        ctx.lineTo(x + w, y + h);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x + 10, y + 10, w - 20, h - 10);
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
         this.drawHealthBar(ctx);
         ctx.restore();
     }
@@ -675,12 +679,18 @@ class Tank extends Enemy {
 class Weaver extends Enemy {
     private angle: number;
     private hSpeed: number;
+    // --- NEU: Bild-Eigenschaft hinzufügen ---
+    private image: HTMLImageElement;
+
     constructor(game: Game) {
-        super(game, Math.random() * (game.width - 40), -30, 40, 30, 1, 20, 'WEAVER');
+        // --- AKTUALISIERT: Breite und Höhe an das Bild anpassen ---
+        super(game, Math.random() * (game.width - 42), -35, 42, 35, 1, 20, 'WEAVER');
         this.speed = 80 * game.enemySpeedMultiplier;
         this.angle = Math.random() * Math.PI * 2;
         this.hSpeed = (Math.random() * 2 + 1) * 60; // px/s
         this.collisionDamage = 35;
+        // --- NEU: Bild zuweisen ---
+        this.image = weaverImg;
     }
     update(dt: number): void {
         const dt_s = dt / 1000;
@@ -692,15 +702,10 @@ class Weaver extends Enemy {
             this.hSpeed *= -1;
         }
     }
+    // --- AKTUALISIERT: draw-Methode zum Zeichnen des Bildes ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
-        ctx.fillStyle = '#27ae60';
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y);
-        ctx.bezierCurveTo(x, y, x, y + h, x + w / 2, y + h);
-        ctx.bezierCurveTo(x + w, y + h, x + w, y, x + w / 2, y);
-        ctx.fill();
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
         this.drawHealthBar(ctx);
         ctx.restore();
     }
@@ -708,11 +713,17 @@ class Weaver extends Enemy {
 
 class Shooter extends Enemy {
     private fireCooldown: number;
+    // --- NEU: Bild-Eigenschaft hinzufügen ---
+    private image: HTMLImageElement;
+
     constructor(game: Game) {
-        super(game, Math.random() * (game.width - 40), -30, 40, 35, 2, 50, 'SHOOTER');
+        // --- AKTUALISIERT: Breite und Höhe an das Bild anpassen ---
+        super(game, Math.random() * (game.width - 40), -40, 40, 40, 2, 50, 'SHOOTER');
         this.speed = 70 * game.enemySpeedMultiplier;
         this.fireCooldown = Math.random() * 1000 + 1500;
         this.collisionDamage = 50;
+        // --- NEU: Bild zuweisen ---
+        this.image = shooterImg;
     }
     update(dt: number): void {
         super.update(dt);
@@ -722,32 +733,29 @@ class Shooter extends Enemy {
             this.fireCooldown = 2000;
         }
     }
+    // --- AKTUALISIERT: draw-Methode zum Zeichnen des Bildes ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
-        ctx.fillStyle = '#f1c40f';
-        ctx.beginPath();
-        ctx.moveTo(x + w / 2, y);
-        ctx.lineTo(x, y + h);
-        ctx.lineTo(x + w / 2, y + h - 10);
-        ctx.lineTo(x + w, y + h);
-        ctx.closePath();
-        ctx.fill();
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
         this.drawHealthBar(ctx);
         ctx.restore();
     }
 }
+
 
 class BossJuggernaut extends Enemy {
     private attackPattern: number = 0;
     private attackTimer: number = 5000;
     private movementPattern: string = 'ENTER';
     private hSpeed: number;
+    // --- NEU: Bild-Eigenschaft hinzufügen ---
+    private image: HTMLImageElement;
 
     constructor(game: Game, health: number, speedMultiplier: number) {
         super(game, game.width / 2 - 100, -150, 200, 100, health, 5000, 'BOSS_JUGGERNAUT');
         this.isBoss = true;
         this.hSpeed = 100 * speedMultiplier;
+        this.image = bossJuggernautImg; // --- NEU: Bild zuweisen ---
         switch(game.level) {
             case 5: this.collisionDamage = 20; break;
             case 10: this.collisionDamage = 50; break;
@@ -771,7 +779,7 @@ class BossJuggernaut extends Enemy {
                  this.hSpeed *= -1;
             }
         }
-        
+
         this.attackTimer -= dt;
         if (this.attackTimer <= 0 && this.movementPattern !== 'ENTER') {
             this.attackPattern = (this.attackPattern + 1) % 3;
@@ -793,15 +801,10 @@ class BossJuggernaut extends Enemy {
             }
         }
     }
+    // --- AKTUALISIERT: draw-Methode zum Zeichnen des Bildes ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
-        ctx.fillStyle = '#34495e';
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(x + 10, y + 10, w - 20, h - 20);
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x + w / 2 - 20, y + h - 30, 40, 30);
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
         ctx.restore();
     }
 }
@@ -818,12 +821,12 @@ class PowerUp extends EntityFamily {
         const W_ULTRA = ['LASER_BEAM', 'HOMING_MISSILES'];
         const D = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL', 'ORBITAL_DRONE'];
         const Z = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
-        
+
         const allTypes = [...W_UPGRADE, ...W_TEMP, ...W_ULTRA, ...D, ...Z];
         this.powerUpType = allTypes[Math.floor(Math.random() * allTypes.length)]!;
 
         this.symbol = this.game.uiManager.localizationManager.getPowerUpSymbol(this.powerUpType);
-        
+
         let cat = 'Z';
         if (W_UPGRADE.includes(this.powerUpType) || W_TEMP.includes(this.powerUpType)) cat = 'W';
         if (W_ULTRA.includes(this.powerUpType)) cat = 'U';
@@ -1101,7 +1104,7 @@ class SoundManager {
     public audioCtx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
     public uiManager: UIManager;
-    
+
     private musicPlaying: boolean = false;
     private musicScheduler: number | null = null;
     private currentStep: number = 0;
@@ -1119,7 +1122,7 @@ class SoundManager {
     private kickPattern: boolean[] = [];
     private snarePattern: boolean[] = [];
     private hihatPattern: boolean[] = [];
-    
+
     private bossLeadMelody: number[] = [];
     private bossBassLine: number[] = [];
     private bossArpeggioMelody: number[] = [];
@@ -1163,13 +1166,13 @@ class SoundManager {
         this.bassLine = [ ...Array(16).fill(Notes.C2), ...Array(16).fill(Notes.G2), ...Array(16).fill(Notes.Ab2), ...Array(16).fill(Notes.Eb2) ];
         const ArpCm = [Notes.C4, Notes.Eb4, Notes.G4, Notes.Eb4]; const ArpGm = [Notes.G3, Notes.Bb3, Notes.D4, Notes.Bb3]; const ArpAb = [Notes.Ab3, Notes.C4, Notes.Eb4, Notes.C4]; const ArpEb = [Notes.Eb3, Notes.G3, Notes.Bb3, Notes.G3];
         this.arpeggioMelody = [ ...ArpCm, ...ArpCm, ...ArpCm, ...ArpCm, ...ArpGm, ...ArpGm, ...ArpGm, ...ArpGm, ...ArpAb, ...ArpAb, ...ArpAb, ...ArpAb, ...ArpEb, ...ArpEb, ...ArpEb, ...ArpEb ];
-        
+
         const K = true, S = true, H = true, o = false;
         this.kickPattern =  [K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,o,o, K,o,K,o, K,o,o,o];
         this.snarePattern = [o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,o,o, S,o,o,o, o,o,S,o, S,o,S,o];
         this.hihatPattern = [H,o,H,o, H,o,H,o, H,o,H,o, H,o,H,o, H,o,H,o, H,o,H,o, H,o,H,o, H,o,H,o, H,H,H,H, H,H,H,H, H,H,H,H, H,H,H,H, H,o,H,o, H,o,H,o, H,H,H,o, H,H,H,o];
     }
-    
+
     defineBossMusicPatterns() {
         const Notes = { A2: 110.00, E2: 82.41, F2: 87.31, G2: 98.00, A3: 220.00, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, Gs4: 415.30, A4: 440.00, };
         const R = 0;
@@ -1181,7 +1184,7 @@ class SoundManager {
             Notes.B3, Notes.C4, Notes.D4, Notes.E4, Notes.F4, Notes.E4, Notes.D4, Notes.C4, Notes.B3, R, R, R, R, R, R, R,
         ];
         this.bossBassLine = [...Array(16).fill(Notes.A2),...Array(16).fill(Notes.G2),...Array(16).fill(Notes.F2),...Array(16).fill(Notes.E2)];
-        
+
         const ArpAm = [Notes.A3, Notes.C4, Notes.E4, Notes.C4]; const ArpG = [Notes.G2, Notes.B3, Notes.D4, Notes.B3]; const ArpF = [Notes.F2, Notes.A3, Notes.C4, Notes.A3]; const ArpE = [Notes.E2, Notes.Gs4, Notes.B3, Notes.Gs4];
         this.bossArpeggioMelody = [...ArpAm,...ArpAm,...ArpAm,...ArpAm,...ArpG,...ArpG,...ArpG,...ArpG,...ArpF,...ArpF,...ArpF,...ArpF,...ArpE,...ArpE,...ArpE,...ArpE];
 
@@ -1202,7 +1205,7 @@ class SoundManager {
 
     playNote(freq: number, time: number, duration: number, type: OscillatorType, volMultiplier: number = 1) {
         if (!this.audioCtx || !this.masterGain || freq === 0) return;
-        
+
         const osc = this.audioCtx.createOscillator(); const gain = this.audioCtx.createGain();
         osc.connect(gain); gain.connect(this.masterGain);
         osc.type = type; osc.frequency.setValueAtTime(freq, time);
@@ -1225,7 +1228,7 @@ class SoundManager {
 
         const filter = this.audioCtx.createBiquadFilter(); const gain = this.audioCtx.createGain();
         noiseSource.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
-        
+
         const drumVol = this.uiManager.settings.masterVolume;
         let duration = 0.1, vol = drumVol;
 
@@ -1238,12 +1241,12 @@ class SoundManager {
         gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
         noiseSource.start(time); noiseSource.stop(time + duration);
     }
-    
+
     scheduler() {
         if (!this.audioCtx || !this.musicPlaying) return;
         while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) {
             let lead, arp, bass, kick, snare, hihat;
-            if (this.currentTrack === 'boss') { [lead, arp, bass, kick, snare, hihat] = [this.bossLeadMelody, this.bossArpeggioMelody, this.bossBassLine, this.bossKickPattern, this.bossSnarePattern, this.bossHihatPattern]; } 
+            if (this.currentTrack === 'boss') { [lead, arp, bass, kick, snare, hihat] = [this.bossLeadMelody, this.bossArpeggioMelody, this.bossBassLine, this.bossKickPattern, this.bossSnarePattern, this.bossHihatPattern]; }
             else { [lead, arp, bass, kick, snare, hihat] = [this.leadMelody, this.arpeggioMelody, this.bassLine, this.kickPattern, this.snarePattern, this.hihatPattern]; }
 
             this.playNote(lead[this.currentStep]!, this.nextNoteTime, this.stepDuration * 0.9, 'square', 0.15);
@@ -1269,7 +1272,7 @@ class SoundManager {
     }
 
     setVolume(volume: number) { if (this.masterGain && this.audioCtx) { this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime); } }
-    
+
     play(soundName: string) {
         if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return;
         let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol = 1;
@@ -1309,13 +1312,13 @@ class LocalizationManager {
     translate(key: string): string {
         return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key;
     }
-    
+
     getPowerUpSymbol(type: string): string {
         const symbols: { [key: string]: string } = {
             'WEAPON_UP': 'W+', 'SIDE_SHOTS': 'W<>', 'RAPID_FIRE': 'RF',
-            'LASER_BEAM': 'L', 'HOMING_MISSILES': 'H', 'SHIELD': 'S', 
-            'REPAIR_KIT': 'R', 'EXTRA_LIFE': '+', 'GHOST_PROTOCOL': 'G', 
-            'ORBITAL_DRONE': 'O', 'NUKE': 'N', 'BLACK_HOLE': 'B', 'SCORE_BOOST': '$' 
+            'LASER_BEAM': 'L', 'HOMING_MISSILES': 'H', 'SHIELD': 'S',
+            'REPAIR_KIT': 'R', 'EXTRA_LIFE': '+', 'GHOST_PROTOCOL': 'G',
+            'ORBITAL_DRONE': 'O', 'NUKE': 'N', 'BLACK_HOLE': 'B', 'SCORE_BOOST': '$'
         };
         return symbols[type] || '?';
     }
@@ -1358,19 +1361,19 @@ class UIManager {
         this.scoreEl = ui.score; this.levelEl = ui.level; this.highscoreEl = ui.highscore;
         this.specialInventoryEl = ui.specialInventory; this.ultraInventoryEl = ui.ultraInventory;
         this.livesDisplay = ui.livesDisplay; this.weaponStatusEl = ui.weaponStatus;
-        this.targetingArrowEl = ui.targetingArrow; 
+        this.targetingArrowEl = ui.targetingArrow;
         this.energyBarEl = ui.energyBar;
         this.menuContainer = document.getElementById('menu-container')!;
         this.langSelectScreen = document.getElementById('language-select-screen')!;
         this.langBackButton = document.getElementById('lang-back-button')!;
-        
+
         this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, };
         this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, };
 
         this.settings = this.loadSettings();
         this.localizationManager = new LocalizationManager();
         this.soundManager = new SoundManager(this);
-        
+
         this.initButtons();
     }
     update(): void {
@@ -1381,7 +1384,7 @@ class UIManager {
         if (!this.game.player || !this.game.player.isAlive()) {
             this.specialInventoryEl.innerHTML = ''; this.ultraInventoryEl.innerHTML = '';
             this.livesDisplay.innerHTML = ''; this.weaponStatusEl.innerHTML = '';
-            this.targetingArrowEl.style.display = 'none'; 
+            this.targetingArrowEl.style.display = 'none';
             this.energyBarEl.style.width = '0%';
             return;
         }
@@ -1437,7 +1440,7 @@ class UIManager {
     showTab(tabName: string): void {
         for (const key in this.tabPanes) {
             const pane = this.tabPanes[key]!; const button = this.tabButtons[key]!;
-            if (key === tabName) { pane.classList.add('active'); button.classList.add('active'); } 
+            if (key === tabName) { pane.classList.add('active'); button.classList.add('active'); }
             else { pane.classList.remove('active'); button.classList.remove('active'); }
         }
     }
@@ -1446,7 +1449,7 @@ class UIManager {
         document.getElementById('restart-button')!.onclick = () => this.game.changeState('LEVEL_START', true);
         document.getElementById('quit-button')!.onclick = () => this.game.changeState('MENU');
         for (const key in this.tabButtons) { this.tabButtons[key]!.onclick = () => this.showTab(key); }
-        
+
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         volSlider.value = this.settings.masterVolume.toString();
         volSlider.oninput = (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); };
@@ -1454,7 +1457,7 @@ class UIManager {
         document.getElementById('toggle-sfx')!.onclick = () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-particles')!.onclick = () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-shake')!.onclick = () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); };
-        
+
         document.getElementById('toggle-language')!.onclick = () => {
             this.langSelectSource = 'settings';
             this.menuContainer.style.display = 'none';
@@ -1467,7 +1470,7 @@ class UIManager {
             this.menuContainer.style.display = 'flex';
             this.langSelectSource = 'startup';
         };
-        
+
         document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
             button.onclick = () => {
                 const lang = button.dataset.lang;
@@ -1520,33 +1523,33 @@ class UIManager {
             case 'SHOOTER': dummyEnemy = new Shooter(tempGame); break;
             case 'BOSS_JUGGERNAUT': dummyEnemy = new BossJuggernaut(this.game, 1, 1); dummyEnemy.width = 30; dummyEnemy.height=15; break;
         }
-        if (dummyEnemy) { dummyEnemy.pos = new Vector2D(canvas.width / 2 - dummyEnemy.width / 2, canvas.height / 2 - dummyEnemy.height / 2); dummyEnemy.draw(ctx); }
+        if (dummyEnemy) { dummyEnemy.pos = new Vector2D(0, 0); dummyEnemy.draw(ctx); }
         return canvas.toDataURL();
     }
     populateArsenal(): void {
         const powerupList = [
             { catKey: "arsenal_cat_weapon_upgrade", nameKey: "powerup_wup_name", descKey: 'powerup_wup_desc', type: 'WEAPON_UP' },
             { catKey: "arsenal_cat_weapon_mod", nameKey: "powerup_rapid_fire_name", descKey: 'powerup_rapid_fire_desc', type: 'RAPID_FIRE' },
-            { catKey: "arsenal_cat_weapon_mod", nameKey: "powerup_side_shots_name", descKey: 'powerup_side_shots_desc', type: 'SIDE_SHOTS' }, 
-            { catKey: "arsenal_cat_ultra_weapon", nameKey: "powerup_laser_name", descKey: 'powerup_laser_desc', type: 'LASER_BEAM' }, 
+            { catKey: "arsenal_cat_weapon_mod", nameKey: "powerup_side_shots_name", descKey: 'powerup_side_shots_desc', type: 'SIDE_SHOTS' },
+            { catKey: "arsenal_cat_ultra_weapon", nameKey: "powerup_laser_name", descKey: 'powerup_laser_desc', type: 'LASER_BEAM' },
             { catKey: "arsenal_cat_ultra_weapon", nameKey: "powerup_homing_missiles_name", descKey: 'powerup_homing_missiles_desc', type: 'HOMING_MISSILES' },
-            { catKey: "arsenal_cat_defense", nameKey: "powerup_shield_name", descKey: 'powerup_shield_desc', type: 'SHIELD' }, 
-            { catKey: "arsenal_cat_defense", nameKey: "powerup_repair_kit_name", descKey: 'powerup_repair_kit_desc', type: 'REPAIR_KIT' }, 
+            { catKey: "arsenal_cat_defense", nameKey: "powerup_shield_name", descKey: 'powerup_shield_desc', type: 'SHIELD' },
+            { catKey: "arsenal_cat_defense", nameKey: "powerup_repair_kit_name", descKey: 'powerup_repair_kit_desc', type: 'REPAIR_KIT' },
             { catKey: "arsenal_cat_defense", nameKey: "powerup_extra_life_name", descKey: 'powerup_extra_life_desc', type: 'EXTRA_LIFE' },
-            { catKey: "arsenal_cat_defense", nameKey: "powerup_ghost_protocol_name", descKey: 'powerup_ghost_protocol_desc', type: 'GHOST_PROTOCOL' }, 
-            { catKey: "arsenal_cat_defense", nameKey: "powerup_orbital_drone_name", descKey: 'powerup_orbital_drone_desc', type: 'ORBITAL_DRONE' }, 
-            { catKey: "arsenal_cat_special", nameKey: "powerup_nuke_name", descKey: 'powerup_nuke_desc', type: 'NUKE' }, 
+            { catKey: "arsenal_cat_defense", nameKey: "powerup_ghost_protocol_name", descKey: 'powerup_ghost_protocol_desc', type: 'GHOST_PROTOCOL' },
+            { catKey: "arsenal_cat_defense", nameKey: "powerup_orbital_drone_name", descKey: 'powerup_orbital_drone_desc', type: 'ORBITAL_DRONE' },
+            { catKey: "arsenal_cat_special", nameKey: "powerup_nuke_name", descKey: 'powerup_nuke_desc', type: 'NUKE' },
             { catKey: "arsenal_cat_special", nameKey: "powerup_black_hole_name", descKey: 'powerup_black_hole_desc', type: 'BLACK_HOLE' },
             { catKey: "arsenal_cat_special", nameKey: "powerup_score_boost_name", descKey: 'powerup_score_boost_desc', type: 'SCORE_BOOST' }
         ];
 
         const listEl = document.getElementById('arsenal-list')!; listEl.innerHTML = ''; let currentCategory = '';
-        powerupList.forEach(p => { 
+        powerupList.forEach(p => {
             const categoryName = this.localizationManager.translate(p.catKey);
-            if (categoryName !== currentCategory) { currentCategory = categoryName; listEl.innerHTML += `<h3>- ${currentCategory} -</h3>`; } 
-            const symbol = this.localizationManager.getPowerUpSymbol(p.type); 
+            if (categoryName !== currentCategory) { currentCategory = categoryName; listEl.innerHTML += `<h3>- ${currentCategory} -</h3>`; }
+            const symbol = this.localizationManager.getPowerUpSymbol(p.type);
             const color = p.catKey.includes('special') ? '#FF0000' : (p.catKey.includes('ultra') ? '#B10DC9' :(p.catKey.includes('defense') ? '#00FFFF' : '#FF851B'));
-            listEl.innerHTML += `<div class="powerup-entry"><div class="powerup-symbol" style="background-color:${color};color:#000;">${symbol}</div><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.nameKey)}</div><div class="powerup-desc">${this.localizationManager.translate(p.descKey)}</div></div></div>`; 
+            listEl.innerHTML += `<div class="powerup-entry"><div class="powerup-symbol" style="background-color:${color};color:#000;">${symbol}</div><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.nameKey)}</div><div class="powerup-desc">${this.localizationManager.translate(p.descKey)}</div></div></div>`;
         });
     }
 
@@ -1652,7 +1655,7 @@ class Game {
         this.height = canvas.height;
         this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
         this.blackHoleTargeting = { active: false, slot: -1, angle: -Math.PI / 2 };
-        
+
         this.levelDefinitions = [
             { scoreToEarn: 2000,  s: 1200, m: 1.0, e: ['GRUNT'], msgKey: "wave_msg_1"},
             { scoreToEarn: 3000,  s: 1000, m: 1.1, e: ['GRUNT', 'WEAVER'], msgKey: "wave_msg_2"},
@@ -1675,7 +1678,7 @@ class Game {
             { scoreToEarn: 80000, s: 280,  m: 2.8, e: ['SHOOTER', 'SHOOTER', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_19"},
             { scoreToEarn: 0,     s: 1000, m: 3.0, e: ['BOSS_JUGGERNAUT'], msgKey: "wave_msg_20"},
         ];
-        
+
         this.uiManager = new UIManager(this, ui);
         this.initEventListeners();
         this.createParallaxStarfield();
@@ -1740,14 +1743,14 @@ class Game {
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
         if (newState === 'LEVEL_START' && this.isPaused) this.togglePause();
-        
+
         this.gameState = newState;
 
         switch (newState) {
             case 'MENU': this.entities = []; this.player = null; this.isPaused = false; this.uiManager.togglePauseMenu(false); this.uiManager.soundManager.setTrack('normal'); break;
             case 'LEVEL_START':
                 if (forceReset) { this.player = null; this.level = 0; }
-                if (!this.player || !this.player.isAlive()) { this.level = 1; this.score = 0; this.player = new Player(this); this.entities = [this.player]; } 
+                if (!this.player || !this.player.isAlive()) { this.level = 1; this.score = 0; this.player = new Player(this); this.entities = [this.player]; }
                 else { this.level++; }
                 if (this.level > this.levelDefinitions.length) { this.changeState('WIN'); return; }
                 this.entities = this.entities.filter(e => e.family === 'player' || e instanceof Drone);
@@ -1777,7 +1780,7 @@ class Game {
 
     update(deltaTime: number): void {
         if (this.gameState === 'LANGUAGE_SELECT' || this.isPaused) return;
-        
+
         this.updateParallaxStarfield(deltaTime);
         if (this.shakeIntensity > 0) { this.shakeIntensity *= this.shakeDecay; if (this.shakeIntensity < 0.1) this.shakeIntensity = 0; }
         if (this.blackHoleTargeting.active) { this.blackHoleTargeting.angle += 4 * (deltaTime / 1000); }
@@ -1824,18 +1827,15 @@ class Game {
             this.stars.push({ pos: new Vector2D(Math.random() * this.width, Math.random() * this.height), s: (4 - l) * 0.8, v: (4 - l) * 24, a: 1 - (l / 4) });
         }
     }
-    // Der korrigierte Code-Block
+
 updateParallaxStarfield(dt: number): void {
     this.stars.forEach(s => {
-        // Stern bewegen
+
         s.pos.y += s.v * (dt / 1000);
 
-        // Wenn der Stern den unteren Rand passiert...
         if (s.pos.y > this.height) {
-            // ...setze ihn wieder OBEN an eine neue, zufällige X-Position.
-            // Die Y-Position ist eine zufällige negative Zahl,
-            // damit die Sterne natürlich ins Bild rieseln und KEINE LINIEN BILDEN.
-            s.pos.y = -(Math.random() * 50); 
+
+            s.pos.y = -(Math.random() * 50);
             s.pos.x = Math.random() * this.width;
         }
     });
@@ -1921,21 +1921,22 @@ window.addEventListener('load', function () {
         weaponStatus: document.getElementById('weapon-status')!, targetingArrow: document.getElementById('targeting-arrow')!,
         energyBar: document.getElementById('energy-bar')!,
     };
-    
+
     const game = new Game(canvas, uiElements);
 
     let lastTime = 0;
     function gameLoop(timestamp: number) {
-    if (!lastTime) lastTime = timestamp;
-    let deltaTime = timestamp - lastTime;
-    lastTime = timestamp;
-    
-    // VERHINDERT DEN ZEITSPRUNG: Die Logik kann nie mehr als 100ms auf einmal simulieren.
-    const maxDeltaTime = 100;
-    deltaTime = Math.min(deltaTime, maxDeltaTime);
+        if (!lastTime) lastTime = timestamp;
+        let deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
 
-    game.update(deltaTime); 
-    game.draw();
+        const maxDeltaTime = 100;
+        deltaTime = Math.min(deltaTime, maxDeltaTime);
+
+        game.update(deltaTime);
+        game.draw();
+        requestAnimationFrame(gameLoop);
+    }
+
     requestAnimationFrame(gameLoop);
-}
 });
