@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Fall: Celestial Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        :root {
+            --cyan-glow: #0ff;
+            --main-font: 'Press Start 2P', cursive;
+            --bg-color: #000;
+            --text-color: #fff;
+            --border-color: var(--cyan-glow);
+            --menu-bg: rgba(0, 10, 20, 0.95);
+        }
+        body { margin: 0; background: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; font-family: var(--main-font); overflow: hidden; }
+        #gameContainer { width: 800px; height: 800px; border: 3px solid var(--border-color); box-shadow: 0 0 25px var(--border-color), 0 0 8px var(--text-color) inset; position: relative; background: var(--bg-color); overflow: hidden; }
+        canvas { display: block; position: absolute; top: 50px; left: 0; background-color: transparent; z-index: 1; }
+        
+        /* --- UI Panel --- */
+        #ui-panel { position: absolute; top: 0; left: 0; width: 100%; height: 50px; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box; font-size: 14px; border-bottom: 3px solid var(--border-color); text-transform: uppercase; background: var(--bg-color); z-index: 10; }
+        #ui-panel .ui-item { display: flex; align-items: center; gap: 8px; }
+        #ui-panel #lives-display { display: flex; align-items: center; gap: 10px; }
+        #ui-panel .life-icon { width: 25px; height: 15px; background-color: #39FF14; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); flex-shrink: 0; }
+        #ui-panel #lives-display span { font-size: 16px; line-height: 1; }
+        
+        #energy-bar-container {
+            width: 100px;
+            height: 15px;
+            border: 1px solid var(--cyan-glow);
+            background-color: rgba(20, 20, 20, 0.8);
+            border-radius: 2px;
+            padding: 2px;
+        }
+        #energy-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #39FF14 0%, #FFFF00 75%, #FF4136 100%);
+            transition: width 0.2s ease-out;
+            border-radius: 1px;
+        }
+
+        #bottom-ui-container { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 20px; z-index: 10; align-items: flex-end; }
+        #special-inventory, #ultra-inventory { display: flex; gap: 10px; }
+        .inventory-slot { position: relative; width: 60px; height: 60px; border: 2px solid var(--border-color); background: rgba(0, 30, 40, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--main-font); border-radius: 5px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+        .inventory-slot .slot-key { font-size: 10px; color: #aaa; }
+        .inventory-slot .slot-symbol { font-size: 24px; color: var(--text-color); }
+        .inventory-slot .slot-count { font-size: 12px; color: var(--cyan-glow); position: absolute; bottom: 2px; right: 5px; }
+        
+        #ultra-inventory .inventory-slot { border-color: #B10DC9; box-shadow: 0 0 15px rgba(177, 13, 201, 0.7); }
+        #ultra-inventory .inventory-slot .slot-count { color: #B10DC9; }
+
+        #weapon-status { position: absolute; bottom: 10px; right: 10px; z-index: 10; background: rgba(0, 30, 40, 0.7); border: 2px solid var(--border-color); padding: 10px 15px; border-radius: 5px; font-size: 14px; text-align: right; min-width: 150px; }
+        .timer-warning { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { color: #ff3333; } }
+
+        #targeting-arrow { position: absolute; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 30px solid var(--cyan-glow); z-index: 15; display: none; transform-origin: bottom center; }
+
+        /* --- MENU STYLES --- */
+        #menu-container { position: absolute; top: 50px; left: 0; width: 100%; height: 750px; background: var(--menu-bg); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: flex-start; color: var(--cyan-glow); text-shadow: 0 0 10px var(--cyan-glow); padding-top: 20px; box-sizing: border-box; }
+        .menu-header { width: 100%; text-align: center; margin-bottom: 20px; }
+        .menu-header h1 { font-size: 50px; margin: 0; }
+        
+        .menu-tabs { display: flex; width: 90%; border-bottom: 2px solid var(--border-color); margin-bottom: 20px; }
+        .tab-button { background: none; border: none; border-bottom: 4px solid transparent; color: var(--text-color); padding: 15px 20px; font-family: var(--main-font); font-size: 16px; cursor: pointer; transition: color 0.3s, border-color 0.3s; }
+        .tab-button:hover { color: var(--cyan-glow); }
+        .tab-button.active { color: var(--cyan-glow); border-bottom-color: var(--cyan-glow); }
+
+        .menu-content { width: 90%; height: calc(100% - 150px); overflow: hidden; }
+        .tab-pane { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .tab-pane.active { display: flex; }
+
+        .menu-button { background: none; border: 2px solid var(--border-color); color: var(--border-color); padding: 15px 30px; font-family: var(--main-font); font-size: 20px; margin: 15px; cursor: pointer; width: 350px; text-align: center; }
+        .menu-button:hover, .menu-button.active { background: var(--cyan-glow); color: var(--bg-color); text-shadow: none; }
+        
+        .settings-panel { display: flex; flex-direction: column; align-items: center; font-size: 16px; width: 100%; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; width: 550px; margin: 10px 0; flex-wrap: wrap; }
+        .setting-item span { flex-basis: 35%; }
+        .setting-item p.setting-desc { font-size: 10px; color: #aaa; flex-basis: 100%; margin: 5px 0 0 0; text-align: center; }
+        .setting-item input[type="range"] { width: 150px; cursor: pointer; }
+        #toggle-language { font-size: 16px; padding: 10px 20px; width: auto; min-width: 150px; }
+        
+        .info-panel { width: 100%; height: 100%; overflow-y: auto; padding: 10px; font-size: 12px; line-height: 1.6; background: rgba(0,0,0,0.3); }
+        .powerup-entry { display: flex; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 255, 255, 0.2); }
+        .powerup-symbol, .arsenal-icon { width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-right: 15px; border-radius: 50%; flex-shrink: 0; }
+        .powerup-info { flex-grow: 1; }
+        .powerup-info .powerup-title { color: var(--text-color); font-size: 14px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .powerup-info .powerup-desc { color: #aaa; }
+
+        .strength-indicator { font-weight: bold; padding: 3px 10px; border-radius: 12px; font-size: 10px; text-shadow: none; }
+        .strength-niedrig, .strength-low { background-color: #2ECC40; color: #000; }
+        .strength-mittel, .strength-medium { background-color: #FFDC00; color: #000; }
+        .strength-hoch, .strength-high { background-color: #FF851B; color: #000; }
+        .strength-extrem, .strength-extreme { background-color: #FF4136; color: var(--text-color); }
+        .strength-apokalyptisch, .strength-apocalyptic { background-color: #B10DC9; color: var(--text-color); animation: blink 2s linear infinite; }
+
+        /* --- LANGUAGE SELECT SCREEN --- */
+        #language-select-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--menu-bg); z-index: 30; display: none; flex-direction: column; align-items: center; justify-content: center; color: var(--cyan-glow); }
+        #language-select-screen h1 { font-size: 30px; margin-bottom: 20px; text-shadow: 0 0 10px var(--cyan-glow); }
+        .language-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .lang-button { background: none; border: 2px solid var(--border-color); color: var(--border-color); padding: 10px; font-family: var(--main-font); font-size: 12px; cursor: pointer; text-align: center; }
+        .lang-button:hover { background: var(--cyan-glow); color: var(--bg-color); text-shadow: none; }
+        #lang-back-button { margin-top: 30px; display: none; }
+        #spiel-view { justify-content: center; }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+<div id="gameContainer">
+    <!-- Language Selection -->
+    <div id="language-select-screen">
+        <h1 data-translate-key="lang_select_title">SELECT LANGUAGE</h1>
+        <div class="language-grid">
+            <button class="lang-button" data-lang="en">English</button>
+            <button class="lang-button" data-lang="de">Deutsch</button>
+            <button class="lang-button" data-lang="zh">中文</button>
+            <button class="lang-button" data-lang="hi">हिन्दी</button>
+            <button class="lang-button" data-lang="ja">日本語</button>
+            <button class="lang-button" data-lang="it">Italiano</button>
+            <button class="lang-button" data-lang="es">Español</button>
+        </div>
+        <button class="menu-button" id="lang-back-button" data-translate-key="btn_back">Back</button>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="ui-panel">
+        <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
+        <div class="ui-item"><span data-translate-key="level">Level</span>: <span id="level">1</span></div>
+        <div class="ui-item" id="lives-display"></div>
+        <div class="ui-item" id="energy-display">
+            <span data-translate-key="energy">Energy</span>
+            <div id="energy-bar-container">
+                <div id="energy-bar"></div>
+            </div>
+        </div>
+        <div class="ui-item"><span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span></div>
+    </div>
+    <canvas id="gameCanvas" width="800" height="750"></canvas>
+    <div id="bottom-ui-container">
+        <div id="special-inventory"></div>
+        <div id="ultra-inventory"></div>
+    </div>
+    <div id="weapon-status"></div>
+    <div id="targeting-arrow"></div>
+    
+    <div id="menu-container">
+        <div class="menu-header"><h1 data-translate-key="pause_header">PAUSE</h1></div>
+        <div class="menu-tabs">
+            <button class="tab-button" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
+            <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
+            <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
+            <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
+        </div>
+        <div class="menu-content">
+            <div id="spiel-view" class="tab-pane">
+                 <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
+                 <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
+                 <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
+            </div>
+            <div id="arsenal-view" class="tab-pane">
+                 <div class="info-panel" id="arsenal-list"></div>
+            </div>
+            <div id="gegner-view" class="tab-pane">
+                 <div class="info-panel" id="gegner-list"></div>
+            </div>
+            <div id="einstellungen-view" class="tab-pane">
+                <div class="info-panel">
+                    <div class="settings-panel">
+                        <div class="setting-item">
+                            <span data-translate-key="settings_language_label">Language</span>
+                            <button class="menu-button" id="toggle-language">English</button>
+                            <p class="setting-desc" data-translate-key="settings_language_desc">Changes the display language of the game.</p>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_volume_label">Master Volume</span><input type="range" id="volume-master" min="0" max="1" step="0.1">
+                            <p class="setting-desc" data-translate-key="settings_volume_desc">Controls the overall volume of the game.</p>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_music_label">Music</span><button class="menu-button" id="toggle-music">ON</button>
+                            <p class="setting-desc" data-translate-key="settings_music_desc">Toggles the background music on or off.</p>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_sfx_label">SFX</span><button class="menu-button" id="toggle-sfx">ON</button>
+                            <p class="setting-desc" data-translate-key="settings_sfx_desc">Toggles sound effects like shots and explosions on or off.</p>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_particles_label">Particles</span><button class="menu-button" id="toggle-particles">HIGH</button>
+                            <p class="setting-desc" data-translate-key="settings_particles_desc">Sets the amount of particle effects for explosions (HIGH, LOW, OFF).</p>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_shake_label">Screen Shake</span><button class="menu-button" id="toggle-shake">ON</button>
+                            <p class="setting-desc" data-translate-key="settings_shake_desc">Enables or disables screen shake on hits and explosions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./index.tsx"></script>
+
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
