@@ -6,57 +6,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galaxy Fall: Celestial Edition</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        :root {
-            --cyan-glow: #0ff;
-            --main-font: 'Press Start 2P', cursive;
-            --bg-color: #000;
-            --text-color: #fff;
-            --border-color: var(--cyan-glow);
-            --menu-bg: rgba(0, 10, 20, 0.95);
-        }
-        body { margin: 0; background: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; font-family: var(--main-font); overflow: hidden; }
-        #gameContainer { width: 800px; height: 800px; border: 3px solid var(--border-color); box-shadow: 0 0 25px var(--border-color), 0 0 8px var(--text-color) inset; position: relative; background: var(--bg-color); overflow: hidden; }
-        canvas { display: block; position: absolute; top: 50px; left: 0; background-color: transparent; z-index: 1; }
-        
-        /* --- UI Panel --- */
-        #ui-panel { position: absolute; top: 0; left: 0; width: 100%; height: 50px; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box; font-size: 14px; border-bottom: 3px solid var(--border-color); text-transform: uppercase; background: var(--bg-color); z-index: 10; }
-        #ui-panel .ui-item { display: flex; align-items: center; gap: 8px; }
-        #ui-panel #lives-display { display: flex; align-items: center; gap: 10px; }
-        #ui-panel .life-icon { width: 25px; height: 15px; background-color: #39FF14; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); flex-shrink: 0; }
-        #ui-panel #lives-display span { font-size: 16px; line-height: 1; }
-        
-        #energy-bar-container {
-            width: 100px;
-            height: 15px;
-            border: 1px solid var(--cyan-glow);
-            background-color: rgba(20, 20, 20, 0.8);
-            border-radius: 2px;
-            padding: 2px;
-        }
-        #energy-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #39FF14 0%, #FFFF00 75%, #FF4136 100%);
-            transition: width 0.2s ease-out;
-            border-radius: 1px;
-        }
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    :root {
+        --cyan-glow: #0ff;
+        --main-font: 'Press Start 2P', cursive;
+        --bg-color: #000;
+        --text-color: #fff;
+        --border-color: var(--cyan-glow);
+        --menu-bg: rgba(0, 10, 20, 0.95);
+    }
+    body { margin: 0; background: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; font-family: var(--main-font); overflow: hidden; }
+    #gameContainer { width: 800px; height: 800px; border: 3px solid var(--border-color); box-shadow: 0 0 25px var(--border-color), 0 0 8px var(--text-color) inset; position: relative; background: var(--bg-color); overflow: hidden; }
+    canvas { display: block; position: absolute; top: 50px; left: 0; background-color: transparent; z-index: 1; }
+    
+    /* --- UI Panel --- */
+    #ui-panel { position: absolute; top: 0; left: 0; width: 100%; height: 50px; display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box; font-size: 14px; border-bottom: 3px solid var(--border-color); text-transform: uppercase; background: var(--bg-color); z-index: 10; }
+    #ui-panel .ui-item { display: flex; align-items: center; gap: 8px; }
+    #ui-panel #lives-display { display: flex; align-items: center; gap: 10px; }
+    #ui-panel .life-icon { width: 25px; height: 15px; background-color: #39FF14; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); flex-shrink: 0; }
+    #ui-panel #lives-display span { font-size: 16px; line-height: 1; }
+    
+    #energy-bar-container { width: 100px; height: 15px; border: 1px solid var(--cyan-glow); background-color: rgba(20, 20, 20, 0.8); border-radius: 2px; padding: 2px; }
+    #energy-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #39FF14 0%, #FFFF00 75%, #FF4136 100%); transition: width 0.2s ease-out; border-radius: 1px; }
+    #bottom-ui-container { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 20px; z-index: 10; align-items: flex-end; }
+    #special-inventory, #ultra-inventory { display: flex; gap: 10px; }
+    .inventory-slot { position: relative; width: 60px; height: 60px; border: 2px solid var(--border-color); background: rgba(0, 30, 40, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--main-font); border-radius: 5px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+    
+    /* ======================================================= */
+    /* --- HIER IST DIE KORREKTUR FÜR DIE BILDGRÖSSE --- */
+    .inventory-slot .slot-image {
+        max-width: 75%;   /* Passt das Bild auf maximal 75% der Slot-Breite an */
+        max-height: 75%;  /* Passt das Bild auf maximal 75% der Slot-Höhe an */
+        object-fit: contain; /* Stellt sicher, dass das Seitenverhältnis erhalten bleibt */
+    }
+    /* ======================================================= */
+    
+    .inventory-slot .slot-key { font-size: 10px; color: #aaa; position: absolute; top: 2px; left: 5px; }
+    .inventory-slot .slot-symbol { font-size: 24px; color: var(--text-color); }
+    .inventory-slot .slot-count { font-size: 12px; color: var(--cyan-glow); position: absolute; bottom: 2px; right: 5px; }
+    
+    #ultra-inventory .inventory-slot { border-color: #B10DC9; box-shadow: 0 0 15px rgba(177, 13, 201, 0.7); }
+    #ultra-inventory .inventory-slot .slot-count { color: #B10DC9; }
 
-        #bottom-ui-container { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 20px; z-index: 10; align-items: flex-end; }
-        #special-inventory, #ultra-inventory { display: flex; gap: 10px; }
-        .inventory-slot { position: relative; width: 60px; height: 60px; border: 2px solid var(--border-color); background: rgba(0, 30, 40, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--main-font); border-radius: 5px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
-        .inventory-slot .slot-key { font-size: 10px; color: #aaa; }
-        .inventory-slot .slot-symbol { font-size: 24px; color: var(--text-color); }
-        .inventory-slot .slot-count { font-size: 12px; color: var(--cyan-glow); position: absolute; bottom: 2px; right: 5px; }
-        
-        #ultra-inventory .inventory-slot { border-color: #B10DC9; box-shadow: 0 0 15px rgba(177, 13, 201, 0.7); }
-        #ultra-inventory .inventory-slot .slot-count { color: #B10DC9; }
+    #weapon-status { position: absolute; bottom: 10px; right: 10px; z-index: 10; background: rgba(0, 30, 40, 0.7); border: 2px solid var(--border-color); padding: 10px 15px; border-radius: 5px; font-size: 14px; text-align: right; min-width: 150px; }
+    .timer-warning { animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { color: #ff3333; } }
 
-        #weapon-status { position: absolute; bottom: 10px; right: 10px; z-index: 10; background: rgba(0, 30, 40, 0.7); border: 2px solid var(--border-color); padding: 10px 15px; border-radius: 5px; font-size: 14px; text-align: right; min-width: 150px; }
-        .timer-warning { animation: blink 1s step-end infinite; }
-        @keyframes blink { 50% { color: #ff3333; } }
-
-        #targeting-arrow { position: absolute; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 30px solid var(--cyan-glow); z-index: 15; display: none; transform-origin: bottom center; }
+    #targeting-arrow { position: absolute; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 30px solid var(--cyan-glow); z-index: 15; display: none; transform-origin: bottom center; }
 
         /* --- MENU STYLES --- */
         #menu-container { position: absolute; top: 50px; left: 0; width: 100%; height: 750px; background: var(--menu-bg); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: flex-start; color: var(--cyan-glow); text-shadow: 0 0 10px var(--cyan-glow); padding-top: 20px; box-sizing: border-box; }
