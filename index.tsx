@@ -28,12 +28,20 @@ import powerupNukeSrc from './assets/images/powerups/powerup_nuke.png';
 import powerupBlackHoleSrc from './assets/images/powerups/powerup_black_hole.png';
 import powerupScoreBoostSrc from './assets/images/powerups/powerup_score_boost.png';
 
+// --- NEU: Bild für die Drohne importieren ---
+import orbitalDroneImgSrc from './assets/images/orbital_drone.png';
+
+
 // --- ECHTE BILD-OBJEKTE ERSTELLEN ---
 const createImage = (src: string) => { const img = new Image(); img.src = src; return img; };
 const playerImg1 = createImage(playerImgSrc1), playerImg2 = createImage(playerImgSrc2), playerImg3 = createImage(playerImgSrc3), playerImg4 = createImage(playerImgSrc4);
 const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), bossJuggernautImg = createImage(bossJuggernautImgSrc);
 const powerUpImages: { [key: string]: HTMLImageElement } = { 'WEAPON_UP': createImage(powerupWeaponUpSrc), 'RAPID_FIRE': createImage(powerupRapidFireSrc), 'SIDE_SHOTS': createImage(powerupSideShotsSrc), 'LASER_BEAM': createImage(powerupLaserBeamSrc), 'HOMING_MISSILES': createImage(powerupHomingMissilesSrc), 'SHIELD': createImage(powerupShieldSrc), 'REPAIR_KIT': createImage(powerupRepairKitSrc), 'EXTRA_LIFE': createImage(powerupExtraLifeSrc), 'GHOST_PROTOCOL': createImage(powerupGhostProtocolSrc), 'ORBITAL_DRONE': createImage(powerupOrbitalDroneSrc), 'NUKE': createImage(powerupNukeSrc), 'BLACK_HOLE': createImage(powerupBlackHoleSrc), 'SCORE_BOOST': createImage(powerupScoreBoostSrc), };
 const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWeaponUpSrc, 'RAPID_FIRE': powerupRapidFireSrc, 'SIDE_SHOTS': powerupSideShotsSrc, 'LASER_BEAM': powerupLaserBeamSrc, 'HOMING_MISSILES': powerupHomingMissilesSrc, 'SHIELD': powerupShieldSrc, 'REPAIR_KIT': powerupRepairKitSrc, 'EXTRA_LIFE': powerupExtraLifeSrc, 'GHOST_PROTOCOL': powerupGhostProtocolSrc, 'ORBITAL_DRONE': powerupOrbitalDroneSrc, 'NUKE': powerupNukeSrc, 'BLACK_HOLE': powerupBlackHoleSrc, 'SCORE_BOOST': powerupScoreBoostSrc, };
+
+// --- NEU: Bild-Objekt für die Drohne erstellen ---
+const orbitalDroneImg = createImage(orbitalDroneImgSrc);
+
 
 // --- TYPE DEFINITIONS ---
 interface IKeyMap { [key: string]: boolean; }
@@ -296,7 +304,45 @@ class PowerUp extends EntityFamily { public speed: number = 150; public powerUpT
 class Coin extends EntityFamily { public value: number; public speed: number = 180; constructor(game: Game, x: number, y: number, value: number) { super(game, x, y, 15, 15, 'pickup', 'COIN'); this.value = value; } update(dt: number): void { this.pos.y += this.speed * (dt / 1000); if (this.pos.y > this.game.height) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FFDC00'; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#F39C12'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "10px 'Press Start 2P'"; ctx.fillText('$', this.pos.x + this.width / 2, this.pos.y + this.height / 2 + 1); ctx.restore(); } onCollect(): void { this.destroy(); if (this.game.player) { const scoreToAdd = this.game.player.isScoreBoosted() ? this.value * 2 : this.value; this.game.score += scoreToAdd; this.game.scoreEarnedThisLevel += scoreToAdd; } } }
 class Explosion extends EntityFamily { private particles: IParticle[] = []; constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; for (let i = 0; i < count; i++) { this.particles.push({ pos: new Vector2D(x, y), vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), size: Math.random() * 4 + 1, life: 0.7, color: color }); } } update(dt: number): void { const dt_s = dt / 1000; this.particles.forEach(p => { p.pos.x += p.vel.x * dt_s; p.pos.y += p.vel.y * dt_s; p.life -= dt_s; }); this.particles = this.particles.filter(p => p.life > 0); if (this.particles.length === 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); } }
 class Particle extends Entity { private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number; constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2) { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'PARTICLE'; this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50); this.size = Math.random() * size + 1; this.life = Math.random() * life; this.initialLife = this.life; this.color = color; } update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) { this.destroy(); } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
-class Drone extends EntityFamily { private angle: number; private orbitRadius: number = 60; private fireCooldown: number = 0; constructor(game: Game, angleOffset: number) { super(game, 0, 0, 15, 15, 'player', 'DRONE'); this.angle = angleOffset; } update(dt: number): void { if (!this.game.player || !this.game.player.isAlive() || !this.game.player.powerUpManager.isActive('ORBITAL_DRONE')) { this.destroy(); return; } const playerPos = this.game.player.pos; this.angle += 3 * (dt/1000); this.pos.x = playerPos.x + this.game.player.width / 2 + Math.cos(this.angle) * this.orbitRadius; this.pos.y = playerPos.y + this.game.player.height / 2 + Math.sin(this.angle) * this.orbitRadius; this.fireCooldown -= dt; if (this.fireCooldown <= 0) { this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y)); this.fireCooldown = 500; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#AAAAAA'; ctx.fillRect(this.pos.x - this.width / 2, this.pos.y - this.height / 2, this.width, this.height); ctx.restore(); } }
+
+// --- ANGEPASSTE Drone Klasse ---
+class Drone extends EntityFamily {
+    private angle: number;
+    private orbitRadius: number = 60;
+    private fireCooldown: number = 0;
+    private image: HTMLImageElement; // Eigenschaft für das Bild
+
+    constructor(game: Game, angleOffset: number) {
+        // Größe der Drohne für bessere Sichtbarkeit leicht erhöht
+        super(game, 0, 0, 24, 24, 'player', 'DRONE');
+        this.angle = angleOffset;
+        this.image = orbitalDroneImg; // Bild-Objekt zuweisen
+    }
+
+    update(dt: number): void {
+        if (!this.game.player || !this.game.player.isAlive() || !this.game.player.powerUpManager.isActive('ORBITAL_DRONE')) {
+            this.destroy();
+            return;
+        }
+        const playerPos = this.game.player.pos;
+        this.angle += 3 * (dt/1000);
+        this.pos.x = playerPos.x + this.game.player.width / 2 + Math.cos(this.angle) * this.orbitRadius;
+        this.pos.y = playerPos.y + this.game.player.height / 2 + Math.sin(this.angle) * this.orbitRadius;
+        this.fireCooldown -= dt;
+        if (this.fireCooldown <= 0) {
+            this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y));
+            this.fireCooldown = 500;
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        // Zeichne das Bild anstelle des Rechtecks
+        ctx.drawImage(this.image, this.pos.x - this.width / 2, this.pos.y - this.height / 2, this.width, this.height);
+        ctx.restore();
+    }
+}
+
 class NukeEffect extends Entity { private radius: number = 0; private life: number = 1; constructor(game: Game) { super(game, game.width / 2, game.height / 2, 0, 0); this.type = 'EFFECT'; } update(dt: number): void { const dt_s = dt / 1000; this.radius += 1200 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = `rgba(255,255,255,${this.life})`; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
 
 class ShockwaveEffect extends Entity {
@@ -328,7 +374,6 @@ class ShockwaveEffect extends Entity {
     }
 }
 
-// --- KORRIGIERTE BlackHole Klasse ---
 class BlackHole extends Entity {
     private life: number = 8000;
     private pullRadius: number = 300;
@@ -363,20 +408,16 @@ class BlackHole extends Entity {
             if (e.family === 'enemy' || e.family === 'pickup') {
                 const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2));
                 
-                // Effekte werden NUR innerhalb des Anziehungsradius angewendet
                 if (dist < this.pullRadius) {
-                    // Stun-Effekt wird hier, innerhalb der Distanzprüfung, angewendet
                     if (e instanceof Enemy && !e.isBoss) {
                         e.stun(50); 
                     }
 
-                    // Anziehungseffekt
                     const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x);
                     const pullSpeed = 180 * (1 - dist / this.pullRadius);
                     e.pos.x += Math.cos(angle) * pullSpeed * dt_s;
                     e.pos.y += Math.sin(angle) * pullSpeed * dt_s;
                     
-                    // Kill-Effekt im inneren Radius
                     if (dist < this.killRadius) {
                         if (e instanceof Enemy && !e.isBoss) { e.takeHit(9999); }
                         else if (!(e instanceof Enemy)) { e.destroy(); }
