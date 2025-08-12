@@ -227,12 +227,11 @@ class Tank extends Enemy { private image: HTMLImageElement; constructor(game: Ga
 class Weaver extends Enemy { private angle: number; private hSpeed: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 42), -35, 42, 35, 1, 20, 'WEAVER'); this.speed = 80 * game.enemySpeedMultiplier; this.angle = Math.random() * Math.PI * 2; this.hSpeed = (Math.random() * 2 + 1) * 60; this.collisionDamage = 35; this.image = weaverImg; } update(dt: number): void { const dt_s = dt / 1000; super.update(dt); this.angle += 3 * dt_s; this.pos.x += Math.sin(this.angle) * this.hSpeed * dt_s; if (this.pos.x < 0 || this.pos.x > this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 40), -40, 40, 40, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 
-// --- ANPASSUNG: BossJuggernaut ---
 class BossJuggernaut extends Enemy {
     private attackPattern: number = 0; private attackTimer: number = 5000;
     private movementPattern: string = 'ENTER'; private hSpeed: number;
     private image: HTMLImageElement;
-    private patrolY: number = 50; // --- NEU: Definierte Patrouillen-Höhe
+    private patrolY: number = 50; 
 
     constructor(game: Game, health: number, speedMultiplier: number) {
         super(game, game.width / 2 - 100, -150, 200, 100, health, 5000, 'BOSS_JUGGERNAUT');
@@ -248,7 +247,6 @@ class BossJuggernaut extends Enemy {
         }
     }
     
-    // --- NEU: Öffentliche Methode, um den Rückkehr-Modus zu starten ---
     public returnToPosition(): void {
         this.movementPattern = 'RETURNING';
     }
@@ -267,7 +265,6 @@ class BossJuggernaut extends Enemy {
                 this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
                 this.hSpeed *= -1;
             }
-        // --- NEU: Logik für den Rückkehr-Modus ---
         } else if (this.movementPattern === 'RETURNING') {
             const returnSpeed = 200;
             const targetY = this.patrolY;
@@ -331,7 +328,7 @@ class ShockwaveEffect extends Entity {
     }
 }
 
-// --- ANPASSUNG: BlackHole ---
+// --- KORRIGIERTE BlackHole Klasse ---
 class BlackHole extends Entity {
     private life: number = 8000;
     private pullRadius: number = 300;
@@ -350,7 +347,6 @@ class BlackHole extends Entity {
             this.game.entities.forEach(e => {
                 const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2));
                 if (dist < this.pullRadius) {
-                    // --- NEU: Überprüfe, ob es ein Boss ist ---
                     if (e instanceof BossJuggernaut) {
                         e.returnToPosition();
                     } else if (e instanceof Enemy) {
@@ -365,22 +361,26 @@ class BlackHole extends Entity {
 
         this.game.entities.forEach(e => {
             if (e.family === 'enemy' || e.family === 'pickup') {
-                if (e instanceof Enemy && e.isBoss) {
-                     // Boss wird angezogen, aber nicht gestunnt.
-                } else if (e instanceof Enemy) {
-                     e.stun(50); // Normale Gegner werden leicht verlangsamt/gestunnt
-                }
-
                 const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2));
+                
+                // Effekte werden NUR innerhalb des Anziehungsradius angewendet
                 if (dist < this.pullRadius) {
+                    // Stun-Effekt wird hier, innerhalb der Distanzprüfung, angewendet
+                    if (e instanceof Enemy && !e.isBoss) {
+                        e.stun(50); 
+                    }
+
+                    // Anziehungseffekt
                     const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x);
                     const pullSpeed = 180 * (1 - dist / this.pullRadius);
                     e.pos.x += Math.cos(angle) * pullSpeed * dt_s;
                     e.pos.y += Math.sin(angle) * pullSpeed * dt_s;
-                }
-                if (dist < this.killRadius) {
-                    if (e instanceof Enemy && !e.isBoss) { e.takeHit(9999); }
-                    else if (!(e instanceof Enemy)) { e.destroy(); }
+                    
+                    // Kill-Effekt im inneren Radius
+                    if (dist < this.killRadius) {
+                        if (e instanceof Enemy && !e.isBoss) { e.takeHit(9999); }
+                        else if (!(e instanceof Enemy)) { e.destroy(); }
+                    }
                 }
             }
         });
@@ -586,7 +586,21 @@ class Game {
     handleCollisions(): void {
         const projectiles = this.entities.filter(e => e.family === 'projectile'); const enemies = this.entities.filter(e => e.family === 'enemy') as Enemy[];
         const player = this.player; if (!player || !player.isAlive()) return;
-        if (player.laser && player.laser.isAlive()) { enemies.forEach(e => { if (this.isColliding(player.laser!, e)) { e.takeHit(player.laser!.damage); if (this.uiManager.settings.particles > 0) this.addEntity(new Particle(this, player.laser!.pos.x + player.laser!.width / 2, e.pos.y, '#FF8C00')); } }); }
+
+        if (player.laser && player.laser.isAlive()) {
+            for (const enemy of enemies) {
+                if (!player.laser) {
+                    break; 
+                }
+                if (this.isColliding(player.laser, enemy)) {
+                    enemy.takeHit(player.laser.damage);
+                    if (this.uiManager.settings.particles > 0 && player.laser) {
+                         this.addEntity(new Particle(this, player.laser.pos.x + player.laser.width / 2, enemy.pos.y, '#FF8C00'));
+                    }
+                }
+            }
+        }
+        
         projectiles.forEach(p => {
             if (p instanceof Projectile && p.type !== 'ENEMY_PROJECTILE') {
                 for (const e of enemies) {
