@@ -121,8 +121,89 @@ class Projectile extends EntityFamily { public vel: Vector2D; public damage: num
 class HeavyProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x, y, velX, velY); this.pos.x = x - 4; this.width = 8; this.height = 22; this.damage = 2.5; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 8; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
 class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 10; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
 class BlackHoleProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number, velY: number) { super(game, x - 10, y - 10, velX, velY); this.width = 20; this.height = 20; this.type = 'BLACK_HOLE_PROJECTILE'; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } onHit(e: Enemy): void { this.game.addEntity(new BlackHole(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.destroy(); } }
-class LaserBeam extends EntityFamily { public player: Player; public damage: number = 0.2; private soundCooldown: number = 0; constructor(game: Game, player: Player) { super(game, 0, 0, 15, game.height, 'projectile', 'LASER_BEAM'); this.player = player; } update(dt: number): void { if (!this.player.isAlive() || !this.player.powerUpManager.isActive('LASER_BEAM')) { this.destroy(); return; } this.pos.x = this.player.pos.x + this.player.width / 2 - this.width / 2; this.height = this.player.pos.y; this.soundCooldown -= dt; if(this.soundCooldown <= 0) { this.game.uiManager.soundManager.play('laser'); this.soundCooldown = 100; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const x = this.pos.x, y = 0, w = this.width, h = this.height; const grad = ctx.createLinearGradient(x, y, x + w, y); grad.addColorStop(0, 'rgba(255,0,0,0)'); grad.addColorStop(0.3, 'rgba(255,100,100,0.8)'); grad.addColorStop(0.5, 'white'); grad.addColorStop(0.7, 'rgba(255,100,100,0.8)'); grad.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = grad; ctx.fillRect(x, y, w, h); ctx.restore(); } }
-class HomingMissile extends Projectile { private target: Enemy | null = null; private searchCooldown: number = 0; private lifetime: number = 5000; constructor(game: Game, x: number, y: number) { super(game, x, y, (Math.random() - 0.5) * 200, -300); this.type = 'HOMING_MISSILE'; this.damage = 3; this.width = 8; this.height = 16; } findTarget(): void { const enemies = this.game.entities.filter(e => e.family === 'enemy' && e.isAlive()) as Enemy[]; if (enemies.length === 0) { this.target = null; return; } let closestEnemy: Enemy | null = null; let minDistance = Infinity; enemies.forEach(enemy => { const dist = Math.hypot(this.pos.x - (enemy.pos.x + enemy.width / 2), this.pos.y - (enemy.pos.y + enemy.height / 2)); if (dist < minDistance) { minDistance = dist; closestEnemy = enemy; } }); this.target = closestEnemy; } update(dt: number): void { this.lifetime -= dt; this.searchCooldown -= dt; if (this.searchCooldown <= 0) { this.findTarget(); this.searchCooldown = 500; } if (this.target && this.target.isAlive()) { const speed = 400; const turnFactor = 5; const dt_s = dt / 1000; const targetX = this.target.pos.x + this.target.width / 2; const targetY = this.target.pos.y + this.target.height / 2; const desiredVelX = targetX - this.pos.x; const desiredVelY = targetY - this.pos.y; const mag = Math.hypot(desiredVelX, desiredVelY); const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0; const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0; this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s; this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s; } super.update(dt); if (this.lifetime <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2); const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2; ctx.rotate(angle); ctx.fillStyle = '#ff9900'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(0, -this.height / 2); ctx.lineTo(-this.width / 2, this.height / 2); ctx.lineTo(this.width / 2, this.height / 2); ctx.closePath(); ctx.fill(); const flameSize = Math.random() * 8 + 4; ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.moveTo(0, this.height / 2); ctx.lineTo(-this.width / 2 + 2, this.height / 2 + flameSize / 2); ctx.lineTo(0, this.height / 2 + flameSize); ctx.lineTo(this.width / 2 - 2, this.height / 2 + flameSize / 2); ctx.closePath(); ctx.fill(); ctx.restore(); } }
+
+// --- GEÄNDERTE KLASSE ---
+class LaserBeam extends EntityFamily {
+    public player: Player;
+    public damage: number = 0.2;
+    private soundCooldown: number = 0;
+    private phase: number = 0;
+    private amplitude: number = 30; // Wie weit die Welle von der Mitte abweicht
+    private frequency: number = 0.02; // Wie viele Wellen auf dem Bildschirm sind
+
+    constructor(game: Game, player: Player) {
+        // Die Breite der Kollisionsbox entspricht der doppelten Amplitude
+        super(game, 0, 0, 60, game.height, 'projectile', 'LASER_BEAM');
+        this.player = player;
+    }
+
+    update(dt: number): void {
+        if (!this.player.isAlive() || !this.player.powerUpManager.isActive('LASER_BEAM')) {
+            this.destroy();
+            return;
+        }
+        // Position der Kollisionsbox aktualisieren
+        this.pos.x = this.player.pos.x + this.player.width / 2 - this.amplitude;
+        this.pos.y = 0; // Der Strahl beginnt ganz oben
+        this.height = this.player.pos.y; // Die Höhe geht bis zum Spieler
+
+        // Phase für die Wellenanimation aktualisieren
+        this.phase += (dt / 1000) * 15;
+
+        // Sound abspielen
+        this.soundCooldown -= dt;
+        if (this.soundCooldown <= 0) {
+            this.game.uiManager.soundManager.play('laser');
+            this.soundCooldown = 100;
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.player.pos.x + this.player.width / 2;
+        const beamHeight = this.player.pos.y;
+
+        // --- Äußerer Schein ---
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = '#f0f'; // Neon Pink/Magenta
+        ctx.lineWidth = 15;
+        ctx.shadowColor = '#f0f';
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+
+        // --- Mittlerer Schein ---
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = '#EE82EE'; // Helleres Violett
+        ctx.lineWidth = 8;
+        ctx.shadowColor = '#EE82EE';
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+
+        // --- Innerer Kern ---
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+class HomingMissile extends Projectile { private target: Enemy | null = null; private searchCooldown: number = 0; private lifetime: number = 5000; constructor(game: Game, x: number, y: number) { super(game, x, y, (Math.random() - 0.5) * 200, -300); this.type = 'HOMING_MISSILE'; this.damage = 15; this.width = 8; this.height = 16; } findTarget(): void { const enemies = this.game.entities.filter(e => e.family === 'enemy' && e.isAlive()) as Enemy[]; if (enemies.length === 0) { this.target = null; return; } let closestEnemy: Enemy | null = null; let minDistance = Infinity; enemies.forEach(enemy => { const dist = Math.hypot(this.pos.x - (enemy.pos.x + enemy.width / 2), this.pos.y - (enemy.pos.y + enemy.height / 2)); if (dist < minDistance) { minDistance = dist; closestEnemy = enemy; } }); this.target = closestEnemy; } update(dt: number): void { this.lifetime -= dt; this.searchCooldown -= dt; if (this.searchCooldown <= 0) { this.findTarget(); this.searchCooldown = 500; } if (this.target && this.target.isAlive()) { const speed = 400; const turnFactor = 5; const dt_s = dt / 1000; const targetX = this.target.pos.x + this.target.width / 2; const targetY = this.target.pos.y + this.target.height / 2; const desiredVelX = targetX - this.pos.x; const desiredVelY = targetY - this.pos.y; const mag = Math.hypot(desiredVelX, desiredVelY); const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0; const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0; this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s; this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s; } super.update(dt); if (this.lifetime <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2); const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2; ctx.rotate(angle); ctx.fillStyle = '#ff9900'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(0, -this.height / 2); ctx.lineTo(-this.width / 2, this.height / 2); ctx.lineTo(this.width / 2, this.height / 2); ctx.closePath(); ctx.fill(); const flameSize = Math.random() * 8 + 4; ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.moveTo(0, this.height / 2); ctx.lineTo(-this.width / 2 + 2, this.height / 2 + flameSize / 2); ctx.lineTo(0, this.height / 2 + flameSize); ctx.lineTo(this.width / 2 - 2, this.height / 2 + flameSize / 2); ctx.closePath(); ctx.fill(); ctx.restore(); } }
 class EnemyProjectile extends Projectile { public playerDamage: number; constructor(game: Game, x: number, y: number, vX: number = 0, vY: number = 360, playerDamage: number = 25) { super(game, x, y, vX, vY); this.type = 'ENEMY_PROJECTILE'; this.width = 5; this.height=10; this.playerDamage = playerDamage; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FF4136'; ctx.shadowColor = '#FF4136'; ctx.shadowBlur = 5; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
 class Drone extends EntityFamily {
     private tier: number; private index: number; private orbitRadius: number = 75; private fireCooldown: number = 0; private image: HTMLImageElement;
@@ -149,26 +230,19 @@ class PowerUpManager {
     activateSpecial(slotIndex: number): void { const special = this.specialInventory[slotIndex]; if (!special) return; if (special.type === 'BLACK_HOLE') { const p = this.game.player!; this.game.addEntity(new BlackHoleProjectile(this.game, p.pos.x + p.width/2, p.pos.y, 0, -600)); this.game.uiManager.soundManager.play('missileLaunch'); } else { this.activate(special.type); } special.count--; if (special.count <= 0) this.specialInventory.splice(slotIndex, 1); }
     activateUltra(slotIndex: number): void { const ultra = this.ultraInventory[slotIndex]; if (!ultra) return; if (this.ultraWeapon) this.deactivate(this.ultraWeapon); this.activate(ultra.type); ultra.count--; if (ultra.count <= 0) this.ultraInventory.splice(slotIndex, 1); }
     activate(type: string, duration?: number): void { const W_ULTRA_DURATIONS: {[key: string]: number} = {'LASER_BEAM': 10000, 'HOMING_MISSILES': 15000}; const W_TEMP_DURATIONS: {[key: string]: number} = {'SIDE_SHOTS': 15000, 'RAPID_FIRE': 30000}; const DEFENSE_TYPES = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL']; const SPECIAL_TYPES = ['NUKE', 'SCORE_BOOST']; if (type === 'ORBITAL_DRONE') { if (this.player.drones.length < 3) { const droneTier = this.player.drones.length + 1; this.player.drones.push(new Drone(this.game, droneTier, this.player.drones.length)); this.player.drones.forEach((drone, index) => drone.updateIndex(index)); } this.timers['ORBITAL_DRONE'] = 30000; } else if (type === 'WEAPON_UP') { if (this.weaponTier < 4) this.weaponTier++; this.setWeaponTierTimer(); } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) { this.timers[type] = duration ?? W_TEMP_DURATIONS[type]!; } else if (Object.keys(W_ULTRA_DURATIONS).includes(type)) { this.ultraWeapon = type; this.timers[type] = duration ?? W_ULTRA_DURATIONS[type]!; } else if (DEFENSE_TYPES.includes(type)) { if (type === 'EXTRA_LIFE') { if (this.player.lives < this.player.maxLives) this.player.lives++; } else if (type === 'REPAIR_KIT') { this.player.energy = 100; } else { this.timers[type] = duration ?? 15000; } } else if (SPECIAL_TYPES.includes(type)) { if (type === 'NUKE') { this.game.entities.filter(e => e.family === 'enemy' && !(e as Enemy).isBoss).forEach(e => (e as Enemy).takeHit(9999)); this.game.addEntity(new NukeEffect(this.game)); } else if (type === 'SCORE_BOOST') { this.timers[type] = 20000; } } this.game.uiManager.soundManager.play('powerup'); }
-    shoot(): void { const p = this.player; p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150; if (this.ultraWeapon) { switch (this.ultraWeapon) { case 'LASER_BEAM': if (!p.laser || !p.laser.isAlive()) { p.laser = new LaserBeam(this.game, p); this.game.addEntity(p.laser); } p.fireCooldown = 0; return; case 'HOMING_MISSILES': this.game.addEntity(new HomingMissile(this.game, p.pos.x + p.width/2, p.pos.y)); p.fireCooldown = 400; this.game.uiManager.soundManager.play('missileLaunch'); return; } } const x = p.pos.x, y = p.pos.y, w = p.width, h = p.height; const velY = -600; const angle15 = 15 * (Math.PI/180); switch (this.weaponTier) { case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break; case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break; case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break; case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break; } if (this.isActive('SIDE_SHOTS')) { this.game.addEntity(new Projectile(this.game, x, y + h / 2, -300, 0)); this.game.addEntity(new Projectile(this.game, x + w, y + h / 2, 300, 0)); } this.game.uiManager.soundManager.play('shoot'); }
+    shoot(): void { const p = this.player; p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150; if (this.ultraWeapon) { switch (this.ultraWeapon) { case 'LASER_BEAM': if (!p.laser || !p.laser.isAlive()) { p.laser = new LaserBeam(this.game, p); this.game.addEntity(p.laser); } p.fireCooldown = 0; break; case 'HOMING_MISSILES': this.game.addEntity(new HomingMissile(this.game, p.pos.x + p.width/2, p.pos.y)); p.fireCooldown = 400; this.game.uiManager.soundManager.play('missileLaunch'); break; } } const x = p.pos.x, y = p.pos.y, w = p.width, h = p.height; const velY = -600; const angle15 = 15 * (Math.PI/180); switch (this.weaponTier) { case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break; case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break; case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break; case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break; } if (this.isActive('SIDE_SHOTS')) { this.game.addEntity(new Projectile(this.game, x, y + h / 2, -300, 0)); this.game.addEntity(new Projectile(this.game, x + w, y + h / 2, 300, 0)); } this.game.uiManager.soundManager.play('shoot'); }
 }
-
-// --- GEÄNDERTE KLASSE ---
 class Player extends EntityFamily {
     public speed: number = 400; public lives: number = 3; public maxLives: number = 5;
     public energy: number = 100; public fireCooldown: number = 0;
     public powerUpManager: PowerUpManager; public drones: Drone[] = [];
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
-    
-    // --- NEUE EIGENSCHAFTEN FÜR DAS AUFLADEN DES SCHWARZEN LOCHS ---
     public isChargingBlackHole: boolean = false;
     public blackHoleChargeSlot: number | null = null;
-
     constructor(game: Game) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
         this.powerUpManager = new PowerUpManager(this);
     }
-
-    // --- GEÄNDERTE UPDATE-METHODE ---
     update(dt: number): void {
         const dt_s = dt / 1000;
         const move = new Vector2D(0, 0);
@@ -183,19 +257,14 @@ class Player extends EntityFamily {
         }
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
-        
-        // Das automatische Schießen wird jetzt hier gesteuert.
-        // Es wird pausiert, wenn isChargingBlackHole true ist.
         if (this.fireCooldown <= 0 && !this.isChargingBlackHole) {
             this.shoot();
         }
-        
         if (this.fireCooldown > 0) this.fireCooldown -= dt;
         this.droneAngle += 3 * dt_s;
         this.powerUpManager.update(dt);
         this.drones.forEach(d => d.update(dt));
     }
-
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.isGhosted() ? 0.5 : 1; const tier = this.powerUpManager.weaponTier; let currentImage: HTMLImageElement; switch (tier) { case 1: currentImage = playerImg1; break; case 2: currentImage = playerImg2; break; case 3: currentImage = playerImg3; break; case 4: currentImage = playerImg4; break; default: currentImage = playerImg1; } const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2); const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2); ctx.drawImage(currentImage, drawX, drawY); this.drones.forEach(d => d.draw(ctx)); if (this.isShielded()) { const alpha = (this.powerUpManager.timers['SHIELD']! < 1000 && Math.floor(Date.now() / 100) % 2 === 0) ? 0 : 0.4; ctx.fillStyle = `rgba(11,255,255,${alpha})`; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width * 0.7, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
     shoot(): void { this.powerUpManager.shoot(); }
     takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = 100; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
@@ -346,8 +415,6 @@ class UIManager {
     drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
-
-// --- GEÄNDERTE KLASSE MIT ANGEPASSTER LOGIK ---
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
@@ -356,27 +423,20 @@ class Game {
         ];
         this.uiManager = new UIManager(this, ui); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
-
-    // --- KOMPLETT ÜBERARBEITETE METHODE ---
     initEventListeners(): void {
         const keyMap: { [key: string]: { type: 'special' | 'ultra', index: number } } = {
             'Digit1': { type: 'special', index: 0 }, 'Digit2': { type: 'special', index: 1 },
             'Digit3': { type: 'special', index: 2 }, 'Digit4': { type: 'ultra', index: 0 },
             'Digit5': { type: 'ultra', index: 1 },
         };
-
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-
-            // Logik für das Pausieren und Starten des Spiels
             if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
                 if (['INTRO', 'MENU'].includes(this.gameState)) { this.uiManager.soundManager.initAudio(); this.changeState('LEVEL_START', true); }
                 else if (['GAME_OVER', 'WIN'].includes(this.gameState)) { this.changeState('MENU'); }
             }
-
-            // Logik für das Starten des "Aufladens" vom Schwarzen Loch
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused && !this.player.isChargingBlackHole) {
                 const mapping = keyMap[e.code];
                 if (mapping && mapping.type === 'special') {
@@ -389,19 +449,13 @@ class Game {
                 }
             }
         });
-
         window.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
-            
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused) {
                 const mapping = keyMap[e.code];
-                
-                // Logik für das Abfeuern des Schwarzen Lochs nach dem Loslassen
                 if (this.player.isChargingBlackHole && this.player.blackHoleChargeSlot !== null) {
-                    // Prüfen, ob die losgelassene Taste die ist, die wir "aufladen"
                     const chargedMapping = Object.values(keyMap).find(m => m.index === this.player.blackHoleChargeSlot && m.type === 'special');
                     const chargedKey = Object.keys(keyMap).find(key => keyMap[key] === chargedMapping);
-
                     if(e.code === chargedKey) {
                         e.preventDefault();
                         this.player.powerUpManager.activateSpecial(this.player.blackHoleChargeSlot);
@@ -409,7 +463,6 @@ class Game {
                         this.player.blackHoleChargeSlot = null;
                     }
                 }
-                // Logik für alle anderen Power-ups (die nicht aufgeladen werden)
                 else if (mapping) {
                     e.preventDefault();
                     if (mapping.type === 'special') {
@@ -424,9 +477,7 @@ class Game {
             }
         });
     }
-
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
-    
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
         this.uiManager.toggleMainMenu(false);
@@ -459,17 +510,12 @@ class Game {
                     this.entities = [this.player];
                 } else {
                     this.level++;
-                    // ÄNDERUNG 2: Der Aufruf zum Zurücksetzen der Power-ups wurde entfernt.
-                    // this.player.powerUpManager.resetTemporaryPowerUps();
                 }
                 if (this.level > this.levelDefinitions.length) {
                     this.changeState('WIN');
                     return;
                 }
-                // ÄNDERUNG 1: Filter wurde so angepasst, dass Spieler, Drohnen UND Pickups erhalten bleiben.
-                // Da Drohnen die Familie 'player' haben, funktioniert dies korrekt.
                 this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup');
-
                 this.isBossActive = false;
                 this.scoreEarnedThisLevel = 0;
                 this.configureLevel();
@@ -488,7 +534,6 @@ class Game {
                 break;
         }
     }
-
     update(deltaTime: number): void { if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
     draw(): void { this.ctx.clearRect(0, 0, this.width, this.height); this.drawParallaxStarfield(); this.entities.forEach(e => e.draw(this.ctx)); this.uiManager.drawOverlay(); switch (this.gameState) { case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break; case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break; case 'GAME_OVER': this.uiManager.drawGameOver(); break; case 'WIN': this.uiManager.drawWinScreen(); break; } }
     configureLevel(): void { const levelData = this.levelDefinitions[this.level - 1]!; if (!levelData) { this.changeState('WIN'); return; } this.enemySpawnTypes = levelData.e; this.enemySpawnInterval = levelData.s; this.enemySpeedMultiplier = levelData.m; this.enemyHealthMultiplier = 1 + Math.floor(this.level / 5); this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey); this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); if (this.enemySpawnTypes.some(e => e.includes('BOSS'))) { this.isBossActive = true; this.spawnEnemy(); this.uiManager.soundManager.setTrack('boss'); } else { this.uiManager.soundManager.setTrack('normal'); } }
