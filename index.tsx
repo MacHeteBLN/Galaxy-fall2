@@ -151,53 +151,24 @@ class PowerUpManager {
     activate(type: string, duration?: number): void { const W_ULTRA_DURATIONS: {[key: string]: number} = {'LASER_BEAM': 10000, 'HOMING_MISSILES': 15000}; const W_TEMP_DURATIONS: {[key: string]: number} = {'SIDE_SHOTS': 15000, 'RAPID_FIRE': 30000}; const DEFENSE_TYPES = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL']; const SPECIAL_TYPES = ['NUKE', 'SCORE_BOOST']; if (type === 'ORBITAL_DRONE') { if (this.player.drones.length < 3) { const droneTier = this.player.drones.length + 1; this.player.drones.push(new Drone(this.game, droneTier, this.player.drones.length)); this.player.drones.forEach((drone, index) => drone.updateIndex(index)); } this.timers['ORBITAL_DRONE'] = 30000; } else if (type === 'WEAPON_UP') { if (this.weaponTier < 4) this.weaponTier++; this.setWeaponTierTimer(); } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) { this.timers[type] = duration ?? W_TEMP_DURATIONS[type]!; } else if (Object.keys(W_ULTRA_DURATIONS).includes(type)) { this.ultraWeapon = type; this.timers[type] = duration ?? W_ULTRA_DURATIONS[type]!; } else if (DEFENSE_TYPES.includes(type)) { if (type === 'EXTRA_LIFE') { if (this.player.lives < this.player.maxLives) this.player.lives++; } else if (type === 'REPAIR_KIT') { this.player.energy = 100; } else { this.timers[type] = duration ?? 15000; } } else if (SPECIAL_TYPES.includes(type)) { if (type === 'NUKE') { this.game.entities.filter(e => e.family === 'enemy' && !(e as Enemy).isBoss).forEach(e => (e as Enemy).takeHit(9999)); this.game.addEntity(new NukeEffect(this.game)); } else if (type === 'SCORE_BOOST') { this.timers[type] = 20000; } } this.game.uiManager.soundManager.play('powerup'); }
     shoot(): void { const p = this.player; p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150; if (this.ultraWeapon) { switch (this.ultraWeapon) { case 'LASER_BEAM': if (!p.laser || !p.laser.isAlive()) { p.laser = new LaserBeam(this.game, p); this.game.addEntity(p.laser); } p.fireCooldown = 0; return; case 'HOMING_MISSILES': this.game.addEntity(new HomingMissile(this.game, p.pos.x + p.width/2, p.pos.y)); p.fireCooldown = 400; this.game.uiManager.soundManager.play('missileLaunch'); return; } } const x = p.pos.x, y = p.pos.y, w = p.width, h = p.height; const velY = -600; const angle15 = 15 * (Math.PI/180); switch (this.weaponTier) { case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break; case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break; case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break; case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break; } if (this.isActive('SIDE_SHOTS')) { this.game.addEntity(new Projectile(this.game, x, y + h / 2, -300, 0)); this.game.addEntity(new Projectile(this.game, x + w, y + h / 2, 300, 0)); } this.game.uiManager.soundManager.play('shoot'); }
 }
+
+// --- GEÄNDERTE KLASSE ---
 class Player extends EntityFamily {
     public speed: number = 400; public lives: number = 3; public maxLives: number = 5;
     public energy: number = 100; public fireCooldown: number = 0;
     public powerUpManager: PowerUpManager; public drones: Drone[] = [];
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
-    // --- NEUE EIGENSCHAFT ---
-    // Diese Eigenschaft wird auf `true` gesetzt, während die Taste für das Schwarze Loch gehalten wird.
-    public isShootingPausedManually: boolean = false;
+    
+    // --- NEUE EIGENSCHAFTEN FÜR DAS AUFLADEN DES SCHWARZEN LOCHS ---
+    public isChargingBlackHole: boolean = false;
+    public blackHoleChargeSlot: number | null = null;
 
     constructor(game: Game) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
         this.powerUpManager = new PowerUpManager(this);
     }
 
-    // --- NEUE METHODE ---
-    // Diese Methode prüft kontinuierlich, ob eine Taste für ein Schwarzes Loch gedrückt wird.
-    handleSpecialActivations(): void {
-        const pm = this.powerUpManager;
-        const keyMap = { 'Digit1': 0, 'Digit2': 1, 'Digit3': 2 };
-
-        let blackHoleKeyIsDown = false;
-
-        // Iteriere über die Tasten, die für Spezialfähigkeiten zuständig sind.
-        for (const key in keyMap) {
-            const index = keyMap[key as keyof typeof keyMap];
-            if (index >= pm.specialInventory.length) continue; // Sicherheitsprüfung
-            const item = pm.specialInventory[index];
-
-            // Prüfen, ob der Gegenstand im Slot ein Schwarzes Loch ist.
-            if (item && item.type === 'BLACK_HOLE') {
-                // Prüfen, ob die entsprechende Taste gedrückt ist.
-                if (this.game.keys[key]) {
-                    blackHoleKeyIsDown = true;
-
-                    // Nur beim ersten Drücken der Taste (wenn das Schießen noch nicht pausiert ist)
-                    // wird das Schwarze Loch abgefeuert.
-                    if (!this.isShootingPausedManually) {
-                        pm.activateSpecial(index);
-                    }
-                }
-            }
-        }
-
-        // Setze den Pausenstatus basierend darauf, ob eine der Tasten gedrückt wurde.
-        this.isShootingPausedManually = blackHoleKeyIsDown;
-    }
-
+    // --- GEÄNDERTE UPDATE-METHODE ---
     update(dt: number): void {
         const dt_s = dt / 1000;
         const move = new Vector2D(0, 0);
@@ -213,13 +184,9 @@ class Player extends EntityFamily {
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
         
-        // --- ANPASSUNG 1 ---
-        // Rufe die neue Methode auf, um die Aktivierung von Spezialfähigkeiten zu behandeln.
-        this.handleSpecialActivations();
-
-        // --- ANPASSUNG 2 ---
-        // Füge die Bedingung `!this.isShootingPausedManually` hinzu, um das Standardschießen zu pausieren.
-        if (this.fireCooldown <= 0 && !this.isShootingPausedManually) {
+        // Das automatische Schießen wird jetzt hier gesteuert.
+        // Es wird pausiert, wenn isChargingBlackHole true ist.
+        if (this.fireCooldown <= 0 && !this.isChargingBlackHole) {
             this.shoot();
         }
         
@@ -380,6 +347,7 @@ class UIManager {
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
+// --- GEÄNDERTE KLASSE ---
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
@@ -389,50 +357,67 @@ class Game {
         this.uiManager = new UIManager(this, ui); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
 
-    // --- GEÄNDERTE METHODE ---
+    // --- KOMPLETT ÜBERARBEITETE METHODE ---
     initEventListeners(): void {
         const keyMap: { [key: string]: { type: 'special' | 'ultra', index: number } } = {
-            'Digit1': { type: 'special', index: 0 },
-            'Digit2': { type: 'special', index: 1 },
-            'Digit3': { type: 'special', index: 2 },
-            'Digit4': { type: 'ultra', index: 0 },
+            'Digit1': { type: 'special', index: 0 }, 'Digit2': { type: 'special', index: 1 },
+            'Digit3': { type: 'special', index: 2 }, 'Digit4': { type: 'ultra', index: 0 },
             'Digit5': { type: 'ultra', index: 1 },
         };
 
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            // Spiel-Logik wie Pause und Start/Neustart
-            if (this.isPaused && e.code !== 'Escape') return;
+
+            // Logik für das Pausieren und Starten des Spiels
+            if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (['INTRO', 'MENU'].includes(this.gameState)) {
-                    this.uiManager.soundManager.initAudio();
-                    this.changeState('LEVEL_START', true);
-                } else if (['GAME_OVER', 'WIN'].includes(this.gameState)) {
-                    this.changeState('MENU');
+                if (['INTRO', 'MENU'].includes(this.gameState)) { this.uiManager.soundManager.initAudio(); this.changeState('LEVEL_START', true); }
+                else if (['GAME_OVER', 'WIN'].includes(this.gameState)) { this.changeState('MENU'); }
+            }
+
+            // Logik für das Starten des "Aufladens" vom Schwarzen Loch
+            if (this.gameState === 'PLAYING' && this.player && !this.isPaused && !this.player.isChargingBlackHole) {
+                const mapping = keyMap[e.code];
+                if (mapping && mapping.type === 'special') {
+                    const item = this.player.powerUpManager.specialInventory[mapping.index];
+                    if (item && item.type === 'BLACK_HOLE') {
+                        e.preventDefault();
+                        this.player.isChargingBlackHole = true;
+                        this.player.blackHoleChargeSlot = mapping.index;
+                    }
                 }
             }
-            if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
         });
 
         window.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
             
-            // Logik für das Aktivieren von Power-ups beim Loslassen der Taste
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused) {
                 const mapping = keyMap[e.code];
-                if (mapping) {
+                
+                // Logik für das Abfeuern des Schwarzen Lochs nach dem Loslassen
+                if (this.player.isChargingBlackHole && this.player.blackHoleChargeSlot !== null) {
+                    // Prüfen, ob die losgelassene Taste die ist, die wir "aufladen"
+                    const chargedMapping = Object.values(keyMap).find(m => m.index === this.player.blackHoleChargeSlot && m.type === 'special');
+                    const chargedKey = Object.keys(keyMap).find(key => keyMap[key] === chargedMapping);
+
+                    if(e.code === chargedKey) {
+                        e.preventDefault();
+                        this.player.powerUpManager.activateSpecial(this.player.blackHoleChargeSlot);
+                        this.player.isChargingBlackHole = false;
+                        this.player.blackHoleChargeSlot = null;
+                    }
+                }
+                // Logik für alle anderen Power-ups (die nicht aufgeladen werden)
+                else if (mapping) {
                     e.preventDefault();
-                    
                     if (mapping.type === 'special') {
-                        // Prüfe, welche Fähigkeit sich im Slot befindet.
                         const item = this.player.powerUpManager.specialInventory[mapping.index];
-                        // Aktiviere nur, wenn es KEIN Schwarzes Loch ist (dieses wird jetzt durch Gedrückthalten gesteuert).
                         if (item && item.type !== 'BLACK_HOLE') {
                             this.player.powerUpManager.activateSpecial(mapping.index);
                         }
                     } else if (mapping.type === 'ultra') {
-                        // Ultras werden wie gewohnt beim Loslassen der Taste aktiviert.
                         this.player.powerUpManager.activateUltra(mapping.index);
                     }
                 }
