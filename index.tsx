@@ -347,7 +347,7 @@ class UIManager {
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
-// --- GEÄNDERTE KLASSE ---
+// --- GEÄNDERTE KLASSE MIT ANGEPASSTER LOGIK ---
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
@@ -426,7 +426,69 @@ class Game {
     }
 
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
-    changeState(newState: string, forceReset: boolean = false): void { if (newState === this.gameState && !forceReset) return; this.uiManager.toggleMainMenu(false); this.uiManager.togglePauseMenu(false); if (newState === 'PAUSED') this.isPaused = true; else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') this.isPaused = false; this.gameState = newState; switch (newState) { case 'MENU': this.entities = []; this.player = null; this.uiManager.toggleMainMenu(true); this.uiManager.soundManager.setTrack('normal'); break; case 'PAUSED': this.uiManager.togglePauseMenu(true); break; case 'LEVEL_START': if (forceReset) { this.player = null; this.level = 0; } if (!this.player || !this.player.isAlive()) { this.level = 1; this.score = 0; this.player = new Player(this); this.entities = [this.player]; } else { this.level++; this.player.powerUpManager.resetTemporaryPowerUps(); } if (this.level > this.levelDefinitions.length) { this.changeState('WIN'); return; } this.entities = this.entities.filter(e => e.family === 'player' || e instanceof Drone); this.isBossActive = false; this.scoreEarnedThisLevel = 0; this.configureLevel(); this.changeState('PLAYING_TRANSITION'); break; case 'PLAYING_TRANSITION': setTimeout(() => this.changeState('PLAYING'), 3000); break; case 'GAME_OVER': case 'WIN': if (this.score > this.highscore) { this.highscore = this.score; localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString()); } this.uiManager.soundManager.setTrack('normal'); break; } }
+    
+    changeState(newState: string, forceReset: boolean = false): void {
+        if (newState === this.gameState && !forceReset) return;
+        this.uiManager.toggleMainMenu(false);
+        this.uiManager.togglePauseMenu(false);
+        if (newState === 'PAUSED') {
+            this.isPaused = true;
+        } else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') {
+            this.isPaused = false;
+        }
+        this.gameState = newState;
+        switch (newState) {
+            case 'MENU':
+                this.entities = [];
+                this.player = null;
+                this.uiManager.toggleMainMenu(true);
+                this.uiManager.soundManager.setTrack('normal');
+                break;
+            case 'PAUSED':
+                this.uiManager.togglePauseMenu(true);
+                break;
+            case 'LEVEL_START':
+                if (forceReset) {
+                    this.player = null;
+                    this.level = 0;
+                }
+                if (!this.player || !this.player.isAlive()) {
+                    this.level = 1;
+                    this.score = 0;
+                    this.player = new Player(this);
+                    this.entities = [this.player];
+                } else {
+                    this.level++;
+                    // ÄNDERUNG 2: Der Aufruf zum Zurücksetzen der Power-ups wurde entfernt.
+                    // this.player.powerUpManager.resetTemporaryPowerUps();
+                }
+                if (this.level > this.levelDefinitions.length) {
+                    this.changeState('WIN');
+                    return;
+                }
+                // ÄNDERUNG 1: Filter wurde so angepasst, dass Spieler, Drohnen UND Pickups erhalten bleiben.
+                // Da Drohnen die Familie 'player' haben, funktioniert dies korrekt.
+                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup');
+
+                this.isBossActive = false;
+                this.scoreEarnedThisLevel = 0;
+                this.configureLevel();
+                this.changeState('PLAYING_TRANSITION');
+                break;
+            case 'PLAYING_TRANSITION':
+                setTimeout(() => this.changeState('PLAYING'), 3000);
+                break;
+            case 'GAME_OVER':
+            case 'WIN':
+                if (this.score > this.highscore) {
+                    this.highscore = this.score;
+                    localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString());
+                }
+                this.uiManager.soundManager.setTrack('normal');
+                break;
+        }
+    }
+
     update(deltaTime: number): void { if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
     draw(): void { this.ctx.clearRect(0, 0, this.width, this.height); this.drawParallaxStarfield(); this.entities.forEach(e => e.draw(this.ctx)); this.uiManager.drawOverlay(); switch (this.gameState) { case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break; case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break; case 'GAME_OVER': this.uiManager.drawGameOver(); break; case 'WIN': this.uiManager.drawWinScreen(); break; } }
     configureLevel(): void { const levelData = this.levelDefinitions[this.level - 1]!; if (!levelData) { this.changeState('WIN'); return; } this.enemySpawnTypes = levelData.e; this.enemySpawnInterval = levelData.s; this.enemySpeedMultiplier = levelData.m; this.enemyHealthMultiplier = 1 + Math.floor(this.level / 5); this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey); this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); if (this.enemySpawnTypes.some(e => e.includes('BOSS'))) { this.isBossActive = true; this.spawnEnemy(); this.uiManager.soundManager.setTrack('boss'); } else { this.uiManager.soundManager.setTrack('normal'); } }
