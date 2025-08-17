@@ -121,8 +121,6 @@ class Projectile extends EntityFamily { public vel: Vector2D; public damage: num
 class HeavyProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x, y, velX, velY); this.pos.x = x - 4; this.width = 8; this.height = 22; this.damage = 2.5; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 8; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
 class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 10; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
 class BlackHoleProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number, velY: number) { super(game, x - 10, y - 10, velX, velY); this.width = 20; this.height = 20; this.type = 'BLACK_HOLE_PROJECTILE'; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } onHit(e: Enemy): void { this.game.addEntity(new BlackHole(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.destroy(); } }
-
-// --- GEÄNDERTE KLASSE ---
 class LaserBeam extends EntityFamily {
     public player: Player;
     public damage: number = 0.2;
@@ -415,6 +413,8 @@ class UIManager {
     drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
+
+// --- GEÄNDERTE KLASSE ---
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
@@ -535,7 +535,43 @@ class Game {
         }
     }
     update(deltaTime: number): void { if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
-    draw(): void { this.ctx.clearRect(0, 0, this.width, this.height); this.drawParallaxStarfield(); this.entities.forEach(e => e.draw(this.ctx)); this.uiManager.drawOverlay(); switch (this.gameState) { case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break; case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break; case 'GAME_OVER': this.uiManager.drawGameOver(); break; case 'WIN': this.uiManager.drawWinScreen(); break; } }
+    
+    // --- GEÄNDERTE METHODE ---
+    draw(): void {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.drawParallaxStarfield();
+
+        // Zeichne alle Entitäten, die NICHT der Spieler sind, zuerst.
+        // Dadurch werden Projektile, Gegner, etc. unter dem Spieler gerendert.
+        this.entities.forEach(e => {
+            if (e !== this.player) {
+                e.draw(this.ctx);
+            }
+        });
+
+        // Zeichne den Spieler zuletzt, damit er über allem anderen liegt.
+        if (this.player && this.player.isAlive()) {
+            this.player.draw(this.ctx);
+        }
+
+        this.uiManager.drawOverlay();
+        switch (this.gameState) {
+            case 'INTRO':
+            case 'MENU':
+                this.drawProfessionalIntro();
+                break;
+            case 'PLAYING_TRANSITION':
+                this.uiManager.drawLevelMessage();
+                break;
+            case 'GAME_OVER':
+                this.uiManager.drawGameOver();
+                break;
+            case 'WIN':
+                this.uiManager.drawWinScreen();
+                break;
+        }
+    }
+
     configureLevel(): void { const levelData = this.levelDefinitions[this.level - 1]!; if (!levelData) { this.changeState('WIN'); return; } this.enemySpawnTypes = levelData.e; this.enemySpawnInterval = levelData.s; this.enemySpeedMultiplier = levelData.m; this.enemyHealthMultiplier = 1 + Math.floor(this.level / 5); this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey); this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); if (this.enemySpawnTypes.some(e => e.includes('BOSS'))) { this.isBossActive = true; this.spawnEnemy(); this.uiManager.soundManager.setTrack('boss'); } else { this.uiManager.soundManager.setTrack('normal'); } }
     createParallaxStarfield(): void { this.stars = []; for (let i = 0; i < 300; i++) { const l = i < 100 ? 1 : (i < 200 ? 2 : 3); this.stars.push({ pos: new Vector2D(Math.random() * this.width, Math.random() * this.height), s: (4 - l) * 0.8, v: (4 - l) * 24, a: 1 - (l / 4) }); } }
     updateParallaxStarfield(dt: number): void { this.stars.forEach(s => { s.pos.y += s.v * (dt / 1000); if (s.pos.y > this.height) { s.pos.y = -(Math.random() * 50); s.pos.x = Math.random() * this.width; } }); }
