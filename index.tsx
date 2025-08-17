@@ -1,13 +1,3 @@
-/**
- * Haupt-Skript für das Spiel "Galaxy Fall: Celestial".
- *
- * FINALE KORRIGIERTE VERSION: Behebt alle Referenzfehler durch korrekte
- * Reihenfolge der Klassendefinitionen. Enthält alle vorherigen Änderungen.
- *
- * ÄNDERUNG: Das Bildschirmwackeln wurde vollständig entfernt.
- * Die Schriftgröße des "Game Over"-Textes wurde weiter angepasst, um die Lesbarkeit in allen Sprachen zu gewährleisten.
- */
-
 import { translations } from './translations.js';
 
 // --- SECTION 1: ASSET-IMPORTE ---
@@ -166,12 +156,79 @@ class Player extends EntityFamily {
     public energy: number = 100; public fireCooldown: number = 0;
     public powerUpManager: PowerUpManager; public drones: Drone[] = [];
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
+    // --- NEUE EIGENSCHAFT ---
+    // Diese Eigenschaft wird auf `true` gesetzt, während die Taste für das Schwarze Loch gehalten wird.
+    public isShootingPausedManually: boolean = false;
 
     constructor(game: Game) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
         this.powerUpManager = new PowerUpManager(this);
     }
-    update(dt: number): void { const dt_s = dt / 1000; const move = new Vector2D(0, 0); if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1; if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1; if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1; if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1; const mag = Math.hypot(move.x, move.y); if (mag > 0) { this.pos.x += (move.x / mag) * this.speed * dt_s; this.pos.y += (move.y / mag) * this.speed * dt_s; } this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height)); if (this.game.keys['Space'] && this.fireCooldown <= 0) this.shoot(); if (this.fireCooldown > 0) this.fireCooldown -= dt; this.droneAngle += 3 * dt_s; this.powerUpManager.update(dt); this.drones.forEach(d => d.update(dt)); }
+
+    // --- NEUE METHODE ---
+    // Diese Methode prüft kontinuierlich, ob eine Taste für ein Schwarzes Loch gedrückt wird.
+    handleSpecialActivations(): void {
+        const pm = this.powerUpManager;
+        const keyMap = { 'Digit1': 0, 'Digit2': 1, 'Digit3': 2 };
+
+        let blackHoleKeyIsDown = false;
+
+        // Iteriere über die Tasten, die für Spezialfähigkeiten zuständig sind.
+        for (const key in keyMap) {
+            const index = keyMap[key as keyof typeof keyMap];
+            if (index >= pm.specialInventory.length) continue; // Sicherheitsprüfung
+            const item = pm.specialInventory[index];
+
+            // Prüfen, ob der Gegenstand im Slot ein Schwarzes Loch ist.
+            if (item && item.type === 'BLACK_HOLE') {
+                // Prüfen, ob die entsprechende Taste gedrückt ist.
+                if (this.game.keys[key]) {
+                    blackHoleKeyIsDown = true;
+
+                    // Nur beim ersten Drücken der Taste (wenn das Schießen noch nicht pausiert ist)
+                    // wird das Schwarze Loch abgefeuert.
+                    if (!this.isShootingPausedManually) {
+                        pm.activateSpecial(index);
+                    }
+                }
+            }
+        }
+
+        // Setze den Pausenstatus basierend darauf, ob eine der Tasten gedrückt wurde.
+        this.isShootingPausedManually = blackHoleKeyIsDown;
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        const move = new Vector2D(0, 0);
+        if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
+        if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1;
+        if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1;
+        if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1;
+        const mag = Math.hypot(move.x, move.y);
+        if (mag > 0) {
+            this.pos.x += (move.x / mag) * this.speed * dt_s;
+            this.pos.y += (move.y / mag) * this.speed * dt_s;
+        }
+        this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
+        this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
+        
+        // --- ANPASSUNG 1 ---
+        // Rufe die neue Methode auf, um die Aktivierung von Spezialfähigkeiten zu behandeln.
+        this.handleSpecialActivations();
+
+        // --- ANPASSUNG 2 ---
+        // Füge die Bedingung `!this.isShootingPausedManually` hinzu, um das Standardschießen zu pausieren.
+        if (this.fireCooldown <= 0 && !this.isShootingPausedManually) {
+            this.shoot();
+        }
+        
+        if (this.fireCooldown > 0) this.fireCooldown -= dt;
+        this.droneAngle += 3 * dt_s;
+        this.powerUpManager.update(dt);
+        this.drones.forEach(d => d.update(dt));
+    }
+
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.isGhosted() ? 0.5 : 1; const tier = this.powerUpManager.weaponTier; let currentImage: HTMLImageElement; switch (tier) { case 1: currentImage = playerImg1; break; case 2: currentImage = playerImg2; break; case 3: currentImage = playerImg3; break; case 4: currentImage = playerImg4; break; default: currentImage = playerImg1; } const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2); const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2); ctx.drawImage(currentImage, drawX, drawY); this.drones.forEach(d => d.draw(ctx)); if (this.isShielded()) { const alpha = (this.powerUpManager.timers['SHIELD']! < 1000 && Math.floor(Date.now() / 100) % 2 === 0) ? 0 : 0.4; ctx.fillStyle = `rgba(11,255,255,${alpha})`; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width * 0.7, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
     shoot(): void { this.powerUpManager.shoot(); }
     takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = 100; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
@@ -331,7 +388,58 @@ class Game {
         ];
         this.uiManager = new UIManager(this, ui); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
-    initEventListeners(): void { const keyMap: {[key: string]: { type: 'special' | 'ultra', index: number }} = { 'Digit1': { type: 'special', index: 0 }, 'Digit2': { type: 'special', index: 1 }, 'Digit3': { type: 'special', index: 2 }, 'Digit4': { type: 'ultra', index: 0 }, 'Digit5': { type: 'ultra', index: 1 }, }; window.addEventListener('keydown', (e) => { this.keys[e.code] = true; }); window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (this.gameState === 'PLAYING' && this.player && !this.isPaused) { const mapping = keyMap[e.code]; if (mapping) { e.preventDefault(); if (mapping.type === 'special') this.player.powerUpManager.activateSpecial(mapping.index); else this.player.powerUpManager.activateUltra(mapping.index); } } }); window.addEventListener('keydown', (e) => { if (this.isPaused && e.code !== 'Escape') return; if (e.code === 'Enter') { e.preventDefault(); if (['INTRO', 'MENU'].includes(this.gameState)) { this.uiManager.soundManager.initAudio(); this.changeState('LEVEL_START', true); } else if (['GAME_OVER', 'WIN'].includes(this.gameState)) { this.changeState('MENU'); } } if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause(); }); }
+
+    // --- GEÄNDERTE METHODE ---
+    initEventListeners(): void {
+        const keyMap: { [key: string]: { type: 'special' | 'ultra', index: number } } = {
+            'Digit1': { type: 'special', index: 0 },
+            'Digit2': { type: 'special', index: 1 },
+            'Digit3': { type: 'special', index: 2 },
+            'Digit4': { type: 'ultra', index: 0 },
+            'Digit5': { type: 'ultra', index: 1 },
+        };
+
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            // Spiel-Logik wie Pause und Start/Neustart
+            if (this.isPaused && e.code !== 'Escape') return;
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                if (['INTRO', 'MENU'].includes(this.gameState)) {
+                    this.uiManager.soundManager.initAudio();
+                    this.changeState('LEVEL_START', true);
+                } else if (['GAME_OVER', 'WIN'].includes(this.gameState)) {
+                    this.changeState('MENU');
+                }
+            }
+            if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+            
+            // Logik für das Aktivieren von Power-ups beim Loslassen der Taste
+            if (this.gameState === 'PLAYING' && this.player && !this.isPaused) {
+                const mapping = keyMap[e.code];
+                if (mapping) {
+                    e.preventDefault();
+                    
+                    if (mapping.type === 'special') {
+                        // Prüfe, welche Fähigkeit sich im Slot befindet.
+                        const item = this.player.powerUpManager.specialInventory[mapping.index];
+                        // Aktiviere nur, wenn es KEIN Schwarzes Loch ist (dieses wird jetzt durch Gedrückthalten gesteuert).
+                        if (item && item.type !== 'BLACK_HOLE') {
+                            this.player.powerUpManager.activateSpecial(mapping.index);
+                        }
+                    } else if (mapping.type === 'ultra') {
+                        // Ultras werden wie gewohnt beim Loslassen der Taste aktiviert.
+                        this.player.powerUpManager.activateUltra(mapping.index);
+                    }
+                }
+            }
+        });
+    }
+
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
     changeState(newState: string, forceReset: boolean = false): void { if (newState === this.gameState && !forceReset) return; this.uiManager.toggleMainMenu(false); this.uiManager.togglePauseMenu(false); if (newState === 'PAUSED') this.isPaused = true; else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') this.isPaused = false; this.gameState = newState; switch (newState) { case 'MENU': this.entities = []; this.player = null; this.uiManager.toggleMainMenu(true); this.uiManager.soundManager.setTrack('normal'); break; case 'PAUSED': this.uiManager.togglePauseMenu(true); break; case 'LEVEL_START': if (forceReset) { this.player = null; this.level = 0; } if (!this.player || !this.player.isAlive()) { this.level = 1; this.score = 0; this.player = new Player(this); this.entities = [this.player]; } else { this.level++; this.player.powerUpManager.resetTemporaryPowerUps(); } if (this.level > this.levelDefinitions.length) { this.changeState('WIN'); return; } this.entities = this.entities.filter(e => e.family === 'player' || e instanceof Drone); this.isBossActive = false; this.scoreEarnedThisLevel = 0; this.configureLevel(); this.changeState('PLAYING_TRANSITION'); break; case 'PLAYING_TRANSITION': setTimeout(() => this.changeState('PLAYING'), 3000); break; case 'GAME_OVER': case 'WIN': if (this.score > this.highscore) { this.highscore = this.score; localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString()); } this.uiManager.soundManager.setTrack('normal'); break; } }
     update(deltaTime: number): void { if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
