@@ -261,7 +261,32 @@ class UIManager {
     constructor(game: Game, ui: IUIElements) { this.game = game; this.ctx = game.ctx; this.scoreEl = ui.score; this.levelEl = ui.level; this.highscoreEl = ui.highscore; this.specialInventoryEl = ui.specialInventory; this.ultraInventoryEl = ui.ultraInventory; this.livesDisplay = ui.livesDisplay; this.weaponStatusEl = ui.weaponStatus; this.energyBarEl = ui.energyBar; this.menuContainer = document.getElementById('menu-container')!; this.langSelectScreen = document.getElementById('language-select-screen')!; this.langBackButton = document.getElementById('lang-back-button')!; this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, }; this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, }; this.mainMenuElements = { resume: document.getElementById('resume-button')!, restart: document.getElementById('restart-button')!, quit: document.getElementById('quit-button')!, header: this.menuContainer.querySelector('.menu-header h1')! }; this.settings = this.loadSettings(); this.localizationManager = new LocalizationManager(); this.soundManager = new SoundManager(this); this.initButtons(); }
     update(): void { this.scoreEl.textContent = this.game.score.toString(); this.levelEl.textContent = this.game.level > this.game.levelDefinitions.length ? 'MAX' : this.game.level.toString(); if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) { this.highscoreEl.textContent = this.game.highscore.toString(); } if (!this.game.player || !this.game.player.isAlive()) { this.specialInventoryEl.innerHTML = ''; this.ultraInventoryEl.innerHTML = ''; this.livesDisplay.innerHTML = ''; this.weaponStatusEl.innerHTML = ''; this.energyBarEl.style.width = '0%'; return; } this.livesDisplay.innerHTML = `<div class="life-icon"></div><span>x${this.game.player.lives}</span>`; this.energyBarEl.style.width = `${this.game.player.energy}%`; this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1); this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4); this.updateWeaponStatusUI(); }
     updateInventoryUI(element: HTMLElement, inventory: IInventoryItem[], maxSize: number, keyStart: number): void { let html = ''; for (let i = 0; i < maxSize; i++) { const item = inventory[i]; const key = keyStart + i; if (item) { const imageSrc = powerUpImageSources[item.type]; html += `<div class="inventory-slot"><div class="slot-key">${key}</div><img src="${imageSrc}" class="slot-image" alt="${item.type}"/>${item.count > 1 ? `<div class="slot-count">x${item.count}</div>` : ''}</div>`; } else { html += `<div class="inventory-slot"><div class="slot-key">${key}</div></div>`; } } element.innerHTML = html; }
-    updateWeaponStatusUI(): void { if (!this.game.player) return; const pm = this.game.player.powerUpManager; let text = `W-Tier: ${pm.weaponTier}`; let timer = pm.weaponTierTimer; if (timer > 0 && pm.weaponTier > 1) { const seconds = Math.ceil(timer / 1000); text += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`; } let activeBuffs = ''; if (pm.isActive('RAPID_FIRE')) activeBuffs += ` RF(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`; if (pm.isActive('SIDE_SHOTS')) activeBuffs += ` W&lt;&gt;(${Math.ceil(pm.timers['SIDE_SHOTS']!/1000)}s)`; if (pm.isActive('ORBITAL_DRONE')) activeBuffs += ` O(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`; this.weaponStatusEl.innerHTML = text + activeBuffs; }
+    updateWeaponStatusUI(): void {
+    if (!this.game.player) return;
+    const t = (key: string) => this.localizationManager.translate(key);
+    const pm = this.game.player.powerUpManager;
+    
+    let text = `${t('w_tier')}: ${pm.weaponTier}`;
+    let timer = pm.weaponTierTimer;
+    
+    if (timer > 0 && pm.weaponTier > 1) {
+        const seconds = Math.ceil(timer / 1000);
+        text += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
+    }
+    
+    let activeBuffs = '';
+    if (pm.isActive('RAPID_FIRE')) {
+        activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
+    }
+    if (pm.isActive('SIDE_SHOTS')) {
+        activeBuffs += ` ${t('buff_sideshots')}(${Math.ceil(pm.timers['SIDE_SHOTS']!/1000)}s)`;
+    }
+    if (pm.isActive('ORBITAL_DRONE')) {
+        activeBuffs += ` ${t('buff_orbital')}(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`;
+    }
+    
+    this.weaponStatusEl.innerHTML = text + activeBuffs;
+}
     toggleMainMenu(show: boolean): void { this.menuContainer.style.display = show ? 'flex' : 'none'; if (show) { this.mainMenuElements.header.dataset.translateKey = "main_menu_title"; this.mainMenuElements.header.textContent = this.localizationManager.translate('main_menu_title'); this.mainMenuElements.resume.style.display = 'none'; this.mainMenuElements.quit.style.display = 'none'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_start_game'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_start_game'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
     togglePauseMenu(isPaused: boolean): void { this.menuContainer.style.display = isPaused ? 'flex' : 'none'; if (isPaused) { this.mainMenuElements.header.dataset.translateKey = "pause_header"; this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header'); this.mainMenuElements.resume.style.display = 'block'; this.mainMenuElements.quit.style.display = 'block'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_restart'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
     showTab(tabName: string): void { for (const key in this.tabPanes) { const pane = this.tabPanes[key]!; const button = this.tabButtons[key]!; if (key === tabName) { pane.classList.add('active'); button.classList.add('active'); } else { pane.classList.remove('active'); button.classList.remove('active'); } } }
