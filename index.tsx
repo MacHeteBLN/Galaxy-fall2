@@ -243,18 +243,33 @@ class Player extends EntityFamily {
     }
     update(dt: number): void {
         const dt_s = dt / 1000;
-        const move = new Vector2D(0, 0);
-        if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
-        if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1;
-        if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1;
-        if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1;
-        const mag = Math.hypot(move.x, move.y);
-        if (mag > 0) {
-            this.pos.x += (move.x / mag) * this.speed * dt_s;
-            this.pos.y += (move.y / mag) * this.speed * dt_s;
+        
+        // --- GEÄNDERT: Mobile- und Desktop-Steuerung ---
+        if (this.game.isMobile) {
+            if (this.game.touchX !== null && this.game.touchY !== null) {
+                const targetX = this.game.touchX - this.width / 2;
+                const targetY = this.game.touchY - this.height / 2;
+                // Sanfte Bewegung zum Finger (Interpolation)
+                this.pos.x += (targetX - this.pos.x) * 0.2;
+                this.pos.y += (targetY - this.pos.y) * 0.2;
+            }
+        } else {
+            // Bestehende Keyboard-Steuerung
+            const move = new Vector2D(0, 0);
+            if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
+            if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1;
+            if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1;
+            if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1;
+            const mag = Math.hypot(move.x, move.y);
+            if (mag > 0) {
+                this.pos.x += (move.x / mag) * this.speed * dt_s;
+                this.pos.y += (move.y / mag) * this.speed * dt_s;
+            }
         }
+        
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
+
         if (this.fireCooldown <= 0 && !this.isChargingBlackHole) {
             this.shoot();
         }
@@ -336,7 +351,71 @@ class BossNexusPrime extends Enemy {
 }
 
 // --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
-class SoundManager { public audioCtx: AudioContext | null = null; private masterGain: GainNode | null = null; public uiManager: UIManager; private musicPlaying: boolean = false; private musicScheduler: number | null = null; private currentStep: number = 0; private readonly bpm: number = 160; private readonly stepsPerBeat: number = 4; private readonly totalSteps: number = 64; private stepDuration: number; private scheduleAheadTime: number = 0.1; private nextNoteTime: number = 0.0; private currentTrack: 'normal' | 'boss' = 'normal'; private leadMelody: number[] = []; private bassLine: number[] = []; private arpeggioMelody: number[] = []; private kickPattern: boolean[] = []; private snarePattern: boolean[] = []; private hihatPattern: boolean[] = []; private bossLeadMelody: number[] = []; private bossBassLine: number[] = []; private bossArpeggioMelody: number[] = []; private bossKickPattern: boolean[] = []; private bossSnarePattern: boolean[] = []; private bossHihatPattern: boolean[] = []; constructor(uiManager: UIManager) { this.uiManager = uiManager; this.stepDuration = 60.0 / this.bpm / this.stepsPerBeat; this.defineMusicPatterns(); this.defineBossMusicPatterns(); } public initAudio(): void { if (this.audioCtx) return; try { this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)(); this.masterGain = this.audioCtx.createGain(); this.masterGain.connect(this.audioCtx.destination); this.setVolume(this.uiManager.settings.masterVolume); this.toggleMusic(this.uiManager.settings.music); } catch (e) { console.error("Web Audio API is not supported", e); } } defineMusicPatterns() { const N = {C2:65.41,G2:98,Ab2:103.83,Eb2:77.78,C3:130.81,D3:146.83,Eb3:155.56,F3:174.61,G3:196,Ab3:207.65,Bb3:233.08,C4:261.63,D4:293.66,Eb4:311.13,F4:349.23,G4:392,Ab4:415.3,Bb4:466.16}; const R=0; this.leadMelody=[N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.Eb4,R,N.D4,R,N.C4,R,R,R,N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.G4,N.Ab4,N.G4,N.F4,N.Eb4,R,R,R,N.Ab4,R,N.F4,R,N.Ab4,R,N.G4,R,N.F4,R,N.Eb4,R,N.C4,R,N.Eb4,R,N.G4,N.F4,N.Eb4,R,N.D4,R,N.C4,R,N.C4,R,R,R,R,R,R,R]; this.bassLine=[...Array(16).fill(N.C2),...Array(16).fill(N.G2),...Array(16).fill(N.Ab2),...Array(16).fill(N.Eb2)]; const A_C=[N.C4,N.Eb4,N.G4,N.Eb4],A_G=[N.G3,N.Bb3,N.D4,N.Bb3],A_A=[N.Ab3,N.C4,N.Eb4,N.C4],A_E=[N.Eb3,N.G3,N.Bb3,N.G3]; this.arpeggioMelody=[...A_C,...A_C,...A_C,...A_C,...A_G,...A_G,...A_G,...A_G,...A_A,...A_A,...A_A,...A_A,...A_E,...A_E,...A_E,...A_E]; const K=true,S=true,H=true,o=false; this.kickPattern=[K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,K,o,K,o,o,o]; this.snarePattern=[o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,S,o,S,o,S,o]; this.hihatPattern=[H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,o,H,o,H,o,H,o,H,H,H,o,H,H,H,o]; }
+class SoundManager {
+    public audioCtx: AudioContext | null = null;
+    private masterGain: GainNode | null = null;
+    public uiManager: UIManager;
+    private musicPlaying: boolean = false;
+    private musicScheduler: number | null = null;
+    private currentStep: number = 0;
+    private readonly bpm: number = 160;
+    private readonly stepsPerBeat: number = 4;
+    private readonly totalSteps: number = 64;
+    private stepDuration: number;
+    private scheduleAheadTime: number = 0.1;
+    private nextNoteTime: number = 0.0;
+    private currentTrack: 'normal' | 'boss' = 'normal';
+    private leadMelody: number[] = [];
+    private bassLine: number[] = [];
+    private arpeggioMelody: number[] = [];
+    private kickPattern: boolean[] = [];
+    private snarePattern: boolean[] = [];
+    private hihatPattern: boolean[] = [];
+    private bossLeadMelody: number[] = [];
+    private bossBassLine: number[] = [];
+    private bossArpeggioMelody: number[] = [];
+    private bossKickPattern: boolean[] = [];
+    private bossSnarePattern: boolean[] = [];
+    private bossHihatPattern: boolean[] = [];
+
+    constructor(uiManager: UIManager) {
+        this.uiManager = uiManager;
+        this.stepDuration = 60.0 / this.bpm / this.stepsPerBeat;
+        this.defineMusicPatterns();
+        this.defineBossMusicPatterns();
+    }
+
+    // --- ÜBERARBEITETE METHODE ---
+    public initAudio(): void {
+        // Wenn der Kontext bereits existiert und läuft, müssen wir nichts tun.
+        if (this.audioCtx && this.audioCtx.state === 'running') {
+            return;
+        }
+        
+        try {
+            // Erstelle den AudioContext nur, wenn er noch nicht existiert.
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                this.masterGain = this.audioCtx.createGain();
+                this.masterGain.connect(this.audioCtx.destination);
+            }
+
+            // Wenn der Kontext "eingefroren" (suspended) ist, versuche ihn fortzusetzen.
+            // Dies ist der entscheidende Schritt für die meisten Browser.
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+
+            // Wende die Lautstärke- und Musikeinstellungen an.
+            this.setVolume(this.uiManager.settings.masterVolume);
+            this.toggleMusic(this.uiManager.settings.music);
+
+        } catch (e) {
+            console.error("Web Audio API is not supported or failed to initialize", e);
+        }
+    }
+    
+    defineMusicPatterns() { const N = {C2:65.41,G2:98,Ab2:103.83,Eb2:77.78,C3:130.81,D3:146.83,Eb3:155.56,F3:174.61,G3:196,Ab3:207.65,Bb3:233.08,C4:261.63,D4:293.66,Eb4:311.13,F4:349.23,G4:392,Ab4:415.3,Bb4:466.16}; const R=0; this.leadMelody=[N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.Eb4,R,N.D4,R,N.C4,R,R,R,N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.G4,N.Ab4,N.G4,N.F4,N.Eb4,R,R,R,N.Ab4,R,N.F4,R,N.Ab4,R,N.G4,R,N.F4,R,N.Eb4,R,N.C4,R,N.Eb4,R,N.G4,N.F4,N.Eb4,R,N.D4,R,N.C4,R,N.C4,R,R,R,R,R,R,R]; this.bassLine=[...Array(16).fill(N.C2),...Array(16).fill(N.G2),...Array(16).fill(N.Ab2),...Array(16).fill(N.Eb2)]; const A_C=[N.C4,N.Eb4,N.G4,N.Eb4],A_G=[N.G3,N.Bb3,N.D4,N.Bb3],A_A=[N.Ab3,N.C4,N.Eb4,N.C4],A_E=[N.Eb3,N.G3,N.Bb3,N.G3]; this.arpeggioMelody=[...A_C,...A_C,...A_C,...A_C,...A_G,...A_G,...A_G,...A_G,...A_A,...A_A,...A_A,...A_A,...A_E,...A_E,...A_E,...A_E]; const K=true,S=true,H=true,o=false; this.kickPattern=[K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,K,o,K,o,o,o]; this.snarePattern=[o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,S,o,S,o,S,o]; this.hihatPattern=[H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,o,H,o,H,o,H,o,H,H,H,o,H,H,H,o]; }
     defineBossMusicPatterns() { const N={A2:110,E2:82.41,F2:87.31,G2:98,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,Gs4:415.3,A4:440}; const R=0; this.bossLeadMelody=[N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,N.F4,R,N.E4,R,N.D4,R,N.C4,N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,R,N.E4,R,N.D4,R,N.C4,R,N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,N.F4,R,N.E4,R,N.D4,R,N.C4,N.B3,N.C4,N.D4,N.E4,N.F4,N.E4,N.D4,N.C4,N.B3,R,R,R,R,R,R,R]; this.bossBassLine=[...Array(16).fill(N.A2),...Array(16).fill(N.G2),...Array(16).fill(N.F2),...Array(16).fill(N.E2)]; const A_A=[N.A3,N.C4,N.E4,N.C4],A_G=[N.G2,N.B3,N.D4,N.B3],A_F=[N.F2,N.A3,N.C4,N.A3],A_E=[N.E2,N.Gs4,N.B3,N.Gs4]; this.bossArpeggioMelody=[...A_A,...A_A,...A_A,...A_A,...A_G,...A_G,...A_G,...A_G,...A_F,...A_F,...A_F,...A_F,...A_E,...A_E,...A_E,...A_E]; const K=true,S=true,H=true,o=false; const r=(p:boolean[],t:number)=>Array(t).fill(p).flat(); this.bossKickPattern=r([K,K,o,o,K,o,o,o,K,K,o,o,K,o,o,K],4); this.bossSnarePattern=r([o,o,o,o,S,o,o,o,o,o,o,o,S,o,S,o],4); this.bossHihatPattern=r([H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H],4); }
     setTrack(trackName: 'normal' | 'boss') { if (!this.audioCtx || this.currentTrack === trackName) return; this.currentTrack = trackName; if (this.musicPlaying) { this.currentStep = 0; this.nextNoteTime = this.audioCtx.currentTime; } }
     playNote(freq: number, time: number, duration: number, type: OscillatorType, volMultiplier: number = 1) { if (!this.audioCtx || !this.masterGain || freq === 0) return; const osc = this.audioCtx.createOscillator(); const gain = this.audioCtx.createGain(); osc.connect(gain); gain.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, time); const noteVol = volMultiplier * this.uiManager.settings.masterVolume; gain.gain.setValueAtTime(noteVol, time); gain.gain.exponentialRampToValueAtTime(0.0001, time + duration); osc.start(time); osc.stop(time + duration); }
@@ -346,42 +425,128 @@ class SoundManager { public audioCtx: AudioContext | null = null; private master
     setVolume(volume: number) { if (this.masterGain && this.audioCtx) this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime); }
     play(soundName: string) { if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return; let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol = 1; switch (soundName) { case 'shoot': freq = 880; duration = 0.05; type = 'triangle'; vol = 0.4; break; case 'missileLaunch': freq = 220; duration = 0.3; type = 'sawtooth'; break; case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; case 'enemyExplosion': freq = 150; duration = 0.15; type = 'sawtooth'; vol = 0.5; break; case 'laser': freq = 1500; duration = 0.1; type = 'sawtooth'; vol = 0.3; break; case 'powerup': freq = 1200; duration = 0.1; type = 'sine'; break; case 'shieldDown': freq = 300; duration = 0.2; type = 'square'; break; } const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); }
 }
+
 class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string): string { return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
+
 class UIManager {
     public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private menuContainer: HTMLElement; private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     constructor(game: Game, ui: IUIElements) { this.game = game; this.ctx = game.ctx; this.scoreEl = ui.score; this.levelEl = ui.level; this.highscoreEl = ui.highscore; this.specialInventoryEl = ui.specialInventory; this.ultraInventoryEl = ui.ultraInventory; this.livesDisplay = ui.livesDisplay; this.weaponStatusEl = ui.weaponStatus; this.energyBarEl = ui.energyBar; this.menuContainer = document.getElementById('menu-container')!; this.langSelectScreen = document.getElementById('language-select-screen')!; this.langBackButton = document.getElementById('lang-back-button')!; this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, }; this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, }; this.mainMenuElements = { resume: document.getElementById('resume-button')!, restart: document.getElementById('restart-button')!, quit: document.getElementById('quit-button')!, header: this.menuContainer.querySelector('.menu-header h1')! }; this.settings = this.loadSettings(); this.localizationManager = new LocalizationManager(); this.soundManager = new SoundManager(this); this.initButtons(); }
     update(): void { this.scoreEl.textContent = this.game.score.toString(); this.levelEl.textContent = this.game.level > this.game.levelDefinitions.length ? 'MAX' : this.game.level.toString(); if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) { this.highscoreEl.textContent = this.game.highscore.toString(); } if (!this.game.player || !this.game.player.isAlive()) { this.specialInventoryEl.innerHTML = ''; this.ultraInventoryEl.innerHTML = ''; this.livesDisplay.innerHTML = ''; this.weaponStatusEl.innerHTML = ''; this.energyBarEl.style.width = '0%'; return; } this.livesDisplay.innerHTML = `<div class="life-icon"></div><span>x${this.game.player.lives}</span>`; this.energyBarEl.style.width = `${this.game.player.energy}%`; this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1); this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4); this.updateWeaponStatusUI(); }
-    updateInventoryUI(element: HTMLElement, inventory: IInventoryItem[], maxSize: number, keyStart: number): void { let html = ''; for (let i = 0; i < maxSize; i++) { const item = inventory[i]; const key = keyStart + i; if (item) { const imageSrc = powerUpImageSources[item.type]; html += `<div class="inventory-slot"><div class="slot-key">${key}</div><img src="${imageSrc}" class="slot-image" alt="${item.type}"/>${item.count > 1 ? `<div class="slot-count">x${item.count}</div>` : ''}</div>`; } else { html += `<div class="inventory-slot"><div class="slot-key">${key}</div></div>`; } } element.innerHTML = html; }
+    
+    // --- ÜBERARBEITETE METHODE ---
+    updateInventoryUI(element: HTMLElement, inventory: IInventoryItem[], maxSize: number, keyStart: number): void {
+        let html = '';
+        const type = element.id === 'special-inventory' ? 'special' : 'ultra';
+        for (let i = 0; i < maxSize; i++) {
+            const item = inventory[i];
+            const key = keyStart + i;
+            if (item) {
+                const imageSrc = powerUpImageSources[item.type];
+                html += `<div class="inventory-slot" data-slot-index="${i}" data-inventory-type="${type}">
+                            <div class="slot-key">${key}</div>
+                            <img src="${imageSrc}" class="slot-image" alt="${item.type}"/>
+                            ${item.count > 1 ? `<div class="slot-count">x${item.count}</div>` : ''}
+                         </div>`;
+            } else {
+                html += `<div class="inventory-slot"><div class="slot-key">${key}</div></div>`;
+            }
+        }
+        element.innerHTML = html;
+    }
+
     updateWeaponStatusUI(): void {
-    if (!this.game.player) return;
-    const t = (key: string) => this.localizationManager.translate(key);
-    const pm = this.game.player.powerUpManager;
-    
-    let text = `${t('w_tier')}: ${pm.weaponTier}`;
-    let timer = pm.weaponTierTimer;
-    
-    if (timer > 0 && pm.weaponTier > 1) {
-        const seconds = Math.ceil(timer / 1000);
-        text += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
+        if (!this.game.player) return;
+        const t = (key: string) => this.localizationManager.translate(key);
+        const pm = this.game.player.powerUpManager;
+        
+        let text = `${t('w_tier')}: ${pm.weaponTier}`;
+        let timer = pm.weaponTierTimer;
+        
+        if (timer > 0 && pm.weaponTier > 1) {
+            const seconds = Math.ceil(timer / 1000);
+            text += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
+        }
+        
+        let activeBuffs = '';
+        if (pm.isActive('RAPID_FIRE')) {
+            activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
+        }
+        if (pm.isActive('SIDE_SHOTS')) {
+            activeBuffs += ` ${t('buff_sideshots')}(${Math.ceil(pm.timers['SIDE_SHOTS']!/1000)}s)`;
+        }
+        if (pm.isActive('ORBITAL_DRONE')) {
+            activeBuffs += ` ${t('buff_orbital')}(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`;
+        }
+        
+        this.weaponStatusEl.innerHTML = text + activeBuffs;
     }
-    
-    let activeBuffs = '';
-    if (pm.isActive('RAPID_FIRE')) {
-        activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
-    }
-    if (pm.isActive('SIDE_SHOTS')) {
-        activeBuffs += ` ${t('buff_sideshots')}(${Math.ceil(pm.timers['SIDE_SHOTS']!/1000)}s)`;
-    }
-    if (pm.isActive('ORBITAL_DRONE')) {
-        activeBuffs += ` ${t('buff_orbital')}(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`;
-    }
-    
-    this.weaponStatusEl.innerHTML = text + activeBuffs;
-}
     toggleMainMenu(show: boolean): void { this.menuContainer.style.display = show ? 'flex' : 'none'; if (show) { this.mainMenuElements.header.dataset.translateKey = "main_menu_title"; this.mainMenuElements.header.textContent = this.localizationManager.translate('main_menu_title'); this.mainMenuElements.resume.style.display = 'none'; this.mainMenuElements.quit.style.display = 'none'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_start_game'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_start_game'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
     togglePauseMenu(isPaused: boolean): void { this.menuContainer.style.display = isPaused ? 'flex' : 'none'; if (isPaused) { this.mainMenuElements.header.dataset.translateKey = "pause_header"; this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header'); this.mainMenuElements.resume.style.display = 'block'; this.mainMenuElements.quit.style.display = 'block'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_restart'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
     showTab(tabName: string): void { for (const key in this.tabPanes) { const pane = this.tabPanes[key]!; const button = this.tabButtons[key]!; if (key === tabName) { pane.classList.add('active'); button.classList.add('active'); } else { pane.classList.remove('active'); button.classList.remove('active'); } } }
-    initButtons(): void { this.mainMenuElements.resume.onclick = () => this.game.togglePause(); this.mainMenuElements.restart.onclick = () => this.game.changeState('LEVEL_START', true); this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU'); for (const key in this.tabButtons) { this.tabButtons[key]!.onclick = () => this.showTab(key); } const volSlider = document.getElementById('volume-master') as HTMLInputElement; if(volSlider) { volSlider.value = this.settings.masterVolume.toString(); volSlider.oninput = (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }; } document.getElementById('toggle-music')!.onclick = () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); }; document.getElementById('toggle-sfx')!.onclick = () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); }; document.getElementById('toggle-particles')!.onclick = () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); }; document.getElementById('toggle-shake')!.onclick = () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); }; document.getElementById('toggle-language')!.onclick = () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; }; this.langBackButton.onclick = () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; }; document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => { button.onclick = () => { const lang = button.dataset.lang; if (lang) { this.localizationManager.setLanguage(lang); this.populateAllTranslatedContent(); this.langSelectScreen.style.display = 'none'; if (this.langSelectSource === 'settings') { this.menuContainer.style.display = 'flex'; } else { this.game.changeState('INTRO'); } } }; }); }
+    
+    // --- ÜBERARBEITETE METHODE ---
+    initButtons(): void {
+        // Sound-Freischaltung an den Neustart-Button koppeln
+        this.mainMenuElements.restart.onclick = () => {
+            this.soundManager.initAudio();
+            this.game.changeState('LEVEL_START', true);
+        };
+        
+        document.getElementById('mobile-pause-button')!.onclick = () => this.game.togglePause();
+        this.mainMenuElements.resume.onclick = () => this.game.togglePause();
+        this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU');
+        
+        for (const key in this.tabButtons) { this.tabButtons[key]!.onclick = () => this.showTab(key); }
+        
+        const volSlider = document.getElementById('volume-master') as HTMLInputElement;
+        if(volSlider) { volSlider.value = this.settings.masterVolume.toString(); volSlider.oninput = (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }; }
+        
+        document.getElementById('toggle-music')!.onclick = () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); };
+        document.getElementById('toggle-sfx')!.onclick = () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); };
+        document.getElementById('toggle-particles')!.onclick = () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); };
+        document.getElementById('toggle-shake')!.onclick = () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); };
+        document.getElementById('toggle-language')!.onclick = () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; };
+        this.langBackButton.onclick = () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; };
+        
+        // Sound-Freischaltung an die Sprachauswahl-Buttons koppeln
+        document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
+            button.onclick = () => {
+                this.soundManager.initAudio(); // Audio beim ersten Klick freischalten
+                const lang = button.dataset.lang;
+                if (lang) {
+                    this.localizationManager.setLanguage(lang);
+                    this.populateAllTranslatedContent();
+                    this.langSelectScreen.style.display = 'none';
+                    if (this.langSelectSource === 'settings') {
+                        this.menuContainer.style.display = 'flex';
+                    } else {
+                        this.game.changeState('INTRO');
+                    }
+                }
+            };
+        });
+
+        // Event Listener für das Antippen des Inventars
+        const inventoryClickHandler = (event: Event) => {
+            if (!this.game.player || this.game.isPaused) return;
+            const target = event.target as HTMLElement;
+            const slot = target.closest('.inventory-slot') as HTMLElement | null;
+            if (slot) {
+                const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                const type = slot.dataset.inventoryType;
+                if (index > -1 && this.game.player) {
+                    if (type === 'special') {
+                        this.game.player.powerUpManager.activateSpecial(index);
+                    } else if (type === 'ultra') {
+                        this.game.player.powerUpManager.activateUltra(index);
+                    }
+                }
+            }
+        };
+        this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
+        this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+    }
+    
     applySettings(): void { const t=(k:string)=>this.localizationManager.translate(k); document.getElementById('toggle-language')!.textContent=t('lang_native_name'); document.getElementById('toggle-music')!.textContent=this.settings.music?t('on'):t('off'); document.getElementById('toggle-sfx')!.textContent=this.settings.sfx?t('on'):t('off'); document.getElementById('toggle-particles')!.textContent=[t('off'),t('low'),t('high')][this.settings.particles]; document.getElementById('toggle-shake')!.textContent=this.settings.screenShake?t('on'):t('off'); (document.getElementById('toggle-music')! as HTMLButtonElement).classList.toggle('active',this.settings.music);(document.getElementById('toggle-sfx')! as HTMLButtonElement).classList.toggle('active',this.settings.sfx);(document.getElementById('toggle-shake')! as HTMLButtonElement).classList.toggle('active',this.settings.screenShake); this.soundManager.setVolume(this.settings.masterVolume); this.soundManager.toggleMusic(this.settings.music); }
     saveSettings(): void { localStorage.setItem('galaxyFallCelestialSettings', JSON.stringify(this.settings)); }
     loadSettings() { const saved = localStorage.getItem('galaxyFallCelestialSettings'); return saved ? JSON.parse(saved) : { masterVolume: 0.5, music: true, sfx: true, particles: 2, screenShake: false }; }
@@ -416,13 +581,65 @@ class UIManager {
 
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
-    constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
+    
+    // --- NEUE EIGENSCHAFTEN ---
+    public isMobile: boolean = false; 
+    public touchX: number | null = null; 
+    public touchY: number | null = null;
+
+    constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
+        this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
+        this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
         this.levelDefinitions = [
             { scoreToEarn: 2000, s: 1200, m: 1.0, e: ['GRUNT'], msgKey: "wave_msg_1"}, { scoreToEarn: 3000, s: 1000, m: 1.1, e: ['GRUNT', 'WEAVER'], msgKey: "wave_msg_2"}, { scoreToEarn: 5000, s: 900, m: 1.2, e: ['GRUNT', 'WEAVER', 'TANK'], msgKey: "wave_msg_3"}, { scoreToEarn: 8000, s: 800, m: 1.3, e: ['WEAVER', 'SHOOTER'], msgKey: "wave_msg_4"}, { scoreToEarn: 0, s: 1000, m: 1.4, e: ['BOSS_SENTINEL_PRIME'], msgKey: "wave_msg_5"}, { scoreToEarn: 12000, s: 700, m: 1.5, e: ['GRUNT', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_6"}, { scoreToEarn: 15000, s: 650, m: 1.6, e: ['WEAVER', 'WEAVER', 'TANK'], msgKey: "wave_msg_7"}, { scoreToEarn: 20000, s: 600, m: 1.7, e: ['GRUNT', 'TANK', 'SHOOTER'], msgKey: "wave_msg_8"}, { scoreToEarn: 25000, s: 550, m: 1.8, e: ['WEAVER', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_9"}, { scoreToEarn: 0, s: 1000, m: 1.9, e: ['BOSS_VOID_SERPENT'], msgKey: "wave_msg_10"}, { scoreToEarn: 30000, s: 500, m: 2.0, e: ['GRUNT', 'GRUNT', 'GRUNT', 'WEAVER'], msgKey: "wave_msg_11"}, { scoreToEarn: 30000, s: 450, m: 2.1, e: ['TANK', 'TANK', 'SHOOTER'], msgKey: "wave_msg_12"}, { scoreToEarn: 30000, s: 400, m: 2.2, e: ['WEAVER', 'WEAVER', 'WEAVER'], msgKey: "wave_msg_13"}, { scoreToEarn: 40000, s: 380, m: 2.3, e: ['SHOOTER', 'SHOOTER', 'TANK'], msgKey: "wave_msg_14"}, { scoreToEarn: 0, s: 1000, m: 2.4, e: ['BOSS_OMEGA_NEXUS'], msgKey: "wave_msg_15"}, { scoreToEarn: 60000, s: 350, m: 2.5, e: ['GRUNT', 'SHOOTER'], msgKey: "wave_msg_16"}, { scoreToEarn: 70000, s: 320, m: 2.6, e: ['WEAVER', 'TANK'], msgKey: "wave_msg_17"}, { scoreToEarn: 70000, s: 300, m: 2.7, e: ['GRUNT', 'WEAVER', 'TANK', 'SHOOTER'], msgKey: "wave_msg_18"}, { scoreToEarn: 80000, s: 280, m: 2.8, e: ['SHOOTER', 'SHOOTER', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_19"}, { scoreToEarn: 0, s: 1000, m: 3.2, e: ['BOSS_NEXUS_PRIME'], msgKey: "wave_msg_20"},
         ];
         this.uiManager = new UIManager(this, ui); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
+    
+    // --- ÜBERARBEITETE METHODE ---
     initEventListeners(): void {
+        if (this.isMobile) {
+            this.initMobileControls();
+        } else {
+            this.initDesktopControls();
+        }
+    }
+
+    // --- NEUE METHODE ---
+    initMobileControls(): void {
+        const getTouchPos = (e: TouchEvent) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const y = e.touches[0].clientY - rect.top;
+            return { x, y };
+        };
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.uiManager.soundManager.initAudio(); // Audio freischalten!
+            const pos = getTouchPos(e);
+            this.touchX = pos.x;
+            this.touchY = pos.y - 50; 
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const pos = getTouchPos(e);
+            this.touchX = pos.x;
+            this.touchY = pos.y - 50;
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                this.touchX = null;
+                this.touchY = null;
+            }
+        });
+    }
+
+    // --- NEUE METHODE ---
+    initDesktopControls(): void {
         const keyMap: { [key: string]: { type: 'special' | 'ultra', index: number } } = {
             'Digit1': { type: 'special', index: 0 }, 'Digit2': { type: 'special', index: 1 },
             'Digit3': { type: 'special', index: 2 }, 'Digit4': { type: 'ultra', index: 0 },
@@ -479,6 +696,7 @@ class Game {
             }
         });
     }
+
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
@@ -536,7 +754,9 @@ class Game {
                 break;
         }
     }
-    update(deltaTime: number): void { if (this.isPaused) return; if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
+    update(deltaTime: number): void { 
+        if (this.isPaused) return; // Kompletter Stop bei Pause
+        if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
     draw(): void {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawParallaxStarfield();
