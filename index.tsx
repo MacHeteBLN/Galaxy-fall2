@@ -362,6 +362,7 @@ class UIManager {
         this.localizationManager = new LocalizationManager();
         this.soundManager = new SoundManager(this);
         
+        // KORRIGIERT: Binden der Methoden an 'this', um Kontextverlust zu verhindern
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
         this.togglePauseMenu = this.togglePauseMenu.bind(this);
         this.showTab = this.showTab.bind(this);
@@ -489,20 +490,68 @@ class UIManager {
             }
         }
     }
+
+    // --- KORREKTUR FÜR "SPIEL STARTET NICHT" ---
     initButtons(): void {
-        document.getElementById('mobile-pause-button')!.onclick = () => this.game.togglePause();
-        this.mainMenuElements.restart.onclick = () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); };
-        this.mainMenuElements.resume.onclick = () => this.game.togglePause();
-        this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU');
-        for (const key in this.tabButtons) { this.tabButtons[key]!.onclick = () => this.showTab(key); }
+        const setupButton = (id: string, action: () => void) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.onclick = action;
+            } else {
+                // Diese Warnung hilft bei der Fehlersuche, falls ein Button im HTML fehlt
+                console.warn(`UI-Element mit der ID '${id}' wurde nicht gefunden.`);
+            }
+        };
+    
+        setupButton('mobile-pause-button', () => this.game.togglePause());
+        
+        // WICHTIG: Die mainMenuElements werden im Konstruktor zugewiesen.
+        // Wir müssen sicherstellen, dass diese Elemente existieren.
+        if (this.mainMenuElements.restart) {
+            this.mainMenuElements.restart.onclick = () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); };
+        }
+        if (this.mainMenuElements.resume) {
+            this.mainMenuElements.resume.onclick = () => this.game.togglePause();
+        }
+        if (this.mainMenuElements.quit) {
+            this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU');
+        }
+    
+        for (const key in this.tabButtons) {
+            const button = this.tabButtons[key];
+            if (button) {
+                button.onclick = () => this.showTab(key);
+            }
+        }
+    
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
-        if(volSlider) { volSlider.value = this.settings.masterVolume.toString(); volSlider.oninput = (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }; }
-        document.getElementById('toggle-music')!.onclick = () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); };
-        document.getElementById('toggle-sfx')!.onclick = () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); };
-        document.getElementById('toggle-particles')!.onclick = () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); };
-        document.getElementById('toggle-shake')!.onclick = () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); };
-        document.getElementById('toggle-language')!.onclick = () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; };
-        this.langBackButton.onclick = () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; };
+        if (volSlider) {
+            volSlider.value = this.settings.masterVolume.toString();
+            volSlider.oninput = (e: any) => {
+                this.settings.masterVolume = parseFloat(e.target.value);
+                this.applySettings();
+                this.saveSettings();
+            };
+        }
+    
+        setupButton('toggle-music', () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); });
+        setupButton('toggle-sfx', () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); });
+        setupButton('toggle-particles', () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); });
+        setupButton('toggle-shake', () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); });
+        
+        setupButton('toggle-language', () => {
+            this.langSelectSource = 'settings';
+            if (this.menuContainer) this.menuContainer.style.display = 'none';
+            if (this.langSelectScreen) this.langSelectScreen.style.display = 'flex';
+            if (this.langBackButton) this.langBackButton.style.display = 'block';
+        });
+        
+        setupButton('lang-back-button', () => {
+            if (this.langSelectScreen) this.langSelectScreen.style.display = 'none';
+            if (this.menuContainer) this.menuContainer.style.display = 'flex';
+            this.langSelectSource = 'startup';
+        });
+    
         document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
             button.onclick = () => {
                 this.soundManager.initAudio();
@@ -510,15 +559,16 @@ class UIManager {
                 if (lang) {
                     this.localizationManager.setLanguage(lang);
                     this.populateAllTranslatedContent();
-                    this.langSelectScreen.style.display = 'none';
+                    if (this.langSelectScreen) this.langSelectScreen.style.display = 'none';
                     if (this.langSelectSource === 'settings') {
-                        this.menuContainer.style.display = 'flex';
+                        if (this.menuContainer) this.menuContainer.style.display = 'flex';
                     } else {
                         this.game.changeState('INTRO');
                     }
                 }
             };
         });
+    
         const inventoryClickHandler = (event: Event) => {
             if (!this.game.player || this.game.isPaused) return;
             const target = event.target as HTMLElement;
@@ -535,11 +585,39 @@ class UIManager {
                 }
             }
         };
-        this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
-        this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+    
+        if (this.specialInventoryEl) {
+            this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
+        }
+        if (this.ultraInventoryEl) {
+            this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+        }
     }
     
-    public applySettings(): void { const t=(k:string)=>this.localizationManager.translate(k); document.getElementById('toggle-language')!.textContent=t('lang_native_name'); document.getElementById('toggle-music')!.textContent=this.settings.music?t('on'):t('off'); document.getElementById('toggle-sfx')!.textContent=this.settings.sfx?t('on'):t('off'); document.getElementById('toggle-particles')!.textContent=[t('off'),t('low'),t('high')][this.settings.particles]; document.getElementById('toggle-shake')!.textContent=this.settings.screenShake?t('on'):t('off'); (document.getElementById('toggle-music')! as HTMLButtonElement).classList.toggle('active',this.settings.music);(document.getElementById('toggle-sfx')! as HTMLButtonElement).classList.toggle('active',this.settings.sfx);(document.getElementById('toggle-shake')! as HTMLButtonElement).classList.toggle('active',this.settings.screenShake); this.soundManager.setVolume(this.settings.masterVolume); this.soundManager.toggleMusic(this.settings.music); }
+    public applySettings(): void { 
+        const t = (k:string) => this.localizationManager.translate(k);
+        const setButtonText = (id: string, text: string) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        const setButtonActive = (id: string, isActive: boolean) => {
+            const el = document.getElementById(id) as HTMLButtonElement;
+            if (el) el.classList.toggle('active', isActive);
+        };
+    
+        setButtonText('toggle-language', t('lang_native_name'));
+        setButtonText('toggle-music', this.settings.music ? t('on') : t('off'));
+        setButtonText('toggle-sfx', this.settings.sfx ? t('on') : t('off'));
+        setButtonText('toggle-particles', [t('off'), t('low'), t('high')][this.settings.particles]!);
+        setButtonText('toggle-shake', this.settings.screenShake ? t('on') : t('off'));
+    
+        setButtonActive('toggle-music', this.settings.music);
+        setButtonActive('toggle-sfx', this.settings.sfx);
+        setButtonActive('toggle-shake', this.settings.screenShake);
+    
+        this.soundManager.setVolume(this.settings.masterVolume); 
+        this.soundManager.toggleMusic(this.settings.music); 
+    }
     public saveSettings(): void { localStorage.setItem('galaxyFallCelestialSettings', JSON.stringify(this.settings)); }
     public loadSettings() { const saved = localStorage.getItem('galaxyFallCelestialSettings'); return saved ? JSON.parse(saved) : { masterVolume: 0.5, music: true, sfx: true, particles: 2, screenShake: false }; }
     public populateAllTranslatedContent() { this.populateArsenal(); this.populateGegner(); this.localizationManager.applyTranslationsToUI(); this.applySettings(); }
@@ -600,15 +678,14 @@ class Game {
         if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
 
+    // --- KORREKTUR FÜR "OBEN FEHLT EIN STÜCK" ---
     resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         const scale = Math.min(screenWidth / this.baseWidth, screenHeight / this.baseHeight);
         this.scale = scale;
-
-        // --- HIER IST DIE KORREKTUR ---
-        // Diese Zeile sorgt dafür, dass die Skalierung von der oberen linken Ecke
-        // ausgeht und verhindert so das Verrutschen des Spielfelds.
+        
+        // Diese Zeile verhindert das visuelle Verrutschen des Spielfelds
         this.container.style.transformOrigin = 'top left';
         
         this.container.style.transform = `scale(${scale})`;
