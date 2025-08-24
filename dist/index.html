@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Fall: Celestial</title>
+    
+    <!-- Link zur externen CSS-Datei -->
+    
+    <!-- Google Font für den Retro-Look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-B1VZmOWF.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BECeG9i5.css">
+</head>
+<body>
+<div id="gameContainer">
+    <!-- Sprachauswahl-Bildschirm -->
+    <div id="language-select-screen">
+        <h1 data-translate-key="lang_select_title">SELECT LANGUAGE</h1>
+        <div class="language-grid">
+            <button class="lang-button" data-lang="en">English</button>
+            <button class="lang-button" data-lang="de">Deutsch</button>
+            <button class="lang-button" data-lang="es">Español</button>
+            <button class="lang-button" data-lang="zh">中文</button>
+            <button class="lang-button" data-lang="ja">日本語</button>
+            <button class="lang-button" data-lang="it">Italiano</button>
+        </div>
+        <button class="menu-button" id="lang-back-button" data-translate-key="btn_back">Back</button>
+    </div>
+
+    <!-- Haupt-UI des Spiels -->
+    <div id="ui-panel">
+        <div class="left-stats">
+            <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
+            <div class="ui-item"><span data-translate-key="level">Level</span>: <span id="level">1</span></div>
+        </div>
+        <div class="right-stats">
+            <div class="ui-item" id="lives-display"></div>
+            <div class="ui-item" id="energy-display">
+                <span data-translate-key="energy">Energy</span>
+                <div id="energy-bar-container"><div id="energy-bar"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="750"></canvas>
+    
+    <div id="bottom-ui-container">
+        <div id="special-inventory"></div>
+        <div id="ultra-inventory"></div>
+    </div>
+    <div id="weapon-status"></div>
+    
+    <!-- Menü-Container (für Pause und Hauptmenü) -->
+    <div id="menu-container">
+        <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
+        <div class="menu-tabs">
+            <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
+            <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
+            <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
+            <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
+        </div>
+        
+        <div class="menu-content">
+            <!-- Tab: Spiel -->
+            <div id="spiel-view" class="tab-pane active">
+                 <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
+                 <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
+                 <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
+                 <div id="menu-highscore">
+                    <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
+                 </div>
+            </div>
+            
+            <!-- Tab: Arsenal -->
+            <div id="arsenal-view" class="tab-pane">
+                 <div class="info-panel" id="arsenal-list"></div>
+            </div>
+            
+            <!-- Tab: Gegner -->
+            <div id="gegner-view" class="tab-pane">
+                 <div class="info-panel" id="gegner-list"></div>
+            </div>
+            
+            <!-- Tab: Einstellungen -->
+            <div id="einstellungen-view" class="tab-pane">
+                <div class="info-panel">
+                    <div class="settings-panel">
+                        <div class="setting-item">
+                            <span data-translate-key="settings_language_label">Sprache</span>
+                            <button class="menu-button" id="toggle-language">Deutsch</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_volume_label">Lautstärke</span>
+                            <input type="range" id="volume-master" min="0" max="1" step="0.1">
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_music_label">Musik</span>
+                            <button class="menu-button" id="toggle-music">AN</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_sfx_label">SFX</span>
+                            <button class="menu-button" id="toggle-sfx">AN</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_particles_label">Partikel</span>
+                            <button class="menu-button" id="toggle-particles">HOCH</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_shake_label">Bildwackeln</span>
+                            <button class="menu-button" id="toggle-shake">AN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Das Skript wird als Modul geladen -->
+</body>
+</html>
