@@ -362,7 +362,6 @@ class UIManager {
         this.localizationManager = new LocalizationManager();
         this.soundManager = new SoundManager(this);
         
-        // KORRIGIERT: Binden der Methoden an 'this', um Kontextverlust zu verhindern
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
         this.togglePauseMenu = this.togglePauseMenu.bind(this);
         this.showTab = this.showTab.bind(this);
@@ -490,83 +489,78 @@ class UIManager {
             }
         }
     }
-
-    // --- KORREKTUR FÜR "SPIEL STARTET NICHT" ---
+    
     initButtons(): void {
-        const setupButton = (id: string, action: () => void) => {
-            const element = document.getElementById(id);
+        const eventType = this.game.isMobile ? 'touchstart' : 'click';
+    
+        const setupButton = (element: HTMLElement | null, action: (e: Event) => void) => {
             if (element) {
-                element.onclick = action;
-            } else {
-                // Diese Warnung hilft bei der Fehlersuche, falls ein Button im HTML fehlt
-                console.warn(`UI-Element mit der ID '${id}' wurde nicht gefunden.`);
+                element.addEventListener(eventType, (e) => {
+                    e.preventDefault();
+                    action(e);
+                });
             }
         };
     
-        setupButton('mobile-pause-button', () => this.game.togglePause());
-        
-        // WICHTIG: Die mainMenuElements werden im Konstruktor zugewiesen.
-        // Wir müssen sicherstellen, dass diese Elemente existieren.
-        if (this.mainMenuElements.restart) {
-            this.mainMenuElements.restart.onclick = () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); };
-        }
-        if (this.mainMenuElements.resume) {
-            this.mainMenuElements.resume.onclick = () => this.game.togglePause();
-        }
-        if (this.mainMenuElements.quit) {
-            this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU');
-        }
+        setupButton(this.mainMenuElements.restart, () => { 
+            this.soundManager.initAudio(); 
+            this.game.changeState('LEVEL_START', true); 
+        });
+        setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
+        setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
+    
+        setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
     
         for (const key in this.tabButtons) {
             const button = this.tabButtons[key];
             if (button) {
-                button.onclick = () => this.showTab(key);
+                setupButton(button, () => this.showTab(key));
             }
         }
     
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) {
-            volSlider.value = this.settings.masterVolume.toString();
-            volSlider.oninput = (e: any) => {
+            volSlider.addEventListener('input', (e: any) => {
                 this.settings.masterVolume = parseFloat(e.target.value);
                 this.applySettings();
                 this.saveSettings();
-            };
+            });
+            volSlider.value = this.settings.masterVolume.toString();
         }
     
-        setupButton('toggle-music', () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); });
-        setupButton('toggle-sfx', () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); });
-        setupButton('toggle-particles', () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); });
-        setupButton('toggle-shake', () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); });
+        setupButton(document.getElementById('toggle-music'), () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); });
+        setupButton(document.getElementById('toggle-sfx'), () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); });
+        setupButton(document.getElementById('toggle-particles'), () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); });
+        setupButton(document.getElementById('toggle-shake'), () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); });
         
-        setupButton('toggle-language', () => {
+        setupButton(document.getElementById('toggle-language'), () => {
             this.langSelectSource = 'settings';
-            if (this.menuContainer) this.menuContainer.style.display = 'none';
-            if (this.langSelectScreen) this.langSelectScreen.style.display = 'flex';
-            if (this.langBackButton) this.langBackButton.style.display = 'block';
+            this.menuContainer.style.display = 'none';
+            this.langSelectScreen.style.display = 'flex';
+            this.langBackButton.style.display = 'block';
         });
         
-        setupButton('lang-back-button', () => {
-            if (this.langSelectScreen) this.langSelectScreen.style.display = 'none';
-            if (this.menuContainer) this.menuContainer.style.display = 'flex';
+        setupButton(document.getElementById('lang-back-button'), () => {
+            this.langSelectScreen.style.display = 'none';
+            this.menuContainer.style.display = 'flex';
             this.langSelectSource = 'startup';
         });
     
         document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
-            button.onclick = () => {
+            setupButton(button, () => {
                 this.soundManager.initAudio();
                 const lang = button.dataset.lang;
                 if (lang) {
                     this.localizationManager.setLanguage(lang);
                     this.populateAllTranslatedContent();
-                    if (this.langSelectScreen) this.langSelectScreen.style.display = 'none';
+                    this.langSelectScreen.style.display = 'none';
                     if (this.langSelectSource === 'settings') {
-                        if (this.menuContainer) this.menuContainer.style.display = 'flex';
+                        this.menuContainer.style.display = 'flex';
                     } else {
                         this.game.changeState('INTRO');
                     }
                 }
-            };
+            });
         });
     
         const inventoryClickHandler = (event: Event) => {
@@ -586,12 +580,8 @@ class UIManager {
             }
         };
     
-        if (this.specialInventoryEl) {
-            this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
-        }
-        if (this.ultraInventoryEl) {
-            this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
-        }
+        if (this.specialInventoryEl) this.specialInventoryEl.addEventListener(eventType, inventoryClickHandler);
+        if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener(eventType, inventoryClickHandler);
     }
     
     public applySettings(): void { 
@@ -678,14 +668,12 @@ class Game {
         if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
     }
 
-    // --- KORREKTUR FÜR "OBEN FEHLT EIN STÜCK" ---
     resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         const scale = Math.min(screenWidth / this.baseWidth, screenHeight / this.baseHeight);
         this.scale = scale;
         
-        // Diese Zeile verhindert das visuelle Verrutschen des Spielfelds
         this.container.style.transformOrigin = 'top left';
         
         this.container.style.transform = `scale(${scale})`;
