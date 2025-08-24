@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy": "gh-pages -d dist",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make"
@@ -55,10 +56,12 @@
     "@electron/fuses": "^1.8.0",
     "@types/node": "^22.14.0",
     "electron": "^37.2.6",
+    "gh-pages": "^6.1.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^5.0.1",
     "electron-squirrel-startup": "^1.0.1"
   }
 }

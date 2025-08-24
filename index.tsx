@@ -414,7 +414,6 @@ class UIManager {
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
-// --- GEÄNDERTE KLASSE ---
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
@@ -434,7 +433,10 @@ class Game {
             if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (['INTRO', 'MENU'].includes(this.gameState)) { this.uiManager.soundManager.initAudio(); this.changeState('LEVEL_START', true); }
+                if (['INTRO', 'MENU'].includes(this.gameState)) {
+                    this.uiManager.soundManager.initAudio();
+                    this.changeState('LEVEL_START', true);
+                }
                 else if (['GAME_OVER', 'WIN'].includes(this.gameState)) { this.changeState('MENU'); }
             }
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused && !this.player.isChargingBlackHole) {
@@ -534,22 +536,15 @@ class Game {
                 break;
         }
     }
-    update(deltaTime: number): void { if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
-    
-    // --- GEÄNDERTE METHODE ---
+    update(deltaTime: number): void { if (this.isPaused) return; if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
     draw(): void {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawParallaxStarfield();
-
-        // Zeichne alle Entitäten, die NICHT der Spieler sind, zuerst.
-        // Dadurch werden Projektile, Gegner, etc. unter dem Spieler gerendert.
         this.entities.forEach(e => {
             if (e !== this.player) {
                 e.draw(this.ctx);
             }
         });
-
-        // Zeichne den Spieler zuletzt, damit er über allem anderen liegt.
         if (this.player && this.player.isAlive()) {
             this.player.draw(this.ctx);
         }

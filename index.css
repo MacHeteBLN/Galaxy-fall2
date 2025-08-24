@@ -11,6 +11,8 @@
 
 * {
     box-sizing: border-box;
+    /* Verhindert das versehentliche Markieren von Text auf Mobilgeräten */
+    user-select: none; 
 }
 
 body {
@@ -135,12 +137,16 @@ canvas {
     align-items: center;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    /* NEU: Visuelles Feedback für Klickbarkeit */
+    cursor: pointer; 
 }
 
 .inventory-slot .slot-image {
     max-width: 75%;
     max-height: 75%;
     object-fit: contain;
+    /* NEU: Stellt sicher, dass Klicks auf dem Slot landen, nicht auf dem Bild */
+    pointer-events: none; 
 }
 
 .inventory-slot .slot-key {
@@ -181,6 +187,16 @@ canvas {
     text-align: right;
     min-width: 150px;
 }
+
+/* --- NEU: STILE FÜR MOBILE STEUERUNG --- */
+#mobile-pause-button {
+    display: none; /* Standardmäßig auf Desktops ausgeblendet */
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    color: var(--cyan-glow);
+}
+
 
 /* --- MENÜ-STILE --- */
 #menu-container {
@@ -445,4 +461,15 @@ canvas {
     0% { filter: brightness(1); }
     50% { filter: brightness(1.5); }
     100% { filter: brightness(1); }
+}
+
+/* --- NEU: MEDIA QUERY FÜR MOBILE GERÄTE --- */
+/* Diese Stile gelten nur für Geräte mit Touchscreen (wie Handys/Tablets) */
+@media (hover: none) and (pointer: coarse) {
+    #mobile-pause-button {
+        display: block; /* Pause-Button anzeigen */
+    }
+    .slot-key {
+        display: none; /* Tasten-Nummern im Inventar ausblenden */
+    }
 }

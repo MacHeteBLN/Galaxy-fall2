@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- WICHTIG: Korrekte Darstellung und Steuerung auf mobilen Geräten -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Galaxy Fall: Celestial</title>
     
     <!-- Link zur externen CSS-Datei -->
@@ -32,6 +33,13 @@
     <!-- Haupt-UI des Spiels -->
     <div id="ui-panel">
         <div class="left-stats">
+            <!-- NEU: Mobiler Pause Button -->
+            <div id="mobile-pause-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
+                    <rect x="60" y="25" width="15" height="50" fill="currentColor"/>
+                </svg>
+            </div>
             <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
             <div class="ui-item"><span data-translate-key="level">Level</span>: <span id="level">1</span></div>
         </div>
