@@ -649,7 +649,6 @@ class Game {
     
     private container: HTMLElement;
     public scale: number = 1;
-    public isUITouch: boolean = false; // HINZUGEFÜGT: Flag zur Unterscheidung von UI- und Spiel-Berührungen
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
         this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
@@ -701,54 +700,37 @@ class Game {
         }
     }
 
-    // KOMPLETT ERSETZTE METHODE
     initMobileControls(): void {
         const getTouchPos = (e: TouchEvent) => {
-            const rect = this.container.getBoundingClientRect();
+            // Berechnet die Position relativ zum Canvas
+            const rect = this.canvas.getBoundingClientRect();
             const x = (e.touches[0].clientX - rect.left) / this.scale;
             const y = (e.touches[0].clientY - rect.top) / this.scale;
             return { x, y };
         };
     
-        this.container.addEventListener('touchstart', (e) => {
-            const target = e.target as HTMLElement;
+        // Event Listener NUR für das Canvas-Element für die Spielerbewegung
+        this.canvas.addEventListener('touchstart', (e) => {
+            // Nur reagieren, wenn das Spiel aktiv ist
+            if (this.gameState !== 'PLAYING' || this.isPaused) return;
             
-            // Prüfen, ob die Berührung auf einem interaktiven UI-Element liegt, das Standardverhalten erfordert.
-            if (target.closest('input[type="range"]') || target.closest('.info-panel') || target.closest('.menu-button') || target.closest('.tab-button') || target.closest('.lang-button') || target.closest('#mobile-pause-button')) {
-                this.isUITouch = true;
-                return; // Dem Browser die Steuerung überlassen (für Scrollen, Slider, Klicks).
-            }
-            
-            // Wenn es kein UI-Touch ist und das Spiel läuft, dann ist es für die Spielersteuerung.
-            if (this.gameState === 'PLAYING') {
-                e.preventDefault();
-                this.isUITouch = false;
-                this.uiManager.soundManager.initAudio();
-                const pos = getTouchPos(e as TouchEvent);
-                this.touchX = pos.x;
-                this.touchY = pos.y - 50;
-            }
-    
+            e.preventDefault();
+            this.uiManager.soundManager.initAudio();
+            const pos = getTouchPos(e as TouchEvent);
+            this.touchX = pos.x;
+            this.touchY = pos.y;
         }, { passive: false });
     
-        this.container.addEventListener('touchmove', (e) => {
-            // Wenn die Berührung auf einem UI-Element begann, hier nichts tun.
-            if (this.isUITouch) {
-                return;
-            }
-    
-            // Ansonsten ist es eine Geste zur Spielsteuerung.
-            if (this.gameState === 'PLAYING') {
-                e.preventDefault();
-                const pos = getTouchPos(e as TouchEvent);
-                this.touchX = pos.x;
-                this.touchY = pos.y - 50;
-            }
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (this.gameState !== 'PLAYING' || this.isPaused) return;
+            e.preventDefault();
+            const pos = getTouchPos(e as TouchEvent);
+            this.touchX = pos.x;
+            this.touchY = pos.y;
         }, { passive: false });
     
-        window.addEventListener('touchend', (e) => {
-            // Das UI-Flag und die Spielerposition zurücksetzen.
-            this.isUITouch = false;
+        // Globaler Listener, um die Position zurückzusetzen, wenn der Finger losgelassen wird
+        this.canvas.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
                 this.touchX = null;
                 this.touchY = null;
