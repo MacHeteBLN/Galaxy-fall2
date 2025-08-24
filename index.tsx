@@ -338,7 +338,9 @@ class SoundManager {
 class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string): string { return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
 
 class UIManager {
-    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement; private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
+    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
+    private gameOverContainer: HTMLElement; // NEU
+    private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     
     constructor(game: Game, ui: IUIElements) {
         this.game = game;
@@ -353,6 +355,7 @@ class UIManager {
         this.energyBarEl = ui.energyBar;
         this.weaponTierDisplayEl = ui.weaponTierDisplay;
         this.menuContainer = document.getElementById('menu-container')!;
+        this.gameOverContainer = document.getElementById('game-over-container')!; // NEU
         this.langSelectScreen = document.getElementById('language-select-screen')!;
         this.langBackButton = document.getElementById('lang-back-button')!;
         this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, };
@@ -450,11 +453,13 @@ class UIManager {
     
     public toggleMainMenu(show: boolean): void {
         this.menuContainer.style.display = show ? 'flex' : 'none';
+        const exitButton = document.getElementById('exit-button');
         if (show) {
             this.mainMenuElements.header.dataset.translateKey = "main_menu_title";
             this.mainMenuElements.header.textContent = this.localizationManager.translate('main_menu_title');
             this.mainMenuElements.resume.style.display = 'none';
             this.mainMenuElements.quit.style.display = 'none';
+            if (exitButton) exitButton.style.display = 'block';
             this.mainMenuElements.restart.style.display = 'block';
             this.mainMenuElements.restart.dataset.translateKey = 'btn_start_game';
             this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_start_game');
@@ -464,11 +469,13 @@ class UIManager {
     }
     public togglePauseMenu(isPaused: boolean): void {
         this.menuContainer.style.display = isPaused ? 'flex' : 'none';
+        const exitButton = document.getElementById('exit-button');
         if (isPaused) {
             this.mainMenuElements.header.dataset.translateKey = "pause_header";
             this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header');
             this.mainMenuElements.resume.style.display = 'block';
             this.mainMenuElements.quit.style.display = 'block';
+            if (exitButton) exitButton.style.display = 'none';
             this.mainMenuElements.restart.style.display = 'block';
             this.mainMenuElements.restart.dataset.translateKey = 'btn_restart';
             this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart');
@@ -476,6 +483,18 @@ class UIManager {
             this.showTab('spiel');
         }
     }
+
+    // NEU: Funktion zum Anzeigen/Verstecken des HTML-Game-Over-Bildschirms
+    public toggleGameOverScreen(show: boolean): void {
+        if (show) {
+            const finalScoreEl = document.getElementById('final-score')!;
+            finalScoreEl.textContent = this.game.score.toString();
+            this.gameOverContainer.style.display = 'flex';
+        } else {
+            this.gameOverContainer.style.display = 'none';
+        }
+    }
+
     public showTab(tabName: string): void {
         for (const key in this.tabPanes) {
             const pane = this.tabPanes[key]!;
@@ -509,6 +528,18 @@ class UIManager {
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
     
+        setupButton(document.getElementById('exit-button'), () => {
+            window.close();
+        });
+
+        // NEU: Event-Listener für die Buttons auf dem Game-Over-Bildschirm
+        setupButton(document.getElementById('restart-from-gameover-button'), () => {
+            this.game.changeState('LEVEL_START', true);
+        });
+        setupButton(document.getElementById('quit-from-gameover-button'), () => {
+            this.game.changeState('MENU');
+        });
+
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
     
         for (const key in this.tabButtons) {
@@ -520,7 +551,6 @@ class UIManager {
     
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) {
-            // 'input' event works for both desktop and modern mobile browsers
             volSlider.addEventListener('input', (e: any) => {
                 this.settings.masterVolume = parseFloat(e.target.value);
                 this.applySettings();
@@ -634,14 +664,18 @@ class UIManager {
         });
     }
     public drawLevelMessage(): void { const ctx = this.ctx; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = "30px 'Press Start 2P'"; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); }
-    public drawGameOver(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#FF3333'; ctx.font = "50px 'Press Start 2P'";
- ctx.fillText(t('game_over_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('game_over_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('game_over_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
+    // GEÄNDERT: Zeichnet nur noch den dunklen Hintergrund, der Text wird vom HTML-Overlay übernommen.
+    public drawGameOver(): void { 
+        const ctx = this.ctx; 
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+        ctx.fillRect(0, 0, this.game.width, this.game.height); 
+    }
     public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     public drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
 class Game {
-    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
@@ -693,8 +727,18 @@ class Game {
             }
         });
 
+        const introTapHandler = (e: Event) => {
+            if (this.gameState === 'INTRO') {
+                e.preventDefault();
+                this.uiManager.soundManager.initAudio();
+                this.changeState('MENU');
+                window.removeEventListener('touchstart', introTapHandler);
+            }
+        };
+
         if (this.isMobile) {
             this.initMobileControls();
+            window.addEventListener('touchstart', introTapHandler, { once: true });
         } else {
             this.initDesktopControls();
         }
@@ -702,16 +746,13 @@ class Game {
 
     initMobileControls(): void {
         const getTouchPos = (e: TouchEvent) => {
-            // Berechnet die Position relativ zum Canvas
             const rect = this.canvas.getBoundingClientRect();
             const x = (e.touches[0].clientX - rect.left) / this.scale;
             const y = (e.touches[0].clientY - rect.top) / this.scale;
             return { x, y };
         };
     
-        // Event Listener NUR für das Canvas-Element für die Spielerbewegung
         this.canvas.addEventListener('touchstart', (e) => {
-            // Nur reagieren, wenn das Spiel aktiv ist
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
             
             e.preventDefault();
@@ -729,7 +770,6 @@ class Game {
             this.touchY = pos.y;
         }, { passive: false });
     
-        // Globaler Listener, um die Position zurückzusetzen, wenn der Finger losgelassen wird
         this.canvas.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
                 this.touchX = null;
@@ -749,11 +789,15 @@ class Game {
             if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (['INTRO', 'MENU'].includes(this.gameState)) {
+                if (this.gameState === 'INTRO') {
+                    this.uiManager.soundManager.initAudio();
+                    this.changeState('MENU');
+                } else if (this.gameState === 'MENU') {
                     this.uiManager.soundManager.initAudio();
                     this.changeState('LEVEL_START', true);
+                } else if (['WIN'].includes(this.gameState)) {
+                    this.changeState('MENU');
                 }
-                else if (['GAME_OVER', 'WIN'].includes(this.gameState)) { this.changeState('MENU'); }
             }
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused && !this.player.isChargingBlackHole) {
                 const mapping = keyMap[e.code];
@@ -797,10 +841,15 @@ class Game {
     }
 
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
+    
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
+
+        // GEÄNDERT: Alle Overlays zu Beginn ausblenden
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
+        this.uiManager.toggleGameOverScreen(false);
+
         if (newState === 'PAUSED') {
             this.isPaused = true;
         } else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') {
@@ -844,6 +893,14 @@ class Game {
                 setTimeout(() => this.changeState('PLAYING'), 3000);
                 break;
             case 'GAME_OVER':
+                if (this.score > this.highscore) {
+                    this.highscore = this.score;
+                    localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString());
+                }
+                this.uiManager.soundManager.setTrack('normal');
+                // GEÄNDERT: Den HTML-Game-Over-Bildschirm anzeigen
+                this.uiManager.toggleGameOverScreen(true);
+                break;
             case 'WIN':
                 if (this.score > this.highscore) {
                     this.highscore = this.score;
@@ -853,7 +910,24 @@ class Game {
                 break;
         }
     }
-    update(deltaTime: number): void { if (this.isPaused) return; if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
+    update(deltaTime: number): void { 
+        if (this.isPaused) return; 
+        if (this.gameState !== 'PLAYING') { 
+            if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); 
+            return; 
+        } 
+        this.updateParallaxStarfield(deltaTime); 
+        this.entities.forEach(e => e.update(deltaTime)); 
+        this.enemySpawnTimer += deltaTime; 
+        if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { 
+            this.spawnEnemy(); this.enemySpawnTimer = 0; 
+        } 
+        if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); 
+        this.handleCollisions(); 
+        this.cleanupEntities(); 
+        if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); 
+        this.uiManager.update(); 
+    }
     draw(): void {
         this.ctx.clearRect(0, 0, this.baseWidth, this.baseHeight);
         this.drawParallaxStarfield();
@@ -883,7 +957,7 @@ class Game {
     updateParallaxStarfield(dt: number): void { this.stars.forEach(s => { s.pos.y += s.v * (dt / 1000); if (s.pos.y > this.baseHeight) { s.pos.y = -(Math.random() * 50); s.pos.x = Math.random() * this.baseWidth; } }); }
     drawParallaxStarfield(): void { this.stars.forEach(s => { this.ctx.fillStyle = `rgba(255,255,255,${s.a})`; this.ctx.beginPath(); this.ctx.arc(s.pos.x, s.pos.y, s.s, 0, Math.PI * 2); this.ctx.fill(); }); }
     spawnEnemy(): void { const type = this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!; let enemy; switch (type) { case 'GRUNT': enemy = new Grunt(this); break; case 'TANK': enemy = new Tank(this); break; case 'WEAVER': enemy = new Weaver(this); break; case 'SHOOTER': enemy = new Shooter(this); break; case 'BOSS_SENTINEL_PRIME': enemy = new BossSentinelPrime(this, 100 * (1 + this.level/5), 1 + this.level/10); break; case 'BOSS_VOID_SERPENT': enemy = new BossVoidSerpent(this, 120 * (1 + this.level/5), 1.1 + this.level/10); break; case 'BOSS_OMEGA_NEXUS': enemy = new BossOmegaNexus(this, 150 * (1 + this.level/5), 1.2 + this.level/10); break; case 'BOSS_NEXUS_PRIME': enemy = new BossNexusPrime(this, 200 * (1 + this.level/5), 1.3 + this.level/10); break; } if (enemy) this.addEntity(enemy); }
-    drawProfessionalIntro(): void { const t = Date.now(), w = this.width, h = this.height, ctx = this.ctx; ctx.textAlign = 'center'; ctx.font = "60px 'Press Start 2P'"; ctx.fillStyle = '#0ff'; const p = Math.sin(t / 500) * 5 + 15; ctx.shadowColor = '#0ff'; ctx.shadowBlur = p; ctx.fillText("GALAXY FALL", w / 2, h / 2); const sG = ctx.createLinearGradient(w / 2 - 300, 0, w / 2 + 300, 0); const sP = (t % 3000) / 3000; sG.addColorStop(Math.max(0, sP - 0.2), 'rgba(255,255,255,0)'); sG.addColorStop(sP, 'rgba(255,255,255,0.8)'); sG.addColorStop(Math.min(1, sP + 0.2), 'rgba(255,255,255,0)'); ctx.fillStyle = sG; ctx.fillText("CELESTIAL", w / 2, h / 2 + 60); ctx.shadowBlur = 0; const a = Math.sin(t / 400) * 0.4 + 0.6; ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.font = "20px 'Press Start 2P'"; ctx.fillText(this.uiManager.localizationManager.translate('intro_prompt'), w / 2, h / 2 + 140); }
+    drawProfessionalIntro(): void { const t = Date.now(), w = this.width, h = this.height, ctx = this.ctx; ctx.textAlign = 'center'; ctx.font = "60px 'Press Start 2P'"; ctx.fillStyle = '#0ff'; const p = Math.sin(t / 500) * 5 + 15; ctx.shadowColor = '#0ff'; ctx.shadowBlur = p; ctx.fillText("GALAXY FALL", w / 2, h / 2); const sG = ctx.createLinearGradient(w / 2 - 300, 0, w / 2 + 300, 0); const sP = (t % 3000) / 3000; sG.addColorStop(Math.max(0, sP - 0.2), 'rgba(255,255,255,0)'); sG.addColorStop(sP, 'rgba(255,255,255,0.8)'); sG.addColorStop(Math.min(1, sP + 0.2), 'rgba(255,255,255,0)'); ctx.fillStyle = sG; ctx.fillText("CELESTIAL", w / 2, h / 2 + 60); ctx.shadowBlur = 0; const a = Math.sin(t / 400) * 0.4 + 0.6; ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.font = "20px 'Press Start 2P'"; const promptKey = this.isMobile ? 'intro_prompt_mobile' : 'intro_prompt'; ctx.fillText(this.uiManager.localizationManager.translate(promptKey), w / 2, h / 2 + 140); }
     isColliding(a: Entity, b: Entity): boolean { return a.pos.x < b.pos.x + b.width && a.pos.x + a.width > b.pos.x && a.pos.y < b.pos.y + b.height && a.pos.y + a.height > b.pos.y; }
     addEntity(entity: Entity): void { this.entities.push(entity); }
     cleanupEntities(): void { this.entities = this.entities.filter(e => e.isAlive()); }
