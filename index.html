@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-CS4YgiQz.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-RrPR74hV.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-DU_2qwuA.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-DUjPNBHb.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -42,7 +42,6 @@
         </div>
         <div class="right-stats">
             <div class="ui-item" id="lives-display"></div>
-            <!-- GEÄNDERT: Tier-Anzeige ist jetzt hier oben -->
             <div class="ui-item" id="weapon-tier-display"></div>
             <div class="ui-item" id="energy-display">
                 <span data-translate-key="energy">Energy</span>
@@ -57,7 +56,6 @@
         <div id="special-inventory"></div>
         <div id="ultra-inventory"></div>
     </div>
-    <!-- Dieses Element zeigt jetzt nur noch die Buffs an -->
     <div id="weapon-status"></div>
     
     <!-- Menü-Container (für Pause und Hauptmenü) -->
@@ -74,6 +72,7 @@
             <div id="spiel-view" class="tab-pane active">
                  <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
                  <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
+                 <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
                  <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
                  <div id="menu-highscore">
                     <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
@@ -117,6 +116,22 @@
             </div>
         </div>
     </div>
+
+    <!-- Container für den Game-Over-Bildschirm -->
+    <div id="game-over-container">
+        <div class="menu">
+            <div class="menu-header">
+                <h1 data-translate-key="game_over_title">Game Over</h1>
+            </div>
+            <div class="final-score-container">
+                <span data-translate-key="game_over_final_score">Final Score</span>: <span id="final-score">0</span>
+            </div>
+            <!-- KORRIGIERT: .menu-button Klasse für konsistentes Styling hinzugefügt -->
+            <button class="menu-button" id="restart-from-gameover-button" data-translate-key="btn_restart">Restart</button>
+            <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>
