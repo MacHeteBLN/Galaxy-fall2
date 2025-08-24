@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Galaxy Fall: Celestial</title>
-    
+    
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-9sYwlJQO.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-CJmWUGyV.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-Db9sthY5.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-4R9p7XCJ.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -42,7 +42,7 @@
         </div>
         <div class="right-stats">
             <div class="ui-item" id="lives-display"></div>
-            <!-- NEU: Container für die Waffen-Tier-Anzeige -->
+            <!-- GEÄNDERT: Tier-Anzeige ist jetzt hier oben -->
             <div class="ui-item" id="weapon-tier-display"></div>
             <div class="ui-item" id="energy-display">
                 <span data-translate-key="energy">Energy</span>
@@ -57,6 +57,7 @@
         <div id="special-inventory"></div>
         <div id="ultra-inventory"></div>
     </div>
+    <!-- Dieses Element zeigt jetzt nur noch die Buffs an -->
     <div id="weapon-status"></div>
     
     <!-- Menü-Container (für Pause und Hauptmenü) -->
@@ -70,7 +71,6 @@
         </div>
         
         <div class="menu-content">
-            <!-- Tab: Spiel -->
             <div id="spiel-view" class="tab-pane active">
                  <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
                  <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
@@ -79,18 +79,12 @@
                     <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
                  </div>
             </div>
-            
-            <!-- Tab: Arsenal -->
             <div id="arsenal-view" class="tab-pane">
                  <div class="info-panel" id="arsenal-list"></div>
             </div>
-            
-            <!-- Tab: Gegner -->
             <div id="gegner-view" class="tab-pane">
                  <div class="info-panel" id="gegner-list"></div>
             </div>
-            
-            <!-- Tab: Einstellungen -->
             <div id="einstellungen-view" class="tab-pane">
                 <div class="info-panel">
                     <div class="settings-panel">
@@ -123,7 +117,6 @@
             </div>
         </div>
     </div>
-</div>
-
+</div>
 </body>
 </html>
