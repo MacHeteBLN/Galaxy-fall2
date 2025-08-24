@@ -46,7 +46,7 @@ const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWea
 interface IKeyMap { [key: string]: boolean; }
 interface IStar { pos: Vector2D; s: number; v: number; a: number; }
 interface ILevelDefinition { scoreToEarn: number; s: number; m: number; e: string[]; msgKey: string; }
-interface IUIElements { score: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; }
+interface IUIElements { score: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; }
 interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; color: string; }
 interface IInventoryItem { type: string; count: number; }
 
@@ -55,9 +55,7 @@ class Vector2D { public x: number; public y: number; constructor(x: number, y: n
 class Entity { public game: Game; public pos: Vector2D; public width: number; public height: number; public family: string = 'none'; public type: string = 'NONE'; protected _isGarbage: boolean = false; constructor(game: Game, x: number, y: number, w: number, h: number) { this.game = game; this.pos = new Vector2D(x, y); this.width = w; this.height = h; } update(dt: number): void {} draw(ctx: CanvasRenderingContext2D): void {} isAlive(): boolean { return !this._isGarbage; } destroy(): void { this._isGarbage = true; } }
 class EntityFamily extends Entity { constructor(game: Game, x: number, y: number, w: number, h: number, family: string, type: string) { super(game, x, y, w, h); this.family = family; this.type = type; } }
 
-// --- SECTION 5: SPIEL-ENTITÄTEN (KORRIGIERTE REIHENFOLGE) ---
-
-// --- 5.1 Effekte, Pickups & Basis-Gegner (werden von komplexeren Klassen benötigt) ---
+// --- SECTION 5: SPIEL-ENTITÄTEN (kompletter Code unverändert) ---
 class Particle extends Entity {
     private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number;
     constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2) { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'PARTICLE'; this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50); this.size = Math.random() * size + 1; this.life = Math.random() * life; this.initialLife = this.life; this.color = color; }
@@ -115,8 +113,6 @@ class BlackHole extends Entity {
     update(dt: number): void { const dt_s = dt/1000; this.life -= dt; if (this.life <= 0) { this.game.entities.forEach(e => { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius && e instanceof Enemy && !e.isBoss) e.takeHit(9999); }); this.destroy(); this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x, this.pos.y, '#EE82EE')); return; } this.game.entities.forEach(e => { if (e.family === 'enemy' || e.family === 'pickup') { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius) { if (e instanceof Enemy && !e.isBoss) e.stun(50); const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x); const pullSpeed = 180 * (1 - dist / this.pullRadius); e.pos.x += Math.cos(angle) * pullSpeed * dt_s; e.pos.y += Math.sin(angle) * pullSpeed * dt_s; if (dist < this.killRadius) { if (e instanceof Enemy && !e.isBoss) e.takeHit(9999); else if (!(e instanceof Enemy)) e.destroy(); } } } }); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.killRadius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.pullRadius * (this.life / 8000), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
-
-// --- 5.5 Spieler-bezogene Klassen (Projektile, Drohnen, Manager) ---
 class Projectile extends EntityFamily { public vel: Vector2D; public damage: number = 1; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE'); this.vel = new Vector2D(velX, velY); } update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; if (this.pos.y < -this.height || this.pos.y > this.game.height || this.pos.x < -this.width || this.pos.x > this.game.width) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#0ff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 5; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.destroy(); } }
 class HeavyProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x, y, velX, velY); this.pos.x = x - 4; this.width = 8; this.height = 22; this.damage = 2.5; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 8; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
 class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 10; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
@@ -126,11 +122,10 @@ class LaserBeam extends EntityFamily {
     public damage: number = 0.2;
     private soundCooldown: number = 0;
     private phase: number = 0;
-    private amplitude: number = 30; // Wie weit die Welle von der Mitte abweicht
-    private frequency: number = 0.02; // Wie viele Wellen auf dem Bildschirm sind
+    private amplitude: number = 30;
+    private frequency: number = 0.02;
 
     constructor(game: Game, player: Player) {
-        // Die Breite der Kollisionsbox entspricht der doppelten Amplitude
         super(game, 0, 0, 60, game.height, 'projectile', 'LASER_BEAM');
         this.player = player;
     }
@@ -140,15 +135,10 @@ class LaserBeam extends EntityFamily {
             this.destroy();
             return;
         }
-        // Position der Kollisionsbox aktualisieren
         this.pos.x = this.player.pos.x + this.player.width / 2 - this.amplitude;
-        this.pos.y = 0; // Der Strahl beginnt ganz oben
-        this.height = this.player.pos.y; // Die Höhe geht bis zum Spieler
-
-        // Phase für die Wellenanimation aktualisieren
+        this.pos.y = 0;
+        this.height = this.player.pos.y;
         this.phase += (dt / 1000) * 15;
-
-        // Sound abspielen
         this.soundCooldown -= dt;
         if (this.soundCooldown <= 0) {
             this.game.uiManager.soundManager.play('laser');
@@ -160,34 +150,28 @@ class LaserBeam extends EntityFamily {
         ctx.save();
         const centerX = this.player.pos.x + this.player.width / 2;
         const beamHeight = this.player.pos.y;
-
-        // --- Äußerer Schein ---
         ctx.beginPath();
         ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
         for (let y = beamHeight; y > 0; y--) {
             const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
             ctx.lineTo(centerX + xOffset, y);
         }
-        ctx.strokeStyle = '#f0f'; // Neon Pink/Magenta
+        ctx.strokeStyle = '#f0f';
         ctx.lineWidth = 15;
         ctx.shadowColor = '#f0f';
         ctx.shadowBlur = 20;
         ctx.stroke();
-
-        // --- Mittlerer Schein ---
         ctx.beginPath();
         ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
         for (let y = beamHeight; y > 0; y--) {
             const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
             ctx.lineTo(centerX + xOffset, y);
         }
-        ctx.strokeStyle = '#EE82EE'; // Helleres Violett
+        ctx.strokeStyle = '#EE82EE';
         ctx.lineWidth = 8;
         ctx.shadowColor = '#EE82EE';
         ctx.shadowBlur = 15;
         ctx.stroke();
-
-        // --- Innerer Kern ---
         ctx.beginPath();
         ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
         for (let y = beamHeight; y > 0; y--) {
@@ -197,7 +181,6 @@ class LaserBeam extends EntityFamily {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
         ctx.stroke();
-
         ctx.restore();
     }
 }
@@ -244,17 +227,14 @@ class Player extends EntityFamily {
     update(dt: number): void {
         const dt_s = dt / 1000;
         
-        // --- GEÄNDERT: Mobile- und Desktop-Steuerung ---
         if (this.game.isMobile) {
             if (this.game.touchX !== null && this.game.touchY !== null) {
                 const targetX = this.game.touchX - this.width / 2;
                 const targetY = this.game.touchY - this.height / 2;
-                // Sanfte Bewegung zum Finger (Interpolation)
                 this.pos.x += (targetX - this.pos.x) * 0.2;
                 this.pos.y += (targetY - this.pos.y) * 0.2;
             }
         } else {
-            // Bestehende Keyboard-Steuerung
             const move = new Vector2D(0, 0);
             if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
             if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1;
@@ -269,7 +249,6 @@ class Player extends EntityFamily {
         
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
-
         if (this.fireCooldown <= 0 && !this.isChargingBlackHole) {
             this.shoot();
         }
@@ -385,31 +364,21 @@ class SoundManager {
         this.defineBossMusicPatterns();
     }
 
-    // --- ÜBERARBEITETE METHODE ---
     public initAudio(): void {
-        // Wenn der Kontext bereits existiert und läuft, müssen wir nichts tun.
         if (this.audioCtx && this.audioCtx.state === 'running') {
             return;
         }
-        
         try {
-            // Erstelle den AudioContext nur, wenn er noch nicht existiert.
             if (!this.audioCtx) {
                 this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
                 this.masterGain = this.audioCtx.createGain();
                 this.masterGain.connect(this.audioCtx.destination);
             }
-
-            // Wenn der Kontext "eingefroren" (suspended) ist, versuche ihn fortzusetzen.
-            // Dies ist der entscheidende Schritt für die meisten Browser.
             if (this.audioCtx.state === 'suspended') {
                 this.audioCtx.resume();
             }
-
-            // Wende die Lautstärke- und Musikeinstellungen an.
             this.setVolume(this.uiManager.settings.masterVolume);
             this.toggleMusic(this.uiManager.settings.music);
-
         } catch (e) {
             console.error("Web Audio API is not supported or failed to initialize", e);
         }
@@ -429,11 +398,9 @@ class SoundManager {
 class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string): string { return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
 
 class UIManager {
-    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private menuContainer: HTMLElement; private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
-    constructor(game: Game, ui: IUIElements) { this.game = game; this.ctx = game.ctx; this.scoreEl = ui.score; this.levelEl = ui.level; this.highscoreEl = ui.highscore; this.specialInventoryEl = ui.specialInventory; this.ultraInventoryEl = ui.ultraInventory; this.livesDisplay = ui.livesDisplay; this.weaponStatusEl = ui.weaponStatus; this.energyBarEl = ui.energyBar; this.menuContainer = document.getElementById('menu-container')!; this.langSelectScreen = document.getElementById('language-select-screen')!; this.langBackButton = document.getElementById('lang-back-button')!; this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, }; this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, }; this.mainMenuElements = { resume: document.getElementById('resume-button')!, restart: document.getElementById('restart-button')!, quit: document.getElementById('quit-button')!, header: this.menuContainer.querySelector('.menu-header h1')! }; this.settings = this.loadSettings(); this.localizationManager = new LocalizationManager(); this.soundManager = new SoundManager(this); this.initButtons(); }
-    update(): void { this.scoreEl.textContent = this.game.score.toString(); this.levelEl.textContent = this.game.level > this.game.levelDefinitions.length ? 'MAX' : this.game.level.toString(); if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) { this.highscoreEl.textContent = this.game.highscore.toString(); } if (!this.game.player || !this.game.player.isAlive()) { this.specialInventoryEl.innerHTML = ''; this.ultraInventoryEl.innerHTML = ''; this.livesDisplay.innerHTML = ''; this.weaponStatusEl.innerHTML = ''; this.energyBarEl.style.width = '0%'; return; } this.livesDisplay.innerHTML = `<div class="life-icon"></div><span>x${this.game.player.lives}</span>`; this.energyBarEl.style.width = `${this.game.player.energy}%`; this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1); this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4); this.updateWeaponStatusUI(); }
-    
-    // --- ÜBERARBEITETE METHODE ---
+    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement; private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
+    constructor(game: Game, ui: IUIElements) { this.game = game; this.ctx = game.ctx; this.scoreEl = ui.score; this.levelEl = ui.level; this.highscoreEl = ui.highscore; this.specialInventoryEl = ui.specialInventory; this.ultraInventoryEl = ui.ultraInventory; this.livesDisplay = ui.livesDisplay; this.weaponStatusEl = ui.weaponStatus; this.energyBarEl = ui.energyBar; this.weaponTierDisplayEl = ui.weaponTierDisplay; this.menuContainer = document.getElementById('menu-container')!; this.langSelectScreen = document.getElementById('language-select-screen')!; this.langBackButton = document.getElementById('lang-back-button')!; this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, }; this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, }; this.mainMenuElements = { resume: document.getElementById('resume-button')!, restart: document.getElementById('restart-button')!, quit: document.getElementById('quit-button')!, header: this.menuContainer.querySelector('.menu-header h1')! }; this.settings = this.loadSettings(); this.localizationManager = new LocalizationManager(); this.soundManager = new SoundManager(this); this.initButtons(); }
+    update(): void { this.scoreEl.textContent = this.game.score.toString(); this.levelEl.textContent = this.game.level > this.game.levelDefinitions.length ? 'MAX' : this.game.level.toString(); if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) { this.highscoreEl.textContent = this.game.highscore.toString(); } if (!this.game.player || !this.game.player.isAlive()) { this.specialInventoryEl.innerHTML = ''; this.ultraInventoryEl.innerHTML = ''; this.livesDisplay.innerHTML = ''; this.weaponStatusEl.innerHTML = ''; this.energyBarEl.style.width = '0%'; this.weaponTierDisplayEl.innerHTML = ''; return; } this.livesDisplay.innerHTML = `<div class="life-icon"></div><span>x${this.game.player.lives}</span>`; this.energyBarEl.style.width = `${this.game.player.energy}%`; this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1); this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4); this.updateWeaponStatusUI(); }
     updateInventoryUI(element: HTMLElement, inventory: IInventoryItem[], maxSize: number, keyStart: number): void {
         let html = '';
         const type = element.id === 'special-inventory' ? 'special' : 'ultra';
@@ -453,20 +420,21 @@ class UIManager {
         }
         element.innerHTML = html;
     }
-
     updateWeaponStatusUI(): void {
-        if (!this.game.player) return;
+        if (!this.game.player) {
+            this.weaponTierDisplayEl.innerHTML = '';
+            this.weaponStatusEl.innerHTML = '';
+            return;
+        }
         const t = (key: string) => this.localizationManager.translate(key);
         const pm = this.game.player.powerUpManager;
-        
-        let text = `${t('w_tier')}: ${pm.weaponTier}`;
-        let timer = pm.weaponTierTimer;
-        
-        if (timer > 0 && pm.weaponTier > 1) {
-            const seconds = Math.ceil(timer / 1000);
-            text += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
+        let tierText = `${t('w_tier')}: ${pm.weaponTier}`;
+        let tierTimer = pm.weaponTierTimer;
+        if (tierTimer > 0 && pm.weaponTier > 1) {
+            const seconds = Math.ceil(tierTimer / 1000);
+            tierText += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
         }
-        
+        this.weaponTierDisplayEl.innerHTML = tierText;
         let activeBuffs = '';
         if (pm.isActive('RAPID_FIRE')) {
             activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
@@ -477,41 +445,72 @@ class UIManager {
         if (pm.isActive('ORBITAL_DRONE')) {
             activeBuffs += ` ${t('buff_orbital')}(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`;
         }
-        
-        this.weaponStatusEl.innerHTML = text + activeBuffs;
+        if (activeBuffs.trim() !== '') {
+            this.weaponStatusEl.innerHTML = activeBuffs.trim();
+            this.weaponStatusEl.style.display = 'block';
+        } else {
+            this.weaponStatusEl.innerHTML = '';
+            this.weaponStatusEl.style.display = 'none';
+        }
     }
-    toggleMainMenu(show: boolean): void { this.menuContainer.style.display = show ? 'flex' : 'none'; if (show) { this.mainMenuElements.header.dataset.translateKey = "main_menu_title"; this.mainMenuElements.header.textContent = this.localizationManager.translate('main_menu_title'); this.mainMenuElements.resume.style.display = 'none'; this.mainMenuElements.quit.style.display = 'none'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_start_game'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_start_game'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
-    togglePauseMenu(isPaused: boolean): void { this.menuContainer.style.display = isPaused ? 'flex' : 'none'; if (isPaused) { this.mainMenuElements.header.dataset.translateKey = "pause_header"; this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header'); this.mainMenuElements.resume.style.display = 'block'; this.mainMenuElements.quit.style.display = 'block'; this.mainMenuElements.restart.style.display = 'block'; this.mainMenuElements.restart.dataset.translateKey = 'btn_restart'; this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart'); this.populateAllTranslatedContent(); this.showTab('spiel'); } }
-    showTab(tabName: string): void { for (const key in this.tabPanes) { const pane = this.tabPanes[key]!; const button = this.tabButtons[key]!; if (key === tabName) { pane.classList.add('active'); button.classList.add('active'); } else { pane.classList.remove('active'); button.classList.remove('active'); } } }
-    
-    // --- ÜBERARBEITETE METHODE ---
+    public toggleMainMenu(show: boolean): void {
+        this.menuContainer.style.display = show ? 'flex' : 'none';
+        if (show) {
+            this.mainMenuElements.header.dataset.translateKey = "main_menu_title";
+            this.mainMenuElements.header.textContent = this.localizationManager.translate('main_menu_title');
+            this.mainMenuElements.resume.style.display = 'none';
+            this.mainMenuElements.quit.style.display = 'none';
+            this.mainMenuElements.restart.style.display = 'block';
+            this.mainMenuElements.restart.dataset.translateKey = 'btn_start_game';
+            this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_start_game');
+            this.populateAllTranslatedContent();
+            this.showTab('spiel');
+        }
+    }
+    public togglePauseMenu(isPaused: boolean): void {
+        this.menuContainer.style.display = isPaused ? 'flex' : 'none';
+        if (isPaused) {
+            this.mainMenuElements.header.dataset.translateKey = "pause_header";
+            this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header');
+            this.mainMenuElements.resume.style.display = 'block';
+            this.mainMenuElements.quit.style.display = 'block';
+            this.mainMenuElements.restart.style.display = 'block';
+            this.mainMenuElements.restart.dataset.translateKey = 'btn_restart';
+            this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart');
+            this.populateAllTranslatedContent();
+            this.showTab('spiel');
+        }
+    }
+    public showTab(tabName: string): void {
+        for (const key in this.tabPanes) {
+            const pane = this.tabPanes[key]!;
+            const button = this.tabButtons[key]!;
+            if (key === tabName) {
+                pane.classList.add('active');
+                button.classList.add('active');
+            } else {
+                pane.classList.remove('active');
+                button.classList.remove('active');
+            }
+        }
+    }
     initButtons(): void {
-        // Sound-Freischaltung an den Neustart-Button koppeln
-        this.mainMenuElements.restart.onclick = () => {
-            this.soundManager.initAudio();
-            this.game.changeState('LEVEL_START', true);
-        };
-        
         document.getElementById('mobile-pause-button')!.onclick = () => this.game.togglePause();
+        this.mainMenuElements.restart.onclick = () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); };
         this.mainMenuElements.resume.onclick = () => this.game.togglePause();
         this.mainMenuElements.quit.onclick = () => this.game.changeState('MENU');
-        
         for (const key in this.tabButtons) { this.tabButtons[key]!.onclick = () => this.showTab(key); }
-        
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if(volSlider) { volSlider.value = this.settings.masterVolume.toString(); volSlider.oninput = (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }; }
-        
         document.getElementById('toggle-music')!.onclick = () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-sfx')!.onclick = () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-particles')!.onclick = () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-shake')!.onclick = () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); };
         document.getElementById('toggle-language')!.onclick = () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; };
         this.langBackButton.onclick = () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; };
-        
-        // Sound-Freischaltung an die Sprachauswahl-Buttons koppeln
         document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
             button.onclick = () => {
-                this.soundManager.initAudio(); // Audio beim ersten Klick freischalten
+                this.soundManager.initAudio();
                 const lang = button.dataset.lang;
                 if (lang) {
                     this.localizationManager.setLanguage(lang);
@@ -525,8 +524,6 @@ class UIManager {
                 }
             };
         });
-
-        // Event Listener für das Antippen des Inventars
         const inventoryClickHandler = (event: Event) => {
             if (!this.game.player || this.game.isPaused) return;
             const target = event.target as HTMLElement;
@@ -573,32 +570,62 @@ class UIManager {
         });
     }
     drawLevelMessage(): void { const ctx = this.ctx; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = "30px 'Press Start 2P'"; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); }
-    drawGameOver(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#FF3333'; ctx.font = "50px 'Press Start 2P'"; // Schriftgröße von 60px auf 50px reduziert
+    drawGameOver(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#FF3333'; ctx.font = "50px 'Press Start 2P'";
  ctx.fillText(t('game_over_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('game_over_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('game_over_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
 class Game {
-    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; private introTimer: number = 3000; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public levelDefinitions: ILevelDefinition[]; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
-    // --- NEUE EIGENSCHAFTEN ---
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
     public touchY: number | null = null;
+    
+    private container: HTMLElement;
+    public scale: number = 1;
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
-        this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = canvas.width; this.height = canvas.height; this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
+        this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
+        this.width = this.baseWidth;
+        this.height = this.baseHeight;
+        this.container = document.getElementById('gameContainer')!;
+        this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
         this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
         this.levelDefinitions = [
             { scoreToEarn: 2000, s: 1200, m: 1.0, e: ['GRUNT'], msgKey: "wave_msg_1"}, { scoreToEarn: 3000, s: 1000, m: 1.1, e: ['GRUNT', 'WEAVER'], msgKey: "wave_msg_2"}, { scoreToEarn: 5000, s: 900, m: 1.2, e: ['GRUNT', 'WEAVER', 'TANK'], msgKey: "wave_msg_3"}, { scoreToEarn: 8000, s: 800, m: 1.3, e: ['WEAVER', 'SHOOTER'], msgKey: "wave_msg_4"}, { scoreToEarn: 0, s: 1000, m: 1.4, e: ['BOSS_SENTINEL_PRIME'], msgKey: "wave_msg_5"}, { scoreToEarn: 12000, s: 700, m: 1.5, e: ['GRUNT', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_6"}, { scoreToEarn: 15000, s: 650, m: 1.6, e: ['WEAVER', 'WEAVER', 'TANK'], msgKey: "wave_msg_7"}, { scoreToEarn: 20000, s: 600, m: 1.7, e: ['GRUNT', 'TANK', 'SHOOTER'], msgKey: "wave_msg_8"}, { scoreToEarn: 25000, s: 550, m: 1.8, e: ['WEAVER', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_9"}, { scoreToEarn: 0, s: 1000, m: 1.9, e: ['BOSS_VOID_SERPENT'], msgKey: "wave_msg_10"}, { scoreToEarn: 30000, s: 500, m: 2.0, e: ['GRUNT', 'GRUNT', 'GRUNT', 'WEAVER'], msgKey: "wave_msg_11"}, { scoreToEarn: 30000, s: 450, m: 2.1, e: ['TANK', 'TANK', 'SHOOTER'], msgKey: "wave_msg_12"}, { scoreToEarn: 30000, s: 400, m: 2.2, e: ['WEAVER', 'WEAVER', 'WEAVER'], msgKey: "wave_msg_13"}, { scoreToEarn: 40000, s: 380, m: 2.3, e: ['SHOOTER', 'SHOOTER', 'TANK'], msgKey: "wave_msg_14"}, { scoreToEarn: 0, s: 1000, m: 2.4, e: ['BOSS_OMEGA_NEXUS'], msgKey: "wave_msg_15"}, { scoreToEarn: 60000, s: 350, m: 2.5, e: ['GRUNT', 'SHOOTER'], msgKey: "wave_msg_16"}, { scoreToEarn: 70000, s: 320, m: 2.6, e: ['WEAVER', 'TANK'], msgKey: "wave_msg_17"}, { scoreToEarn: 70000, s: 300, m: 2.7, e: ['GRUNT', 'WEAVER', 'TANK', 'SHOOTER'], msgKey: "wave_msg_18"}, { scoreToEarn: 80000, s: 280, m: 2.8, e: ['SHOOTER', 'SHOOTER', 'SHOOTER', 'SHOOTER'], msgKey: "wave_msg_19"}, { scoreToEarn: 0, s: 1000, m: 3.2, e: ['BOSS_NEXUS_PRIME'], msgKey: "wave_msg_20"},
         ];
-        this.uiManager = new UIManager(this, ui); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
+        this.uiManager = new UIManager(this, ui); 
+        this.initEventListeners(); 
+        this.createParallaxStarfield(); 
+        this.uiManager.populateAllTranslatedContent();
+        this.resizeGame(); 
+        if (localStorage.getItem('galaxyFallLanguage')) this.changeState('INTRO'); else document.getElementById('language-select-screen')!.style.display = 'flex';
+    }
+
+    resizeGame(): void {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const scale = Math.min(screenWidth / this.baseWidth, screenHeight / this.baseHeight);
+        this.scale = scale;
+        const newWidth = this.baseWidth * scale;
+        const newHeight = this.baseHeight * scale;
+        this.container.style.width = `${newWidth}px`;
+        this.container.style.height = `${newHeight}px`;
     }
     
-    // --- ÜBERARBEITETE METHODE ---
     initEventListeners(): void {
+        window.addEventListener('resize', () => this.resizeGame());
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
+                    this.uiManager.soundManager.audioCtx.resume();
+                }
+            }
+        });
+
         if (this.isMobile) {
             this.initMobileControls();
         } else {
@@ -606,28 +633,27 @@ class Game {
         }
     }
 
-    // --- NEUE METHODE ---
     initMobileControls(): void {
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.canvas.getBoundingClientRect();
-            const x = e.touches[0].clientX - rect.left;
-            const y = e.touches[0].clientY - rect.top;
+            const x = (e.touches[0].clientX - rect.left) / this.scale;
+            const y = ((e.touches[0].clientY - rect.top) / this.scale) - (this.baseHeight * 0.0625); // Korrektur für UI-Leiste
             return { x, y };
         };
 
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            this.uiManager.soundManager.initAudio(); // Audio freischalten!
+            this.uiManager.soundManager.initAudio();
             const pos = getTouchPos(e);
             this.touchX = pos.x;
-            this.touchY = pos.y - 50; 
+            this.touchY = pos.y;
         }, { passive: false });
 
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const pos = getTouchPos(e);
             this.touchX = pos.x;
-            this.touchY = pos.y - 50;
+            this.touchY = pos.y;
         }, { passive: false });
 
         window.addEventListener('touchend', (e) => {
@@ -638,7 +664,6 @@ class Game {
         });
     }
 
-    // --- NEUE METHODE ---
     initDesktopControls(): void {
         const keyMap: { [key: string]: { type: 'special' | 'ultra', index: number } } = {
             'Digit1': { type: 'special', index: 0 }, 'Digit2': { type: 'special', index: 1 },
@@ -754,11 +779,9 @@ class Game {
                 break;
         }
     }
-    update(deltaTime: number): void { 
-        if (this.isPaused) return; // Kompletter Stop bei Pause
-        if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
+    update(deltaTime: number): void { if (this.isPaused) return; if (this.gameState !== 'PLAYING') { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); if (this.gameState === 'INTRO') { this.introTimer -= deltaTime; if (this.introTimer <= 0) this.changeState('MENU'); } return; } this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.enemySpawnTimer += deltaTime; if (this.enemySpawnTimer > this.enemySpawnInterval && !this.isBossActive) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (!this.isBossActive && this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) this.changeState('LEVEL_START'); this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
     draw(): void {
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.ctx.clearRect(0, 0, this.baseWidth, this.baseHeight);
         this.drawParallaxStarfield();
         this.entities.forEach(e => {
             if (e !== this.player) {
@@ -802,7 +825,17 @@ class Game {
 // --- SECTION 8: INITIALISIERUNG ---
 window.addEventListener('load', function () {
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
-    const uiElements: IUIElements = { score: document.getElementById('score')!, level: document.getElementById('level')!, highscore: document.getElementById('highscore')!, specialInventory: document.getElementById('special-inventory')!, ultraInventory: document.getElementById('ultra-inventory')!, livesDisplay: document.getElementById('lives-display')!, weaponStatus: document.getElementById('weapon-status')!, energyBar: document.getElementById('energy-bar')!, };
+    const uiElements: IUIElements = { 
+        score: document.getElementById('score')!, 
+        level: document.getElementById('level')!, 
+        highscore: document.getElementById('highscore')!, 
+        specialInventory: document.getElementById('special-inventory')!, 
+        ultraInventory: document.getElementById('ultra-inventory')!, 
+        livesDisplay: document.getElementById('lives-display')!, 
+        weaponStatus: document.getElementById('weapon-status')!, 
+        energyBar: document.getElementById('energy-bar')!,
+        weaponTierDisplay: document.getElementById('weapon-tier-display')!
+    };
     const game = new Game(canvas, uiElements);
     let lastTime = 0;
     function gameLoop(timestamp: number) {

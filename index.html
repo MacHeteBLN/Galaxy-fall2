@@ -2,14 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <!-- WICHTIG: Korrekte Darstellung und Steuerung auf mobilen Geräten -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Galaxy Fall: Celestial</title>
     
-    <!-- Link zur externen CSS-Datei -->
     <link rel="stylesheet" href="index.css">
     
-    <!-- Google Font für den Retro-Look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -33,7 +30,6 @@
     <!-- Haupt-UI des Spiels -->
     <div id="ui-panel">
         <div class="left-stats">
-            <!-- NEU: Mobiler Pause Button -->
             <div id="mobile-pause-button">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                     <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
@@ -45,6 +41,8 @@
         </div>
         <div class="right-stats">
             <div class="ui-item" id="lives-display"></div>
+            <!-- NEU: Container für die Waffen-Tier-Anzeige -->
+            <div class="ui-item" id="weapon-tier-display"></div>
             <div class="ui-item" id="energy-display">
                 <span data-translate-key="energy">Energy</span>
                 <div id="energy-bar-container"><div id="energy-bar"></div></div>
@@ -126,7 +124,6 @@
     </div>
 </div>
 
-<!-- Das Skript wird als Modul geladen -->
 <script type="module" src="./index.js"></script>
 </body>
 </html>

@@ -11,8 +11,7 @@
 
 * {
     box-sizing: border-box;
-    /* Verhindert das versehentliche Markieren von Text auf Mobilgeräten */
-    user-select: none; 
+    user-select: none; /* Verhindert Textauswahl auf Mobilgeräten */
 }
 
 body {
@@ -30,20 +29,22 @@ body {
 
 /* --- SPIEL-CONTAINER & CANVAS --- */
 #gameContainer {
-    width: 800px;
-    height: 800px;
+    position: relative;
     border: 3px solid var(--border-color);
     box-shadow: 0 0 25px var(--border-color), 0 0 8px var(--text-color) inset;
-    position: relative;
     background: var(--bg-color);
     overflow: hidden;
+    aspect-ratio: 1 / 1;
 }
 
+/* GEÄNDERT: Canvas nutzt jetzt die volle relative Größe */
 canvas {
     display: block;
     position: absolute;
-    top: 50px;
+    top: 6.25%; /* 50px / 800px */
     left: 0;
+    width: 100%;
+    height: 93.75%; /* 750px / 800px */
     background-color: transparent;
     z-index: 1;
 }
@@ -54,11 +55,12 @@ canvas {
     top: 0;
     left: 0;
     width: 100%;
-    height: 50px;
+    /* GEÄNDERT: Feste Höhe durch relative Höhe ersetzt */
+    height: 6.25%; /* 50px / 800px */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 20px;
+    padding: 0 2.5%;
     font-size: 14px;
     border-bottom: 3px solid var(--border-color);
     text-transform: uppercase;
@@ -105,7 +107,8 @@ canvas {
 #energy-bar {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #39FF14 0%, #FFFF00 75%, #FF4136 100%);
+    /* GEÄNDERT: Farbverlauf umgedreht (Rot -> Gelb -> Grün) */
+    background: linear-gradient(90deg, #FF4136 0%, #FFFF00 50%, #39FF14 100%);
     transition: width 0.2s ease-out;
     border-radius: 1px;
 }
@@ -137,16 +140,14 @@ canvas {
     align-items: center;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-    /* NEU: Visuelles Feedback für Klickbarkeit */
-    cursor: pointer; 
+    cursor: pointer;
 }
 
 .inventory-slot .slot-image {
     max-width: 75%;
     max-height: 75%;
     object-fit: contain;
-    /* NEU: Stellt sicher, dass Klicks auf dem Slot landen, nicht auf dem Bild */
-    pointer-events: none; 
+    pointer-events: none;
 }
 
 .inventory-slot .slot-key {
@@ -188,23 +189,23 @@ canvas {
     min-width: 150px;
 }
 
-/* --- NEU: STILE FÜR MOBILE STEUERUNG --- */
+/* --- MOBILE STEUERUNG --- */
 #mobile-pause-button {
-    display: none; /* Standardmäßig auf Desktops ausgeblendet */
+    display: none;
     width: 30px;
     height: 30px;
     cursor: pointer;
     color: var(--cyan-glow);
 }
 
-
 /* --- MENÜ-STILE --- */
 #menu-container {
     position: absolute;
-    top: 50px;
+    /* GEÄNDERT: Position und Höhe sind jetzt relativ */
+    top: 6.25%; /* 50px / 800px */
     left: 0;
     width: 100%;
-    height: 750px;
+    height: 93.75%; /* 750px / 800px */
     background: var(--menu-bg);
     z-index: 20;
     display: none; /* Wird per JS gesteuert */
@@ -463,13 +464,12 @@ canvas {
     100% { filter: brightness(1); }
 }
 
-/* --- NEU: MEDIA QUERY FÜR MOBILE GERÄTE --- */
-/* Diese Stile gelten nur für Geräte mit Touchscreen (wie Handys/Tablets) */
+/* --- MEDIA QUERY FÜR MOBILE GERÄTE --- */
 @media (hover: none) and (pointer: coarse) {
     #mobile-pause-button {
-        display: block; /* Pause-Button anzeigen */
+        display: block;
     }
     .slot-key {
-        display: none; /* Tasten-Nummern im Inventar ausblenden */
+        display: none;
     }
 }
