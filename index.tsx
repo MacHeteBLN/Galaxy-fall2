@@ -520,6 +520,7 @@ class UIManager {
     
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) {
+            // 'input' event works for both desktop and modern mobile browsers
             volSlider.addEventListener('input', (e: any) => {
                 this.settings.masterVolume = parseFloat(e.target.value);
                 this.applySettings();
@@ -706,22 +707,34 @@ class Game {
             const y = (e.touches[0].clientY - rect.top) / this.scale;
             return { x, y };
         };
-
+    
         this.container.addEventListener('touchstart', (e) => {
+            const target = e.target as HTMLElement;
+            // Wenn die Berührung auf einem UI-Element liegt, überlasse dem Browser die Steuerung
+            if (target.closest('#menu-container') || target.closest('#ui-panel')) {
+                return;
+            }
+    
             e.preventDefault();
             this.uiManager.soundManager.initAudio();
             const pos = getTouchPos(e as TouchEvent);
             this.touchX = pos.x;
             this.touchY = pos.y - 50;
         }, { passive: false });
-
+    
         this.container.addEventListener('touchmove', (e) => {
+            const target = e.target as HTMLElement;
+            // Wenn die Berührung auf einem UI-Element liegt, überlasse dem Browser die Steuerung
+            if (target.closest('#menu-container') || target.closest('#ui-panel')) {
+                return;
+            }
+            
             e.preventDefault();
             const pos = getTouchPos(e as TouchEvent);
             this.touchX = pos.x;
             this.touchY = pos.y - 50;
         }, { passive: false });
-
+    
         window.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
                 this.touchX = null;

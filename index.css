@@ -336,6 +336,7 @@ canvas {
     font-size: 12px;
     line-height: 1.6;
     background: rgba(0,0,0,0.3);
+    -webkit-overflow-scrolling: touch; /* Hinzugefügt für flüssiges Scrollen auf iOS */
 }
 
 .powerup-entry {
