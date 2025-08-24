@@ -649,6 +649,7 @@ class Game {
     
     private container: HTMLElement;
     public scale: number = 1;
+    public isUITouch: boolean = false; // HINZUGEFÜGT: Flag zur Unterscheidung von UI- und Spiel-Berührungen
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
         this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
@@ -700,6 +701,7 @@ class Game {
         }
     }
 
+    // KOMPLETT ERSETZTE METHODE
     initMobileControls(): void {
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.container.getBoundingClientRect();
@@ -710,32 +712,43 @@ class Game {
     
         this.container.addEventListener('touchstart', (e) => {
             const target = e.target as HTMLElement;
-            // Wenn die Berührung auf einem UI-Element liegt, überlasse dem Browser die Steuerung
-            if (target.closest('#menu-container') || target.closest('#ui-panel')) {
-                return;
+            
+            // Prüfen, ob die Berührung auf einem interaktiven UI-Element liegt, das Standardverhalten erfordert.
+            if (target.closest('input[type="range"]') || target.closest('.info-panel') || target.closest('.menu-button') || target.closest('.tab-button') || target.closest('.lang-button') || target.closest('#mobile-pause-button')) {
+                this.isUITouch = true;
+                return; // Dem Browser die Steuerung überlassen (für Scrollen, Slider, Klicks).
+            }
+            
+            // Wenn es kein UI-Touch ist und das Spiel läuft, dann ist es für die Spielersteuerung.
+            if (this.gameState === 'PLAYING') {
+                e.preventDefault();
+                this.isUITouch = false;
+                this.uiManager.soundManager.initAudio();
+                const pos = getTouchPos(e as TouchEvent);
+                this.touchX = pos.x;
+                this.touchY = pos.y - 50;
             }
     
-            e.preventDefault();
-            this.uiManager.soundManager.initAudio();
-            const pos = getTouchPos(e as TouchEvent);
-            this.touchX = pos.x;
-            this.touchY = pos.y - 50;
         }, { passive: false });
     
         this.container.addEventListener('touchmove', (e) => {
-            const target = e.target as HTMLElement;
-            // Wenn die Berührung auf einem UI-Element liegt, überlasse dem Browser die Steuerung
-            if (target.closest('#menu-container') || target.closest('#ui-panel')) {
+            // Wenn die Berührung auf einem UI-Element begann, hier nichts tun.
+            if (this.isUITouch) {
                 return;
             }
-            
-            e.preventDefault();
-            const pos = getTouchPos(e as TouchEvent);
-            this.touchX = pos.x;
-            this.touchY = pos.y - 50;
+    
+            // Ansonsten ist es eine Geste zur Spielsteuerung.
+            if (this.gameState === 'PLAYING') {
+                e.preventDefault();
+                const pos = getTouchPos(e as TouchEvent);
+                this.touchX = pos.x;
+                this.touchY = pos.y - 50;
+            }
         }, { passive: false });
     
         window.addEventListener('touchend', (e) => {
+            // Das UI-Flag und die Spielerposition zurücksetzen.
+            this.isUITouch = false;
             if (e.touches.length === 0) {
                 this.touchX = null;
                 this.touchY = null;
