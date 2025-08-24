@@ -339,7 +339,7 @@ class LocalizationManager { private currentLanguage: string = 'en'; private tran
 
 class UIManager {
     public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
-    private gameOverContainer: HTMLElement; // NEU
+    private gameOverContainer: HTMLElement;
     private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     
     constructor(game: Game, ui: IUIElements) {
@@ -355,7 +355,7 @@ class UIManager {
         this.energyBarEl = ui.energyBar;
         this.weaponTierDisplayEl = ui.weaponTierDisplay;
         this.menuContainer = document.getElementById('menu-container')!;
-        this.gameOverContainer = document.getElementById('game-over-container')!; // NEU
+        this.gameOverContainer = document.getElementById('game-over-container')!;
         this.langSelectScreen = document.getElementById('language-select-screen')!;
         this.langBackButton = document.getElementById('lang-back-button')!;
         this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, };
@@ -475,7 +475,7 @@ class UIManager {
             this.mainMenuElements.header.textContent = this.localizationManager.translate('pause_header');
             this.mainMenuElements.resume.style.display = 'block';
             this.mainMenuElements.quit.style.display = 'block';
-            if (exitButton) exitButton.style.display = 'none';
+            if (exitButton) exitButton.style.display = 'block';
             this.mainMenuElements.restart.style.display = 'block';
             this.mainMenuElements.restart.dataset.translateKey = 'btn_restart';
             this.mainMenuElements.restart.textContent = this.localizationManager.translate('btn_restart');
@@ -484,7 +484,6 @@ class UIManager {
         }
     }
 
-    // NEU: Funktion zum Anzeigen/Verstecken des HTML-Game-Over-Bildschirms
     public toggleGameOverScreen(show: boolean): void {
         if (show) {
             const finalScoreEl = document.getElementById('final-score')!;
@@ -528,11 +527,24 @@ class UIManager {
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
     
+        // --- START: AKTUALISIERTER EXIT BUTTON ---
         setupButton(document.getElementById('exit-button'), () => {
-            window.close();
+            // Prüfen, ob das Spiel auf einem Mobilgerät läuft
+            if (this.game.isMobile) {
+                // Logik für Mobilgeräte: Zeige den "Goodbye"-Bildschirm an
+                this.menuContainer.style.display = 'none';
+                const exitScreen = document.getElementById('exit-screen');
+                if (exitScreen) {
+                    exitScreen.style.display = 'flex';
+                }
+                this.soundManager.toggleMusic(false);
+            } else {
+                // Logik für PC: Versuche, das Fenster zu schließen
+                window.close();
+            }
         });
+        // --- ENDE: AKTUALISIERTER EXIT BUTTON ---
 
-        // NEU: Event-Listener für die Buttons auf dem Game-Over-Bildschirm
         setupButton(document.getElementById('restart-from-gameover-button'), () => {
             this.game.changeState('LEVEL_START', true);
         });
@@ -664,7 +676,6 @@ class UIManager {
         });
     }
     public drawLevelMessage(): void { const ctx = this.ctx; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = "30px 'Press Start 2P'"; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); }
-    // GEÄNDERT: Zeichnet nur noch den dunklen Hintergrund, der Text wird vom HTML-Overlay übernommen.
     public drawGameOver(): void { 
         const ctx = this.ctx; 
         ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
@@ -845,7 +856,6 @@ class Game {
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
 
-        // GEÄNDERT: Alle Overlays zu Beginn ausblenden
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
         this.uiManager.toggleGameOverScreen(false);
@@ -898,7 +908,6 @@ class Game {
                     localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString());
                 }
                 this.uiManager.soundManager.setTrack('normal');
-                // GEÄNDERT: Den HTML-Game-Over-Bildschirm anzeigen
                 this.uiManager.toggleGameOverScreen(true);
                 break;
             case 'WIN':
