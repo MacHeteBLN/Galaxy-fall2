@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- WICHTIG: Korrekte Darstellung und Steuerung auf mobilen Geräten -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Galaxy Fall: Celestial</title>
     
     <!-- Link zur externen CSS-Datei -->
@@ -11,8 +12,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-B95NkPxf.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-BECeG9i5.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-DZYYie-6.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-R8tkSQox.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -33,6 +34,13 @@
     <!-- Haupt-UI des Spiels -->
     <div id="ui-panel">
         <div class="left-stats">
+            <!-- NEU: Mobiler Pause Button -->
+            <div id="mobile-pause-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
+                    <rect x="60" y="25" width="15" height="50" fill="currentColor"/>
+                </svg>
+            </div>
             <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
             <div class="ui-item"><span data-translate-key="level">Level</span>: <span id="level">1</span></div>
         </div>
