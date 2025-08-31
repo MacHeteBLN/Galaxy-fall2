@@ -166,6 +166,7 @@ canvas {
 
 /* HINZUGEFÜGT: Stile für die Level-Anzeige unten rechts */
 #level-display-container {
+    display: none; /* Hinzugefügt, um standardmäßig auszublenden */
     position: absolute;
     bottom: 10px;
     right: 10px;
