@@ -37,17 +37,23 @@
                 </svg>
             </div>
             <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
-            <div class="ui-item"><span data-translate-key="level">Level</span>: <span id="level">1</span></div>
+            <!-- HINZUGEFÜGT: Münzzähler -->
+            <div class="ui-item" id="coin-display">
+                <img id="coin-icon" src="" alt="Coins"/>: <span id="coins">0</span>
+            </div>
         </div>
         <div class="right-stats">
             <div class="ui-item" id="lives-display"></div>
             <div class="ui-item" id="weapon-tier-display"></div>
             <div class="ui-item" id="energy-display">
-                <span data-translate-key="energy">Energy</span>
+                <!-- GEÄNDERT: Text "Energy" entfernt -->
                 <div id="energy-bar-container"><div id="energy-bar"></div></div>
             </div>
         </div>
     </div>
+    
+    <!-- HINZUGEFÜGT: Leiste für aktive Buffs -->
+    <div id="buff-bar"></div>
 
     <canvas id="gameCanvas" width="800" height="750"></canvas>
     
@@ -55,6 +61,12 @@
         <div id="special-inventory"></div>
         <div id="ultra-inventory"></div>
     </div>
+    
+    <!-- HINZUGEFÜGT: Level-Anzeige unten rechts -->
+    <div id="level-display-container">
+        <span data-translate-key="level">Level</span>: <span id="level">1</span>
+    </div>
+
     <div id="weapon-status"></div>
     
     <!-- Menü-Container (für Pause und Hauptmenü) -->

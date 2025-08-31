@@ -1,4 +1,4 @@
-import { translations } from './translations.js';
+import { translations } from './translations';
 
 // --- SECTION 1: ASSET-IMPORTE ---
 import playerImgSrc1 from './assets/images/player_tier1.png';
@@ -31,6 +31,9 @@ import orbitalDrone1ImgSrc from './assets/images/orbital_drone_1.png';
 import orbitalDrone2ImgSrc from './assets/images/orbital_drone_2.png';
 import orbitalDrone3ImgSrc from './assets/images/orbital_drone_3.png';
 import piCoinImgSrc from './assets/images/pi_coin.png';
+// *** MODIFIKATION 1: START ***
+import piCoin2ImgSrc from './assets/images/pi_coin2.png';
+// *** MODIFIKATION 1: ENDE ***
 
 
 // --- SECTION 2: BILD-INITIALISIERUNG ---
@@ -49,8 +52,8 @@ const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWea
 // --- SECTION 3: TYP-DEFINITIONEN & LEVEL DEFINITION---
 interface IKeyMap { [key: string]: boolean; }
 interface IStar { pos: Vector2D; s: number; v: number; a: number; }
-interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[]; boss?: string; formation?: string; msgKey: string; s: number; m: number; }
-interface IUIElements { score: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; }
+interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[]; boss?: string; formation?: string; msgKey: string; s: number; m: number; h?: number; isMultiFormation?: boolean; }
+interface IUIElements { score: HTMLElement; coins: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; }
 interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; color: string; }
 interface IInventoryItem { type: string; count: number; }
 
@@ -104,7 +107,6 @@ class TeleportEffect extends Entity {
         if (this.life <= 0) this.destroy();
     }
 
-    // *** KORRIGIERTE DRAW-METHODE ***
     draw(ctx: CanvasRenderingContext2D): void {
         if (this.radius < 0) return;
 
@@ -149,9 +151,7 @@ class Coin extends EntityFamily {
     public onCollect(): void { 
         if (this.game.player) { 
             this.game.uiManager.soundManager.play('coinCollect');
-            const scoreToAdd = this.game.player.isScoreBoosted() ? this.value * 2 : this.value; 
-            this.game.score += scoreToAdd; 
-            this.game.scoreEarnedThisLevel += scoreToAdd; 
+            this.game.coins += 1;
         } 
         this.destroy(); 
     }
@@ -175,7 +175,7 @@ class Enemy extends EntityFamily {
 class Grunt extends Enemy { private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 60), -54, 60, 54, 1, 10, 'GRUNT'); this.speed = 100 * game.enemySpeedMultiplier; this.collisionDamage = 35; this.image = gruntImg; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Tank extends Enemy { private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 100), -96, 100, 96, 3, 30, 'TANK'); this.speed = 60 * game.enemySpeedMultiplier; this.collisionDamage = 50; this.image = tankImg; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Weaver extends Enemy { private angle: number; private hSpeed: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 55), -46, 55, 46, 1, 20, 'WEAVER'); this.speed = 80 * game.enemySpeedMultiplier; this.angle = Math.random() * Math.PI * 2; this.hSpeed = (Math.random() * 2 + 1) * 60; this.collisionDamage = 35; this.image = weaverImg; } update(dt: number): void { const dt_s = dt / 1000; super.update(dt); if (this.inFormation) return; this.angle += 3 * dt_s; this.pos.x += Math.sin(this.angle) * this.hSpeed * dt_s; if (this.pos.x < 0 || this.pos.x > this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
-class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
+class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); if(this.inFormation) { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000 + Math.random() * 1500; } } else { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Teleporter extends Enemy {
     private teleportCooldown: number = 4000;
     private isVisible: boolean = true;
@@ -259,21 +259,165 @@ class BlackHole extends Entity {
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.killRadius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.pullRadius * (this.life / 8000), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
 class Projectile extends EntityFamily { public vel: Vector2D; public damage: number = 1; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE'); this.vel = new Vector2D(velX, velY); } update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; if (this.pos.y < -this.height || this.pos.y > this.game.height || this.pos.x < -this.width || this.pos.x > this.game.width) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#0ff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 5; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.destroy(); } }
-class HeavyProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x, y, velX, velY); this.pos.x = x - 4; this.width = 8; this.height = 22; this.damage = 2.5; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 8; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
+// *** MODIFIZIERT ***
+class HeavyProjectile extends Projectile {
+    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) {
+        super(game, x, y, velX, velY);
+        this.pos.x = x - 4;
+        this.width = 8;
+        this.height = 22;
+        this.damage = 1.5; // *** MODIFIZIERT: Schaden auf 1.5 gesetzt (50% stärker als Standard) ***
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.fillStyle = '#FFD700';
+        ctx.shadowColor = '#FFA500';
+        ctx.shadowBlur = 8;
+        ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+        ctx.restore();
+    }
+}
 class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 10; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
 class BlackHoleProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number, velY: number) { super(game, x - 10, y - 10, velX, velY); this.width = 20; this.height = 20; this.type = 'BLACK_HOLE_PROJECTILE'; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } onHit(e: Enemy): void { this.game.addEntity(new BlackHole(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.destroy(); } }
 class LaserBeam extends EntityFamily {
     public player: Player; public damage: number = 0.2; private soundCooldown: number = 0; private phase: number = 0; private amplitude: number = 30; private frequency: number = 0.02;
     constructor(game: Game, player: Player) { super(game, 0, 0, 60, game.height, 'projectile', 'LASER_BEAM'); this.player = player; }
     update(dt: number): void { if (!this.player.isAlive() || !this.player.powerUpManager.isActive('LASER_BEAM')) { this.destroy(); return; } this.pos.x = this.player.pos.x + this.player.width / 2 - this.amplitude; this.pos.y = 0; this.height = this.player.pos.y; this.phase += (dt / 1000) * 15; this.soundCooldown -= dt; if (this.soundCooldown <= 0) { this.game.uiManager.soundManager.play('laser'); this.soundCooldown = 100; } }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const centerX = this.player.pos.x + this.player.width / 2; const beamHeight = this.player.pos.y; ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = '#f0f'; ctx.lineWidth = 15; ctx.shadowColor = '#f0f'; ctx.shadowBlur = 20; ctx.stroke(); ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = '#EE82EE'; ctx.lineWidth = 8; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.stroke(); ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+    draw(ctx: CanvasRenderingContext2D): void {
+        // *** MODIFIKATION 1: START ***
+        ctx.save();
+        const centerX = this.player.pos.x + this.player.width / 2;
+        const beamHeight = this.player.pos.y;
+        
+        // Äußere, dunklere Schicht
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = '#9400D3'; // Dunkelviolett
+        ctx.lineWidth = 15;
+        ctx.shadowColor = '#EE82EE'; // Hellerer Schatten
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+
+        // Mittlere, hellere Schicht
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = '#EE82EE'; // Violett
+        ctx.lineWidth = 8;
+        ctx.shadowColor = '#EE82EE';
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+
+        // Innerer, weißer Kern
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight);
+        for (let y = beamHeight; y > 0; y--) {
+            const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude;
+            ctx.lineTo(centerX + xOffset, y);
+        }
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.restore();
+        // *** MODIFIKATION 1: ENDE ***
+    }
 }
-class HomingMissile extends Projectile { private target: Enemy | null = null; private searchCooldown: number = 0; private lifetime: number = 5000; constructor(game: Game, x: number, y: number) { super(game, x, y, (Math.random() - 0.5) * 200, -300); this.type = 'HOMING_MISSILE'; this.damage = 15; this.width = 8; this.height = 16; } findTarget(): void { const enemies = this.game.entities.filter(e => e.family === 'enemy' && e.isAlive()) as Enemy[]; if (enemies.length === 0) { this.target = null; return; } let closestEnemy: Enemy | null = null; let minDistance = Infinity; enemies.forEach(enemy => { const dist = Math.hypot(this.pos.x - (enemy.pos.x + enemy.width / 2), this.pos.y - (enemy.pos.y + enemy.height / 2)); if (dist < minDistance) { minDistance = dist; closestEnemy = enemy; } }); this.target = closestEnemy; } update(dt: number): void { this.lifetime -= dt; this.searchCooldown -= dt; if (this.searchCooldown <= 0) { this.findTarget(); this.searchCooldown = 500; } if (this.target && this.target.isAlive()) { const speed = 400; const turnFactor = 5; const dt_s = dt / 1000; const targetX = this.target.pos.x + this.target.width / 2; const targetY = this.target.pos.y + this.target.height / 2; const desiredVelX = targetX - this.pos.x; const desiredVelY = targetY - this.pos.y; const mag = Math.hypot(desiredVelX, desiredVelY); const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0; const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0; this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s; this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s; } super.update(dt); if (this.lifetime <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2); const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2; ctx.rotate(angle); ctx.fillStyle = '#ff9900'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(0, -this.height / 2); ctx.lineTo(-this.width / 2, this.height / 2); ctx.lineTo(this.width / 2, this.height / 2); ctx.closePath(); ctx.fill(); const flameSize = Math.random() * 8 + 4; ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.moveTo(0, this.height / 2); ctx.lineTo(-this.width / 2 + 2, this.height / 2 + flameSize / 2); ctx.lineTo(0, this.height / 2 + flameSize); ctx.lineTo(this.width / 2 - 2, this.height / 2 + flameSize / 2); ctx.closePath(); ctx.fill(); ctx.restore(); } }
-// *** MODIFIZIERTE/KORRIGIERTE KLASSE ***
+// *** MODIFIZIERT ***
+class HomingMissile extends Projectile {
+    private target: Enemy | null = null;
+    private searchCooldown: number = 0;
+    private lifetime: number = 5000;
+    constructor(game: Game, x: number, y: number, damage: number = 15) { // *** MODIFIZIERT: Schadensparameter hinzugefügt ***
+        super(game, x, y, (Math.random() - 0.5) * 200, -300);
+        this.type = 'HOMING_MISSILE';
+        this.damage = damage; // *** MODIFIZIERT: Schaden wird übergeben ***
+        this.width = 8;
+        this.height = 16;
+    }
+    findTarget(): void {
+        const enemies = this.game.entities.filter(e => e.family === 'enemy' && e.isAlive()) as Enemy[];
+        if (enemies.length === 0) { this.target = null; return; }
+        let closestEnemy: Enemy | null = null;
+        let minDistance = Infinity;
+        enemies.forEach(enemy => {
+            const dist = Math.hypot(this.pos.x - (enemy.pos.x + enemy.width / 2), this.pos.y - (enemy.pos.y + enemy.height / 2));
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestEnemy = enemy;
+            }
+        });
+        this.target = closestEnemy;
+    }
+    update(dt: number): void {
+        this.lifetime -= dt;
+        this.searchCooldown -= dt;
+        if (this.searchCooldown <= 0) {
+            this.findTarget();
+            this.searchCooldown = 500;
+        }
+        if (this.target && this.target.isAlive()) {
+            const speed = 400;
+            const turnFactor = 5;
+            const dt_s = dt / 1000;
+            const targetX = this.target.pos.x + this.target.width / 2;
+            const targetY = this.target.pos.y + this.target.height / 2;
+            const desiredVelX = targetX - this.pos.x;
+            const desiredVelY = targetY - this.pos.y;
+            const mag = Math.hypot(desiredVelX, desiredVelY);
+            const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0;
+            const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0;
+            this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s;
+            this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s;
+        }
+        super.update(dt);
+        if (this.lifetime <= 0) this.destroy();
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2);
+        const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2;
+        ctx.rotate(angle);
+        ctx.fillStyle = '#ff9900';
+        ctx.shadowColor = '#ff5722';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(0, -this.height / 2);
+        ctx.lineTo(-this.width / 2, this.height / 2);
+        ctx.lineTo(this.width / 2, this.height / 2);
+        ctx.closePath();
+        ctx.fill();
+        const flameSize = Math.random() * 8 + 4;
+        ctx.fillStyle = '#ff5722';
+        ctx.beginPath();
+        ctx.moveTo(0, this.height / 2);
+        ctx.lineTo(-this.width / 2 + 2, this.height / 2 + flameSize / 2);
+        ctx.lineTo(0, this.height / 2 + flameSize);
+        ctx.lineTo(this.width / 2 - 2, this.height / 2 + flameSize / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+}
+class SideProjectile extends Projectile {
+    constructor(game: Game, x: number, y: number, velX: number, velY: number) {
+        super(game, x, y, velX, velY);
+        this.width = 20;
+        this.height = 5;
+        this.pos.x = x - this.width / 2;
+        this.pos.y = y - this.height / 2;
+    }
+}
 class EnemyProjectile extends Projectile {
     public playerDamage: number;
     constructor(game: Game, x: number, y: number, vX: number = 0, vY: number = 360, playerDamage: number = 25) {
-        // KORREKTUR: Explizite Initialisierung, um den Absturz zu verhindern.
         super(game, x - 2.5, y, vX, vY);
         this.family = 'projectile';
         this.type = 'ENEMY_PROJECTILE';
@@ -288,13 +432,58 @@ class EnemyProjectile extends Projectile {
         ctx.restore();
     }
 }
+// *** MODIFIZIERT ***
 class Drone extends EntityFamily {
-    private tier: number; private index: number; private orbitRadius: number = 75; private fireCooldown: number = 0; private image: HTMLImageElement;
-    constructor(game: Game, tier: number, index: number) { super(game, 0, 0, 36, 36, 'player', 'DRONE'); this.tier = tier; this.index = index; this.image = orbitalDroneImages[this.tier - 1]!; }
-    updateIndex(newIndex: number) { this.index = newIndex; }
-    update(dt: number): void { if (!this.game.player || !this.game.player.isAlive() || !this.game.player.powerUpManager.isActive('ORBITAL_DRONE')) { this.destroy(); return; } const totalDrones = this.game.player.drones.length; const angleOffset = (2 * Math.PI / totalDrones) * this.index; const currentAngle = this.game.player.droneAngle + angleOffset; const playerPos = this.game.player.pos; this.pos.x = playerPos.x + this.game.player.width / 2 + Math.cos(currentAngle) * this.orbitRadius; this.pos.y = playerPos.y + this.game.player.height / 2 + Math.sin(currentAngle) * this.orbitRadius; this.fireCooldown -= dt; if (this.fireCooldown <= 0) this.shoot(); }
-    shoot(): void { switch (this.tier) { case 1: this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y)); this.fireCooldown = 600; break; case 2: this.game.addEntity(new HeavyProjectile(this.game, this.pos.x, this.pos.y)); this.fireCooldown = 500; break; case 3: this.game.addEntity(new PiercingProjectile(this.game, this.pos.x, this.pos.y)); this.fireCooldown = 400; break; } }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x - this.width / 2, this.pos.y - this.height / 2, this.width, this.height); ctx.restore(); }
+    private tier: number;
+    private index: number;
+    private orbitRadius: number = 75;
+    private fireCooldown: number = 0;
+    private image: HTMLImageElement;
+
+    constructor(game: Game, tier: number, index: number) {
+        super(game, 0, 0, 36, 36, 'player', 'DRONE');
+        this.tier = tier;
+        this.index = index;
+        this.image = orbitalDroneImages[this.tier - 1]!;
+    }
+    updateIndex(newIndex: number) {
+        this.index = newIndex;
+    }
+    update(dt: number): void {
+        if (!this.game.player || !this.game.player.isAlive() || !this.game.player.powerUpManager.isActive('ORBITAL_DRONE')) {
+            this.destroy();
+            return;
+        }
+        const totalDrones = this.game.player.drones.length;
+        const angleOffset = (2 * Math.PI / totalDrones) * this.index;
+        const currentAngle = this.game.player.droneAngle + angleOffset;
+        const playerPos = this.game.player.pos;
+        this.pos.x = playerPos.x + this.game.player.width / 2 + Math.cos(currentAngle) * this.orbitRadius;
+        this.pos.y = playerPos.y + this.game.player.height / 2 + Math.sin(currentAngle) * this.orbitRadius;
+        this.fireCooldown -= dt;
+        if (this.fireCooldown <= 0) this.shoot();
+    }
+    shoot(): void {
+        switch (this.tier) {
+            case 1:
+                this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y));
+                this.fireCooldown = 600;
+                break;
+            case 2:
+                this.game.addEntity(new HeavyProjectile(this.game, this.pos.x, this.pos.y)); // *** MODIFIZIERT: Nutzt das Projektil mit 1.5 Schaden ***
+                this.fireCooldown = 500;
+                break;
+            case 3:
+                this.game.addEntity(new HomingMissile(this.game, this.pos.x, this.pos.y, 1.875)); // *** MODIFIZIERT: Nutzt HomingMissile mit 1.875 Schaden ***
+                this.fireCooldown = 400;
+                break;
+        }
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.drawImage(this.image, this.pos.x - this.width / 2, this.pos.y - this.height / 2, this.width, this.height);
+        ctx.restore();
+    }
 }
 class PowerUpManager {
     public player: Player; public game: Game; public weaponTier: number = 1; public weaponTierTimer: number = 0;
@@ -312,8 +501,93 @@ class PowerUpManager {
     private collectToInventory(type: string, inventory: IInventoryItem[], maxSize: number): void { const existing = inventory.find(item => item.type === type); if (existing) existing.count++; else if (inventory.length < maxSize) inventory.push({ type, count: 1 }); this.game.uiManager.soundManager.play('powerup'); }
     activateSpecial(slotIndex: number): void { const special = this.specialInventory[slotIndex]; if (!special) return; if (special.type === 'BLACK_HOLE') { const p = this.game.player!; this.game.addEntity(new BlackHoleProjectile(this.game, p.pos.x + p.width/2, p.pos.y, 0, -600)); this.game.uiManager.soundManager.play('missileLaunch'); } else { this.activate(special.type); } special.count--; if (special.count <= 0) this.specialInventory.splice(slotIndex, 1); }
     activateUltra(slotIndex: number): void { const ultra = this.ultraInventory[slotIndex]; if (!ultra) return; if (this.ultraWeapon) this.deactivate(this.ultraWeapon); this.activate(ultra.type); ultra.count--; if (ultra.count <= 0) this.ultraInventory.splice(slotIndex, 1); }
-    activate(type: string, duration?: number): void { const W_ULTRA_DURATIONS: {[key: string]: number} = {'LASER_BEAM': 10000, 'HOMING_MISSILES': 15000}; const W_TEMP_DURATIONS: {[key: string]: number} = {'SIDE_SHOTS': 15000, 'RAPID_FIRE': 30000}; const DEFENSE_TYPES = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL']; const SPECIAL_TYPES = ['NUKE', 'SCORE_BOOST']; if (type === 'ORBITAL_DRONE') { if (this.player.drones.length < 3) { const droneTier = this.player.drones.length + 1; this.player.drones.push(new Drone(this.game, droneTier, this.player.drones.length)); this.player.drones.forEach((drone, index) => drone.updateIndex(index)); } this.timers['ORBITAL_DRONE'] = 30000; } else if (type === 'WEAPON_UP') { if (this.weaponTier < 4) this.weaponTier++; this.setWeaponTierTimer(); } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) { this.timers[type] = duration ?? W_TEMP_DURATIONS[type]!; } else if (Object.keys(W_ULTRA_DURATIONS).includes(type)) { this.ultraWeapon = type; this.timers[type] = duration ?? W_ULTRA_DURATIONS[type]!; } else if (DEFENSE_TYPES.includes(type)) { if (type === 'EXTRA_LIFE') { if (this.player.lives < this.player.maxLives) this.player.lives++; } else if (type === 'REPAIR_KIT') { this.player.energy = 100; } else { this.timers[type] = duration ?? 15000; } } else if (SPECIAL_TYPES.includes(type)) { if (type === 'NUKE') { this.game.entities.filter(e => e.family === 'enemy' && !(e as Enemy).isBoss).forEach(e => (e as Enemy).takeHit(9999)); this.game.addEntity(new NukeEffect(this.game)); } else if (type === 'SCORE_BOOST') { this.timers[type] = 20000; } } this.game.uiManager.soundManager.play('powerup'); }
-    shoot(): void { const p = this.player; p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150; if (this.ultraWeapon) { switch (this.ultraWeapon) { case 'LASER_BEAM': if (!p.laser || !p.laser.isAlive()) { p.laser = new LaserBeam(this.game, p); this.game.addEntity(p.laser); } p.fireCooldown = 0; break; case 'HOMING_MISSILES': this.game.addEntity(new HomingMissile(this.game, p.pos.x + p.width/2, p.pos.y)); p.fireCooldown = 400; this.game.uiManager.soundManager.play('missileLaunch'); break; } } const x = p.pos.x, y = p.pos.y, w = p.width, h = p.height; const velY = -600; const angle15 = 15 * (Math.PI/180); switch (this.weaponTier) { case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break; case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break; case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break; case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break; } if (this.isActive('SIDE_SHOTS')) { this.game.addEntity(new Projectile(this.game, x, y + h / 2, -300, 0)); this.game.addEntity(new Projectile(this.game, x + w, y + h / 2, 300, 0)); } this.game.uiManager.soundManager.play('shoot'); }
+    activate(type: string, duration?: number): void {
+        const W_ULTRA_DURATIONS: {[key: string]: number} = {'LASER_BEAM': 10000, 'HOMING_MISSILES': 15000};
+        const W_TEMP_DURATIONS: {[key: string]: number} = {'SIDE_SHOTS': 15000, 'RAPID_FIRE': 30000};
+        const DEFENSE_TYPES = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL'];
+        const SPECIAL_TYPES = ['NUKE', 'SCORE_BOOST'];
+
+        if (type === 'ORBITAL_DRONE') {
+            if (this.player.drones.length < 3) {
+                const droneTier = this.player.drones.length + 1;
+                this.player.drones.push(new Drone(this.game, droneTier, this.player.drones.length));
+                this.player.drones.forEach((drone, index) => drone.updateIndex(index));
+            }
+            this.timers['ORBITAL_DRONE'] = 30000;
+        } else if (type === 'WEAPON_UP') {
+            if (this.weaponTier < 4) this.weaponTier++;
+            this.setWeaponTierTimer();
+        } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) {
+            this.timers[type] = duration ?? W_TEMP_DURATIONS[type]!;
+        } else if (Object.keys(W_ULTRA_DURATIONS).includes(type)) {
+            this.ultraWeapon = type;
+            this.timers[type] = duration ?? W_ULTRA_DURATIONS[type]!;
+        } else if (DEFENSE_TYPES.includes(type)) {
+            if (type === 'EXTRA_LIFE') {
+                if (this.player.lives < this.player.maxLives) this.player.lives++;
+            } else if (type === 'REPAIR_KIT') {
+                this.player.energy = 100;
+            } else if (type === 'SHIELD') {
+                // *** MODIFIKATION 1: START ***
+                // Das Schild erhält keinen Timer mehr, sondern bleibt bis zum nächsten Treffer aktiv.
+                this.timers[type] = Infinity;
+                // *** MODIFIKATION 1: ENDE ***
+            } else {
+                // GHOST_PROTOCOL behält seinen Timer
+                this.timers[type] = duration ?? 15000;
+            }
+        } else if (SPECIAL_TYPES.includes(type)) {
+            if (type === 'NUKE') {
+                this.game.entities.filter(e => e.family === 'enemy' && !(e as Enemy).isBoss).forEach(e => (e as Enemy).takeHit(9999));
+                this.game.addEntity(new NukeEffect(this.game));
+            } else if (type === 'SCORE_BOOST') {
+                this.timers[type] = 20000;
+            }
+        }
+        this.game.uiManager.soundManager.play('powerup');
+    }
+    shoot(): void {
+        const p = this.player;
+        p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150;
+
+        if (this.ultraWeapon) {
+            switch (this.ultraWeapon) {
+                case 'LASER_BEAM':
+                    if (!p.laser || !p.laser.isAlive()) {
+                        p.laser = new LaserBeam(this.game, p);
+                        this.game.addEntity(p.laser);
+                    }
+                    p.fireCooldown = 0;
+                    // *** MODIFIKATION 2: START ***
+                    // Beendet die Schussfunktion hier, damit keine normalen Projektile abgefeuert werden.
+                    return;
+                    // *** MODIFIKATION 2: ENDE ***
+                case 'HOMING_MISSILES':
+                    this.game.addEntity(new HomingMissile(this.game, p.pos.x + p.width / 2, p.pos.y));
+                    p.fireCooldown = 400;
+                    this.game.uiManager.soundManager.play('missileLaunch');
+                    break;
+            }
+        }
+
+        const x = p.pos.x, y = p.pos.y, w = p.width, h = p.height;
+        const velY = -600;
+        const angle15 = 15 * (Math.PI / 180);
+
+        switch (this.weaponTier) {
+            case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break;
+            case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break;
+            case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break;
+            case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break;
+        }
+
+        if (this.isActive('SIDE_SHOTS')) {
+            this.game.addEntity(new SideProjectile(this.game, x, y + h / 2, -300, 0));
+            this.game.addEntity(new SideProjectile(this.game, x + w, y + h / 2, 300, 0));
+        }
+
+        this.game.uiManager.soundManager.play('shoot');
+    }
 }
 class Player extends EntityFamily {
     public speed: number = 400; public lives: number = 3; public maxLives: number = 5;
@@ -359,7 +633,48 @@ class Player extends EntityFamily {
         this.powerUpManager.update(dt);
         this.drones.forEach(d => d.update(dt));
     }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.isGhosted() ? 0.5 : 1; const tier = this.powerUpManager.weaponTier; let currentImage: HTMLImageElement; switch (tier) { case 1: currentImage = playerImg1; break; case 2: currentImage = playerImg2; break; case 3: currentImage = playerImg3; break; case 4: currentImage = playerImg4; break; default: currentImage = playerImg1; } const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2); const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2); ctx.drawImage(currentImage, drawX, drawY); this.drones.forEach(d => d.draw(ctx)); if (this.isShielded()) { const alpha = (this.powerUpManager.timers['SHIELD']! < 1000 && Math.floor(Date.now() / 100) % 2 === 0) ? 0 : 0.4; ctx.fillStyle = `rgba(11,255,255,${alpha})`; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width * 0.7, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.globalAlpha = this.isGhosted() ? 0.5 : 1;
+        const tier = this.powerUpManager.weaponTier;
+        let currentImage: HTMLImageElement;
+        switch (tier) {
+            case 1: currentImage = playerImg1; break;
+            case 2: currentImage = playerImg2; break;
+            case 3: currentImage = playerImg3; break;
+            case 4: currentImage = playerImg4; break;
+            default: currentImage = playerImg1;
+        }
+        const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2);
+        const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2);
+
+        // *** MODIFIKATION 2: START ***
+        // Pulsierenden Leuchteffekt für das Schild hinzufügen
+        if (this.isShielded()) {
+            // Erzeugt eine weiche Schwingung zwischen 0 und 1 mithilfe einer Sinuswelle
+            const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+            // Die Stärke des Leuchtens pulsiert zwischen 10 und 25
+            const glowSize = 10 + pulse * 15;
+            // Die Deckkraft des Leuchtens pulsiert zwischen 0.7 und 1.0
+            const glowAlpha = 0.7 + pulse * 0.3;
+
+            ctx.shadowColor = `rgba(11, 255, 255, ${glowAlpha})`;
+            ctx.shadowBlur = glowSize;
+        }
+        
+        ctx.drawImage(currentImage, drawX, drawY);
+
+        // Setzt den Schatten zurück, damit andere Elemente (z.B. Drohnen) nicht leuchten
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        
+        this.drones.forEach(d => d.draw(ctx));
+        
+        // Der alte Code für den Schild-Kreis wurde entfernt.
+        // *** MODIFIKATION 2: ENDE ***
+        
+        ctx.restore();
+    }
     shoot(): void { this.powerUpManager.shoot(); }
     takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = 100; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
     isShielded(): boolean { return this.powerUpManager.isActive('SHIELD'); }
@@ -529,7 +844,7 @@ class BossNexusPrime extends Enemy {
     updatePhase2(dt: number): void { if (this.isChargingLaser) { this.laserChargeTimer -= dt; if (this.laserChargeTimer <= 0) { this.isChargingLaser = false; this.laserActive = true; this.laserDurationTimer = 3000; this.laserX = 100; this.laserSweepSpeed = 80; } return; } if (this.laserActive) { this.laserDurationTimer -= dt; this.laserX += this.laserSweepSpeed * (dt/1000); if(this.laserX > this.game.width - 100 || this.laserX < 100) { this.laserSweepSpeed *= -1; } if (this.laserDurationTimer <= 0) this.laserActive = false; return; } if (this.attackTimer <= 0) { this.attackTimer = 7000; this.isChargingLaser = true; this.laserChargeTimer = 2500; } }
     updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0) { this.bulletHellTimer = 80; const bulletSpeed = 300; for(let i=0; i<4; i++){ const angle = this.bulletHellAngle + (i * Math.PI / 2); this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, 40)); } this.bulletHellAngle += 0.25; } }
     fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); this.game.addEntity(new EnemyProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 150); } }
-    draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.save(); ctx.shadowColor = '#FF4136'; ctx.shadowBlur = this.phase * 10; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); this.drones.forEach(d => { ctx.fillStyle = '#B10DC9'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#FF4136'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 8, 0, Math.PI * 2); ctx.fill(); }); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 2500); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.8})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 45 * chargeRatio, 0, Math.PI * 2); ctx.fill(); } if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(this.laserX - 10, 0, 20, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(this.laserX - 20, 0, 40, this.game.height); } }
+    draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.save(); ctx.shadowColor = '#FF4136'; ctx.shadowBlur = this.phase * 10; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); this.drones.forEach(d => { ctx.fillStyle = '#B10DC9'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#FF4136'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 8, 0, Math.PI * 2); ctx.fill(); }); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 2500); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.8})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 45 * chargeRatio, 0, Math.PI * 2); ctx.fill();} if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(this.laserX - 10, 0, 20, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(this.laserX - 20, 0, 40, this.game.height); } }
 }
 
 // --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
@@ -625,7 +940,7 @@ class SoundManager {
 class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string): string { return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
 
 class UIManager {
-    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
+    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
     private gameOverContainer: HTMLElement;
     private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     
@@ -633,6 +948,7 @@ class UIManager {
         this.game = game;
         this.ctx = game.ctx;
         this.scoreEl = ui.score;
+        this.coinsEl = ui.coins;
         this.levelEl = ui.level;
         this.highscoreEl = ui.highscore;
         this.specialInventoryEl = ui.specialInventory;
@@ -651,6 +967,9 @@ class UIManager {
         this.settings = this.loadSettings();
         this.localizationManager = new LocalizationManager();
         this.soundManager = new SoundManager(this);
+        // *** MODIFIKATION 2: START ***
+        (document.getElementById('coin-icon') as HTMLImageElement).src = piCoin2ImgSrc;
+        // *** MODIFIKATION 2: ENDE ***
         
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
         this.togglePauseMenu = this.togglePauseMenu.bind(this);
@@ -664,7 +983,8 @@ class UIManager {
     
     update(): void {
         this.scoreEl.textContent = this.game.score.toString();
-        this.levelEl.textContent = this.game.level > 40 ? 'MAX' : this.game.level.toString();
+        this.coinsEl.textContent = this.game.coins.toString();
+        this.levelEl.textContent = this.game.level > 50 ? 'MAX' : this.game.level.toString();
         if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) {
             this.highscoreEl.textContent = this.game.highscore.toString();
         }
@@ -677,7 +997,7 @@ class UIManager {
             this.weaponTierDisplayEl.innerHTML = '';
             return;
         }
-        this.livesDisplay.innerHTML = `<div class="life-icon"></div><span>x${this.game.player.lives}</span>`;
+        this.livesDisplay.innerHTML = `<img src="${powerupExtraLifeSrc}" alt="Leben" class="ui-icon" />: ${this.game.player.lives}`;
         this.energyBarEl.style.width = `${this.game.player.energy}%`;
         this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1);
         this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4);
@@ -712,13 +1032,17 @@ class UIManager {
         }
         const t = (key: string) => this.localizationManager.translate(key);
         const pm = this.game.player.powerUpManager;
-        let tierText = `${t('w_tier')}: ${pm.weaponTier}`;
+        
+        const tierImageSrc = powerUpImageSources['WEAPON_UP'];
+        let tierHTML = `<img src="${tierImageSrc}" alt="Waffenstufe" class="ui-icon" />: ${pm.weaponTier}`;
         let tierTimer = pm.weaponTierTimer;
+        
         if (tierTimer > 0 && pm.weaponTier > 1) {
             const seconds = Math.ceil(tierTimer / 1000);
-            tierText += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
+            tierHTML += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
         }
-        this.weaponTierDisplayEl.innerHTML = tierText;
+        this.weaponTierDisplayEl.innerHTML = tierHTML;
+
         let activeBuffs = '';
         if (pm.isActive('RAPID_FIRE')) {
             activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
@@ -969,51 +1293,61 @@ class UIManager {
 }
 
 const LEVELS: ILevelDefinition[] = [
-    { wave: 1, scoreToEarn: 2000, enemies: ['GRUNT'], msgKey: "wave_msg_1", s: 1200, m: 1.0 },
-    { wave: 2, scoreToEarn: 4000, enemies: ['GRUNT', 'WEAVER'], msgKey: "wave_msg_2", s: 1100, m: 1.05 },
-    { wave: 3, scoreToEarn: 7000, enemies: ['GRUNT', 'GRUNT', 'WEAVER'], msgKey: "wave_msg_3", s: 1000, m: 1.1 },
-    { wave: 4, scoreToEarn: 10000, enemies: ['GRUNT', 'TANK'], msgKey: "wave_msg_4", s: 1000, m: 1.15 },
-    { wave: 5, scoreToEarn: 14000, enemies: ['WEAVER', 'WEAVER'], formation: 'V_SHAPE', msgKey: "formation_incoming", s: 900, m: 1.2 },
-    { wave: 6, scoreToEarn: 18000, enemies: ['SHOOTER', 'GRUNT'], msgKey: "wave_msg_6", s: 850, m: 1.25 },
-    { wave: 7, scoreToEarn: 23000, enemies: ['TANK', 'WEAVER'], msgKey: "wave_msg_7", s: 800, m: 1.3 },
-    { wave: 8, scoreToEarn: 28000, enemies: ['SHOOTER', 'WEAVER', 'GRUNT'], msgKey: "wave_msg_8", s: 750, m: 1.35 },
-    { wave: 9, scoreToEarn: 35000, enemies: ['SHOOTER', 'TANK'], formation: 'MATRIX', msgKey: "formation_incoming", s: 700, m: 1.4 },
-    { wave: 10, scoreToEarn: 0, enemies: [], boss: 'BOSS_SENTINEL_PRIME', msgKey: "wave_msg_10", s: 0, m: 1.5 },
-    { wave: 11, scoreToEarn: 45000, enemies: ['GRUNT', 'SHOOTER'], msgKey: "wave_msg_11", s: 650, m: 1.55 },
-    { wave: 12, scoreToEarn: 55000, enemies: ['WEAVER', 'TANK', 'WEAVER'], msgKey: "wave_msg_12", s: 600, m: 1.6 },
-    { wave: 13, scoreToEarn: 68000, enemies: ['TELEPORTER', 'GRUNT'], msgKey: "wave_msg_13", s: 1000, m: 1.65 },
-    { wave: 14, scoreToEarn: 80000, enemies: ['SHOOTER', 'SHOOTER', 'TANK'], msgKey: "wave_msg_14", s: 550, m: 1.7 },
-    { wave: 15, scoreToEarn: 95000, enemies: ['WEAVER', 'WEAVER', 'WEAVER'], formation: 'CIRCLE', msgKey: "formation_incoming", s: 500, m: 1.75 },
-    { wave: 16, scoreToEarn: 110000, enemies: ['TELEPORTER', 'SHOOTER'], msgKey: "wave_msg_16", s: 900, m: 1.8 },
-    { wave: 17, scoreToEarn: 130000, enemies: ['TANK', 'TANK', 'GRUNT'], msgKey: "wave_msg_17", s: 500, m: 1.85 },
-    { wave: 18, scoreToEarn: 150000, enemies: ['SHOOTER', 'TELEPORTER', 'WEAVER'], msgKey: "wave_msg_18", s: 800, m: 1.9 },
-    { wave: 19, scoreToEarn: 175000, enemies: ['TANK', 'SHOOTER', 'WEAVER', 'GRUNT'], formation: 'MATRIX', msgKey: "formation_incoming", s: 450, m: 2.0 },
-    { wave: 20, scoreToEarn: 0, enemies: [], boss: 'BOSS_VOID_SERPENT', msgKey: "wave_msg_10", s: 0, m: 2.1 },
-    { wave: 21, scoreToEarn: 200000, enemies: ['GRUNT', 'TELEPORTER'], msgKey: "wave_msg_1", s: 700, m: 2.2 },
-    { wave: 22, scoreToEarn: 225000, enemies: ['SHOOTER', 'TANK', 'WEAVER'], msgKey: "wave_msg_2", s: 400, m: 2.3 },
-    { wave: 23, scoreToEarn: 255000, enemies: ['WEAVER', 'TELEPORTER', 'WEAVER'], msgKey: "wave_msg_3", s: 700, m: 2.4 },
-    { wave: 24, scoreToEarn: 285000, enemies: ['TANK', 'TANK', 'SHOOTER'], msgKey: "wave_msg_4", s: 380, m: 2.5 },
-    { wave: 25, scoreToEarn: 320000, enemies: ['GRUNT', 'SHOOTER', 'TANK'], formation: 'V_SHAPE', msgKey: "formation_incoming", s: 350, m: 2.6 },
-    { wave: 26, scoreToEarn: 360000, enemies: ['SHOOTER', 'SHOOTER', 'TELEPORTER'], msgKey: "wave_msg_6", s: 650, m: 2.7 },
-    { wave: 27, scoreToEarn: 400000, enemies: ['TANK', 'WEAVER', 'TELEPORTER'], msgKey: "wave_msg_7", s: 600, m: 2.8 },
-    { wave: 28, scoreToEarn: 450000, enemies: ['GRUNT', 'WEAVER', 'TANK', 'SHOOTER'], msgKey: "wave_msg_8", s: 320, m: 2.9 },
-    { wave: 29, scoreToEarn: 500000, enemies: ['TELEPORTER', 'TANK', 'SHOOTER'], formation: 'MATRIX', msgKey: "formation_incoming", s: 300, m: 3.0 },
-    { wave: 30, scoreToEarn: 0, enemies: [], boss: 'BOSS_OMEGA_NEXUS', msgKey: "wave_msg_15", s: 0, m: 3.2 },
-    { wave: 31, scoreToEarn: 560000, enemies: ['GRUNT', 'SHOOTER', 'TELEPORTER'], msgKey: "wave_msg_11", s: 500, m: 3.3 },
-    { wave: 32, scoreToEarn: 620000, enemies: ['WEAVER', 'TANK', 'WEAVER', 'TELEPORTER'], msgKey: "wave_msg_12", s: 450, m: 3.4 },
-    { wave: 33, scoreToEarn: 690000, enemies: ['TELEPORTER', 'TELEPORTER'], msgKey: "wave_msg_13", s: 800, m: 3.5 },
-    { wave: 34, scoreToEarn: 760000, enemies: ['SHOOTER', 'TANK', 'SHOOTER', 'TANK'], msgKey: "wave_msg_14", s: 280, m: 3.6 },
-    { wave: 35, scoreToEarn: 840000, enemies: ['WEAVER', 'SHOOTER', 'TELEPORTER'], formation: 'CIRCLE', msgKey: "formation_incoming", s: 250, m: 3.7 },
-    { wave: 36, scoreToEarn: 920000, enemies: ['TELEPORTER', 'SHOOTER', 'TANK'], msgKey: "wave_msg_16", s: 400, m: 3.8 },
-    { wave: 37, scoreToEarn: 1000000, enemies: ['TANK', 'TANK', 'TANK'], msgKey: "wave_msg_17", s: 250, m: 4.0 },
-    { wave: 38, scoreToEarn: 1100000, enemies: ['SHOOTER', 'SHOOTER', 'TELEPORTER', 'TELEPORTER'], msgKey: "wave_msg_18", s: 350, m: 4.2 },
-    { wave: 39, scoreToEarn: 1250000, enemies: ['GRUNT', 'WEAVER', 'TANK', 'SHOOTER', 'TELEPORTER'], formation: 'MATRIX', msgKey: "formation_incoming", s: 200, m: 4.5 },
-    { wave: 40, scoreToEarn: 0, enemies: [], boss: 'BOSS_NEXUS_PRIME', msgKey: "wave_msg_20", s: 0, m: 5.0 },
+  { wave: 1,  scoreToEarn:   2000,   enemies: ['GRUNT'],                                  msgKey: 'wave_msg_1_invasion',              s: 1200, m: 1.00 },
+  { wave: 2,  scoreToEarn:   4000,   enemies: ['GRUNT','WEAVER'],                         msgKey: 'wave_msg_2_sighting',              s: 1100, m: 1.05 },
+  { wave: 3,  scoreToEarn:   7000,   enemies: ['GRUNT','WEAVER','TANK'],                  msgKey: 'wave_msg_3_heavy',                 s: 1000, m: 1.10 },
+  { wave: 4,  scoreToEarn:  12000,   enemies: ['GRUNT','WEAVER','TANK','SHOOTER'],        msgKey: 'wave_msg_4_returnfire',            s:  950, m: 1.15 },
+  { wave: 5,  scoreToEarn:      0,   enemies: [], isMultiFormation: true,                 msgKey: 'wave_msg_5_multi_formation',       s:    0, m: 1.20, h: 5.0 },
+  { wave: 6,  scoreToEarn:  25000,   enemies: ['SHOOTER','WEAVER','WEAVER'],              msgKey: 'wave_msg_6_weaverrain',            s:  700, m: 1.35 },
+  { wave: 7,  scoreToEarn:  35000,   enemies: ['SHOOTER','TANK','GRUNT'],                 msgKey: 'wave_msg_7_skirmish',              s:  700, m: 1.40 },
+  { wave: 8,  scoreToEarn:  45000,   enemies: ['GRUNT','SHOOTER'],                         msgKey: 'wave_msg_8_surge',                 s:  650, m: 1.45 },
+  { wave: 9,  scoreToEarn:  55000,   enemies: ['WEAVER','TANK','WEAVER'],                  msgKey: 'wave_msg_9_pressure',              s:  600, m: 1.55 },
+  { wave: 10, scoreToEarn:      0,   enemies: [], boss: 'BOSS_SENTINEL_PRIME',            msgKey: 'wave_msg_10_sentinel_prime',       s:    0, m: 1.60, h: 12.0 },
+  { wave: 11, scoreToEarn:  68000,   enemies: ['TELEPORTER','GRUNT'],                      msgKey: 'wave_msg_11_reinforcements',       s: 1000, m: 1.65 },
+  { wave: 12, scoreToEarn:  80000,   enemies: ['SHOOTER','SHOOTER','TANK'],                msgKey: 'wave_msg_12_crossfire',            s:  550, m: 1.70 },
+  { wave: 13, scoreToEarn:  95000,   enemies: ['WEAVER','WEAVER','TELEPORTER'],           msgKey: 'wave_msg_13_swarm',                s:  500, m: 1.75 },
+  { wave: 14, scoreToEarn: 110000,   enemies: ['TELEPORTER','SHOOTER'],                    msgKey: 'wave_msg_14_ambush',               s:  900, m: 1.80 },
+  { wave: 15, scoreToEarn:      0,   enemies: [], isMultiFormation: true,                 msgKey: 'wave_msg_15_multi_formation',      s:    0, m: 1.90, h: 6.0 },
+  { wave: 16, scoreToEarn: 150000,   enemies: ['SHOOTER','TELEPORTER','WEAVER'],           msgKey: 'wave_msg_16_flank',                s:  800, m: 1.95 },
+  { wave: 17, scoreToEarn: 175000,   enemies: ['TANK','SHOOTER','WEAVER','GRUNT'],         msgKey: 'wave_msg_17_composite',            s:  500, m: 2.00 },
+  { wave: 18, scoreToEarn: 190000,   enemies: ['GRUNT','TELEPORTER','SHOOTER'],            msgKey: 'wave_msg_18_turbulence',           s:  680, m: 2.05 },
+  { wave: 19, scoreToEarn: 210000,   enemies: ['WEAVER','TANK','SHOOTER'],                 msgKey: 'wave_msg_19_heatup',               s:  620, m: 2.10 },
+  { wave: 20, scoreToEarn:      0,   enemies: [], boss: 'BOSS_VOID_SERPENT',              msgKey: 'wave_msg_20_void_serpent',         s:    0, m: 2.30, h: 20.0 },
+  { wave: 21, scoreToEarn: 240000,   enemies: ['WEAVER','TELEPORTER','WEAVER'],            msgKey: 'wave_msg_21_surge',                s:  700, m: 2.40 },
+  { wave: 22, scoreToEarn: 270000,   enemies: ['TANK','TANK','SHOOTER'],                   msgKey: 'wave_msg_22_ironwall',             s:  380, m: 2.50 },
+  { wave: 23, scoreToEarn: 300000,   enemies: ['GRUNT','SHOOTER','TANK'],                  msgKey: 'wave_msg_23_press',                s:  350, m: 2.60 },
+  { wave: 24, scoreToEarn: 340000,   enemies: ['SHOOTER','SHOOTER','TELEPORTER'],          msgKey: 'wave_msg_24_crosslines',           s:  650, m: 2.70 },
+  { wave: 25, scoreToEarn:      0,   enemies: [], isMultiFormation: true,                 msgKey: 'wave_msg_25_multi_formation',      s:    0, m: 2.80, h: 7.0 },
+  { wave: 26, scoreToEarn: 430000,   enemies: ['GRUNT','WEAVER','TANK','SHOOTER'],         msgKey: 'wave_msg_26_combined_arms',        s:  320, m: 2.90 },
+  { wave: 27, scoreToEarn: 480000,   enemies: ['TELEPORTER','TANK','SHOOTER'],             msgKey: 'wave_msg_27_ambit',                s:  300, m: 3.00 },
+  { wave: 28, scoreToEarn: 520000,   enemies: ['GRUNT','SHOOTER','TELEPORTER'],            msgKey: 'wave_msg_28_thin_red_line',        s:  500, m: 3.10 },
+  { wave: 29, scoreToEarn: 560000,   enemies: ['WEAVER','TANK','WEAVER','TELEPORTER'],     msgKey: 'wave_msg_29_furnace',              s:  450, m: 3.20 },
+  { wave: 30, scoreToEarn:      0,   enemies: [], boss: 'BOSS_OMEGA_NEXUS',               msgKey: 'wave_msg_30_omega_nexus',          s:    0, m: 3.40, h: 30.0 },
+  { wave: 31, scoreToEarn: 620000,   enemies: ['TELEPORTER','TELEPORTER'],                 msgKey: 'wave_msg_31_phase_shift',          s:  780, m: 3.50 },
+  { wave: 32, scoreToEarn: 680000,   enemies: ['SHOOTER','TANK','SHOOTER','TANK'],         msgKey: 'wave_msg_32_crossarmor',           s:  280, m: 3.60 },
+  { wave: 33, scoreToEarn: 750000,   enemies: ['WEAVER','SHOOTER','TELEPORTER'],           msgKey: 'wave_msg_33_circle_assault',       s:  250, m: 3.70 },
+  { wave: 34, scoreToEarn: 830000,   enemies: ['TELEPORTER','SHOOTER','TANK'],             msgKey: 'wave_msg_34_pulse',                s:  380, m: 3.80 },
+  { wave: 35, scoreToEarn:      0,   enemies: [], isMultiFormation: true,                 msgKey: 'wave_msg_35_multi_formation',      s:    0, m: 4.00, h: 8.0 },
+  { wave: 36, scoreToEarn:1020000,   enemies: ['SHOOTER','SHOOTER','TELEPORTER','TELEPORTER'], msgKey:'wave_msg_36_barrage',     s:  340, m: 4.20 },
+  { wave: 37, scoreToEarn:1140000,   enemies: ['GRUNT','WEAVER','TANK','SHOOTER','TELEPORTER'], msgKey:'wave_msg_37_matrix',    s:  200, m: 4.50 },
+  { wave: 38, scoreToEarn:1280000,   enemies: ['WEAVER','SHOOTER','TANK','TELEPORTER'],    msgKey: 'wave_msg_38_overload',             s:  220, m: 4.70 },
+  { wave: 39, scoreToEarn:1440000,   enemies: ['GRUNT','GRUNT','SHOOTER','TANK','TELEPORTER'], msgKey:'wave_msg_39_last_stand',  s:  200, m: 4.90 },
+  { wave: 40, scoreToEarn:      0,   enemies: [], boss: 'BOSS_NEXUS_PRIME',               msgKey: 'wave_msg_40_nexus_prime',          s:    0, m: 5.00, h: 40.0 },
+  { wave: 41, scoreToEarn:1650000,   enemies: ['SHOOTER','TELEPORTER','WEAVER'],           msgKey: 'wave_msg_41_countercharge',        s:  420, m: 5.10 },
+  { wave: 42, scoreToEarn:1900000,   enemies: ['TANK','SHOOTER','TANK','WEAVER'],          msgKey: 'wave_msg_42_heavy_push',           s:  300, m: 5.20 },
+  { wave: 43, scoreToEarn:2200000,   enemies: ['GRUNT','SHOOTER','TANK'],                  msgKey: 'wave_msg_43_v_shape',              s:  260, m: 5.30 },
+  { wave: 44, scoreToEarn:2550000,   enemies: ['TELEPORTER','TELEPORTER','SHOOTER'],       msgKey: 'wave_msg_44_phase_storm',          s:  360, m: 5.40 },
+  { wave: 45, scoreToEarn:      0,   enemies: [], isMultiFormation: true,                 msgKey: 'wave_msg_45_multi_formation_final',s:    0, m: 5.50, h: 10.0 },
+  { wave: 46, scoreToEarn:3400000,   enemies: ['TANK','TANK','SHOOTER','TELEPORTER'],      msgKey: 'wave_msg_46_anvil',                s:  240, m: 5.60 },
+  { wave: 47, scoreToEarn:3900000,   enemies: ['WEAVER','SHOOTER','TELEPORTER'],           msgKey: 'wave_msg_47_circle_strike',        s:  220, m: 5.70 },
+  { wave: 48, scoreToEarn:4450000,   enemies: ['GRUNT','WEAVER','TANK','SHOOTER','TELEPORTER'], msgKey:'wave_msg_48_maelstrom',    s:  200, m: 5.80 },
+  { wave: 49, scoreToEarn:5050000,   enemies: ['TANK','SHOOTER','TELEPORTER','TELEPORTER'], msgKey:'wave_msg_49_critical_mass',    s:  170, m: 5.90 },
+  { wave: 50, scoreToEarn:      0,   enemies: [], boss: 'BOSS_NEXUS_PRIME',               msgKey: 'wave_msg_50_final',               s:    0, m: 6.00, h: 60.0 },
 ];
 
 
 class Game {
-    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
@@ -1023,11 +1357,14 @@ class Game {
     public scale: number = 1;
 
     public isFormationActive: boolean = false;
-    private formationEnemies: Enemy[] = [];
+    private activeFormationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
     private formationMoveTimer: number = 0;
     private formationMoveInterval: number = 1000;
     private formationVerticalStep: number = 20;
+
+    public isMultiFormationWaveActive: boolean = false;
+    private multiFormationStage: number = 0;
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
         this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
@@ -1208,10 +1545,12 @@ class Game {
                 if (forceReset) {
                     this.player = null;
                     this.level = 0;
+                    this.coins = 0;
                 }
                 if (!this.player || !this.player.isAlive()) {
                     this.level = 1;
                     this.score = 0;
+                    this.coins = 0;
                     this.player = new Player(this);
                     this.entities = [this.player];
                 } else {
@@ -1221,10 +1560,14 @@ class Game {
                     this.changeState('WIN');
                     return;
                 }
-                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup');
+                // *** MODIFIKATION 3: START ***
+                // Filtert Entitäten, behält aber den Spieler, Pickups UND den Laserstrahl für den Wellenübergang.
+                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
+                // *** MODIFIKATION 3: ENDE ***
                 this.isBossActive = false;
                 this.isFormationActive = false;
-                this.formationEnemies = [];
+                this.isMultiFormationWaveActive = false;
+                this.activeFormationEnemies = [];
                 this.scoreEarnedThisLevel = 0;
                 this.configureLevel();
                 this.changeState('PLAYING_TRANSITION');
@@ -1259,10 +1602,25 @@ class Game {
         this.entities.forEach(e => e.update(deltaTime)); 
         this.enemySpawnTimer += deltaTime; 
         
-        if (this.isFormationActive) {
-            this.updateFormation(deltaTime);
-            if (this.formationEnemies.every(e => !e.isAlive())) {
+        if (this.isMultiFormationWaveActive) {
+            if (this.activeFormationEnemies.length > 0 && this.activeFormationEnemies.every(e => !e.isAlive())) {
+                this.multiFormationStage++;
+                this.activeFormationEnemies = [];
+    
+                if (this.multiFormationStage > 3) {
+                    this.isMultiFormationWaveActive = false;
+                    this.changeState('LEVEL_START');
+                } else {
+                    this.spawnNextFormationStage();
+                }
+            } else if (this.activeFormationEnemies.length > 0) {
+                this.updateActiveFormation(deltaTime);
+            }
+        } else if (this.isFormationActive) {
+            this.updateActiveFormation(deltaTime);
+            if (this.activeFormationEnemies.every(e => !e.isAlive())) {
                 this.isFormationActive = false;
+                this.changeState('LEVEL_START');
             }
         } else if (this.isBossActive) {
             const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy;
@@ -1291,13 +1649,25 @@ class Game {
         if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); 
         this.uiManager.update(); 
     }
+    
     draw(): void {
         this.ctx.clearRect(0, 0, this.baseWidth, this.baseHeight);
         this.drawParallaxStarfield();
+
         this.entities.forEach(e => {
-            e.draw(this.ctx);
+            if (e.family !== 'player') {
+                e.draw(this.ctx);
+            }
         });
+
+        this.entities.forEach(e => {
+            if (e.family === 'player') {
+                e.draw(this.ctx);
+            }
+        });
+        
         this.uiManager.drawOverlay();
+
         switch (this.gameState) {
             case 'INTRO':
             case 'MENU':
@@ -1321,10 +1691,15 @@ class Game {
         this.enemySpawnTypes = levelData.enemies; 
         this.enemySpawnInterval = levelData.s; 
         this.enemySpeedMultiplier = levelData.m; 
-        this.enemyHealthMultiplier = 1 + Math.floor(this.level / 5); 
+        this.enemyHealthMultiplier = levelData.h ?? (1 + Math.floor(this.level / 10)); 
         this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey); 
         this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); 
-        if (levelData.boss) { 
+        if (levelData.isMultiFormation) {
+            this.isMultiFormationWaveActive = true;
+            this.multiFormationStage = 1;
+            this.spawnNextFormationStage();
+            this.uiManager.soundManager.setTrack('normal');
+        } else if (levelData.boss) { 
             this.isBossActive = true; 
             this.spawnEnemy(false, levelData.boss); 
             this.uiManager.soundManager.setTrack('boss'); 
@@ -1337,42 +1712,37 @@ class Game {
         } 
     }
 
-    updateFormation(dt: number): void {
+    private spawnNextFormationStage(): void {
+        const levelData = LEVELS[this.level - 1]!;
+        this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) + ` (${this.multiFormationStage}/3)`;
+        this.uiManager.update();
+        
+        setTimeout(() => {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Stage1(); break;
+                case 2: this.spawnFormation_Stage2(); break;
+                case 3: this.spawnFormation_Stage3(); break;
+            }
+        }, 2000);
+    }
+
+    updateActiveFormation(dt: number): void {
         const dt_s = dt / 1000;
-
         let highestY = this.height;
-        let hasLivingEnemies = false;
-        for (const enemy of this.formationEnemies) {
-            if (enemy.isAlive()) {
-                hasLivingEnemies = true;
-                highestY = Math.min(highestY, enemy.pos.y);
-            }
-        }
-
-        if (!hasLivingEnemies) {
-             this.isFormationActive = false;
-             return;
-        }
-
-        // Einflug-Phase
+        this.activeFormationEnemies.forEach(e => { if (e.isAlive()) highestY = Math.min(highestY, e.pos.y); });
+        
         if (highestY < 50) {
-            for(const enemy of this.formationEnemies) {
-                if(enemy.isAlive()) {
-                    enemy.pos.y += 120 * dt_s;
-                }
-            }
-            return; // Keine weitere Bewegung in diesem Frame
+            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.y += 120 * dt_s; });
+            return;
         }
 
-        // Normale Bewegungs-Phase
         this.formationMoveTimer += dt;
         if(this.formationMoveTimer < this.formationMoveInterval) return;
 
         this.formationMoveTimer = 0;
         let wallHit = false;
-        for(const enemy of this.formationEnemies) {
+        for(const enemy of this.activeFormationEnemies) {
             if(!enemy.isAlive()) continue;
-
             const nextX = enemy.pos.x + 10 * this.formationMovementDirection;
             if (nextX <= 0 || nextX + enemy.width >= this.width) {
                 wallHit = true;
@@ -1382,39 +1752,86 @@ class Game {
         
         if (wallHit) {
             this.formationMovementDirection *= -1;
-            for (const enemy of this.formationEnemies) {
-                if(enemy.isAlive()) enemy.pos.y += this.formationVerticalStep;
-            }
+            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.y += this.formationVerticalStep; });
         } else {
-            for (const enemy of this.formationEnemies) {
-                 if(enemy.isAlive()) enemy.pos.x += 10 * this.formationMovementDirection;
+            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.x += 10 * this.formationMovementDirection; });
+        }
+    }
+    
+    private addEnemyToFormation(enemy: Enemy | null, x: number, y: number) {
+        if(enemy) {
+            enemy.pos.x = x;
+            enemy.pos.y = y;
+            enemy.speed = 0;
+            enemy.inFormation = true;
+            this.activeFormationEnemies.push(enemy);
+            this.addEntity(enemy);
+        }
+    }
+
+    spawnFormation_Stage1(): void {
+        const d = { r: 4, c: 8, hS: 60, vS: 50, sX: (this.width - (8 * 60)) / 2, sY: -250 };
+        for (let r = 0; r < d.r; r++) {
+            for (let c = 0; c < d.c; c++) {
+                const type = r < 1 ? 'TANK' : (r < 2 ? 'WEAVER' : 'GRUNT');
+                this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
+            }
+        }
+    }
+
+    spawnFormation_Stage2(): void {
+        const d = { c: 5, hS: 80, vS: 60, sX: this.width / 2, sY: -200 };
+        for (let r = 0; r < d.c; r++) {
+            const type = r < 2 ? 'SHOOTER' : (r < 4 ? 'WEAVER' : 'GRUNT');
+            this.addEnemyToFormation(this.createEnemyByType(type), d.sX - (r * d.hS / 2), d.sY + r * d.vS);
+            if (r > 0) this.addEnemyToFormation(this.createEnemyByType(type), d.sX + (r * d.hS / 2), d.sY + r * d.vS);
+        }
+    }
+
+    spawnFormation_Stage3(): void {
+        const d = { r: 5, c: 8, hS: 60, vS: 50, sX: (this.width - (8 * 60)) / 2, sY: -250 };
+        const types = ['GRUNT', 'WEAVER', 'SHOOTER', 'TANK'];
+        for (let r = 0; r < d.r; r++) {
+            for (let c = 0; c < d.c; c++) {
+                const type = types[Math.floor(Math.random() * types.length)]!;
+                this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
             }
         }
     }
     
     spawnFormation(type: string): void {
-        this.formationEnemies = [];
-        const formationData = {
-            rows: 5,
-            cols: 8,
-            hSpacing: 60,
-            vSpacing: 50,
-            startX: (this.width - (8 * 60)) / 2,
-            startY: -250
-        };
-
+        this.activeFormationEnemies = [];
+        const formationData = { rows: 5, cols: 8, hSpacing: 60, vSpacing: 50, startX: (this.width - (8 * 60)) / 2, startY: -250 };
         for (let r = 0; r < formationData.rows; r++) {
             for (let c = 0; c < formationData.cols; c++) {
                 let enemy: Enemy | null = null;
-                const enemyType = r < 1 ? 'TANK' : (r < 3 ? 'WEAVER' : 'GRUNT');
-                enemy = this.createEnemyByType(enemyType);
-
+                switch (type) {
+                    case 'V_SHAPE':
+                        if(c === r || c === (formationData.cols -1 -r)) {
+                           enemy = this.createEnemyByType(this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!);
+                        }
+                        break;
+                     case 'CIRCLE':
+                        const angle = (c / formationData.cols) * 2 * Math.PI;
+                        const radius = 150 + r * 30;
+                        const x = this.width / 2 + Math.cos(angle) * radius;
+                        const y = -200 + Math.sin(angle) * radius + r * 50;
+                        enemy = this.createEnemyByType(this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!);
+                        if (enemy) { enemy.pos = new Vector2D(x, y); }
+                        break;
+                    default: // MATRIX
+                        const enemyType = r < 1 ? 'TANK' : (r < 3 ? 'WEAVER' : 'GRUNT');
+                        enemy = this.createEnemyByType(enemyType);
+                        break;
+                }
                 if (enemy) {
-                    enemy.pos.x = formationData.startX + c * formationData.hSpacing;
-                    enemy.pos.y = formationData.startY + r * formationData.vSpacing;
+                    if(!enemy.pos.x && !enemy.pos.y){
+                        enemy.pos.x = formationData.startX + c * formationData.hSpacing;
+                        enemy.pos.y = formationData.startY + r * formationData.vSpacing;
+                    }
                     enemy.speed = 0;
                     enemy.inFormation = true;
-                    this.formationEnemies.push(enemy);
+                    this.activeFormationEnemies.push(enemy);
                     this.addEntity(enemy);
                 }
             }
@@ -1445,7 +1862,7 @@ class Game {
         if(fixedType) {
             type = fixedType;
         } else if (isBossAdd) {
-            const addTypes = ['GRUNT', 'WEAVER', 'SHOOTER', 'TANK', 'TELEPORTER'];
+            const addTypes = ['GRUNT', 'WEAVER', 'SHOOTER', 'TANK'];
             type = addTypes[Math.floor(Math.random() * addTypes.length)]!;
         } else {
             type = this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!;
@@ -1467,6 +1884,7 @@ window.addEventListener('load', function () {
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     const uiElements: IUIElements = { 
         score: document.getElementById('score')!, 
+        coins: document.getElementById('coins')!,
         level: document.getElementById('level')!, 
         highscore: document.getElementById('highscore')!, 
         specialInventory: document.getElementById('special-inventory')!, 
