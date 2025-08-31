@@ -34,6 +34,12 @@ import piCoinImgSrc from './assets/images/pi_coin.png';
 // *** MODIFIKATION 1: START ***
 import piCoin2ImgSrc from './assets/images/pi_coin2.png';
 // *** MODIFIKATION 1: ENDE ***
+// *** MODIFIKATION HINZUGEFÜGT: START ***
+import shootTier1Src from './assets/audio/shoot_tier1.mp3';
+import shootTier2Src from './assets/audio/shoot_tier2.mp3';
+import shootTier3Src from './assets/audio/shoot_tier3.mp3';
+import shootTier4Src from './assets/audio/shoot_tier4.mp3';
+// *** MODIFIKATION HINZUGEFÜGT: ENDE ***
 
 
 // --- SECTION 2: BILD-INITIALISIERUNG ---
@@ -875,12 +881,41 @@ class SoundManager {
     private bossSnarePattern: boolean[] = [];
     private bossHihatPattern: boolean[] = [];
 
+    // *** MODIFIKATION HINZUGEFÜGT: START ***
+    private shootTier1Buffer: AudioBuffer | null = null;
+    private shootTier2Buffer: AudioBuffer | null = null;
+    private shootTier3Buffer: AudioBuffer | null = null;
+    private shootTier4Buffer: AudioBuffer | null = null;
+    // *** MODIFIKATION HINZUGEFÜGT: ENDE ***
+
     constructor(uiManager: UIManager) {
         this.uiManager = uiManager;
         this.stepDuration = 60.0 / this.bpm / this.stepsPerBeat;
         this.defineMusicPatterns();
         this.defineBossMusicPatterns();
     }
+    
+    // *** MODIFIKATION HINZUGEFÜGT: START ***
+    private async loadAudioFile(url: string): Promise<AudioBuffer | null> {
+        if (!this.audioCtx) return null;
+        try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+            return audioBuffer;
+        } catch (e) {
+            console.error(`Fehler beim Laden der Audiodatei: ${url}`, e);
+            return null;
+        }
+    }
+
+    public async loadSounds() {
+        this.shootTier1Buffer = await this.loadAudioFile(shootTier1Src);
+        this.shootTier2Buffer = await this.loadAudioFile(shootTier2Src);
+        this.shootTier3Buffer = await this.loadAudioFile(shootTier3Src);
+        this.shootTier4Buffer = await this.loadAudioFile(shootTier4Src);
+    }
+    // *** MODIFIKATION HINZUGEFÜGT: ENDE ***
 
     public initAudio(): void {
         if (this.audioCtx && this.audioCtx.state === 'running') {
@@ -891,6 +926,9 @@ class SoundManager {
                 this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
                 this.masterGain = this.audioCtx.createGain();
                 this.masterGain.connect(this.audioCtx.destination);
+                
+                // *** MODIFIKATION HINZUGEFÜGT ***
+                this.loadSounds();
             }
             if (this.audioCtx.state === 'suspended') {
                 this.audioCtx.resume();
@@ -910,10 +948,55 @@ class SoundManager {
     scheduler() { if (!this.audioCtx || !this.musicPlaying) return; while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) { let l, a, b, k, s, h; if (this.currentTrack === 'boss') {[l,a,b,k,s,h]=[this.bossLeadMelody,this.bossArpeggioMelody,this.bossBassLine,this.bossKickPattern,this.bossSnarePattern,this.bossHihatPattern];} else {[l,a,b,k,s,h]=[this.leadMelody,this.arpeggioMelody,this.bassLine,this.kickPattern,this.snarePattern,this.hihatPattern];} this.playNote(l[this.currentStep]!, this.nextNoteTime, this.stepDuration * 0.9, 'square', 0.15); this.playNote(a[this.currentStep]!, this.nextNoteTime, this.stepDuration, 'square', 0.07); if (this.currentStep % 2 === 0) this.playNote(b[this.currentStep]!, this.nextNoteTime, this.stepDuration * 1.8, 'triangle', 0.3); if(k[this.currentStep])this.playDrum('kick',this.nextNoteTime); if(s[this.currentStep])this.playDrum('snare',this.nextNoteTime); if(h[this.currentStep])this.playDrum('hihat',this.nextNoteTime); this.nextNoteTime += this.stepDuration; this.currentStep = (this.currentStep + 1) % this.totalSteps; } }
     toggleMusic(shouldPlay: boolean): void { if (!this.audioCtx) return; this.musicPlaying = shouldPlay; if (this.musicPlaying && this.musicScheduler === null) { this.currentStep = 0; this.nextNoteTime = this.audioCtx.currentTime; this.musicScheduler = window.setInterval(() => this.scheduler(), 25); } else if (!this.musicPlaying && this.musicScheduler !== null) { clearInterval(this.musicScheduler); this.musicScheduler = null; } }
     setVolume(volume: number) { if (this.masterGain && this.audioCtx) this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime); }
-    play(soundName: string) { 
-        if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return; 
+    
+    // *** MODIFIZIERTE play-Methode ***
+    play(soundName: string) {
+        if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return;
+    
+        // *** MODIFIKATION HINZUGEFÜGT: START ***
+        // Spezielle Logik für die Schuss-Sounds der verschiedenen Waffenstufen
+        const player = this.uiManager.game.player;
+        if (soundName === 'shoot' && player) {
+            let bufferToPlay: AudioBuffer | null = null;
+            let volume = 0.2; // Standardlautstärke, falls keine Stufe passt
+    
+            switch (player.powerUpManager.weaponTier) {
+                case 1:
+                    bufferToPlay = this.shootTier1Buffer;
+                    volume = 0.05; // Lautstärke für Stufe 1
+                    break;
+                case 2:
+                    bufferToPlay = this.shootTier2Buffer;
+                    volume = 0.05; // Lautstärke für Stufe 2
+                    break;
+                case 3:
+                    bufferToPlay = this.shootTier3Buffer;
+                    volume = 0.05; // Lautstärke für Stufe 3
+                    break;
+                case 4:
+                    bufferToPlay = this.shootTier4Buffer;
+                    volume = 0.05; // Lautstärke für Stufe 4
+                    break;
+            }
+    
+            if (bufferToPlay) {
+                const source = this.audioCtx.createBufferSource();
+                source.buffer = bufferToPlay;
+                
+                const gainNode = this.audioCtx.createGain();
+                gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
+    
+                source.connect(gainNode);
+                gainNode.connect(this.masterGain);
+                source.start(this.audioCtx.currentTime);
+                return; // Beendet die Funktion, da der Sound abgespielt wurde
+            }
+        }
+        // *** MODIFIKATION HINZUGEFÜGT: ENDE ***
+        
         let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol = 1; 
         switch (soundName) { 
+            // Der 'shoot'-case dient als Fallback, falls keine MP3 geladen werden konnte
             case 'shoot': freq = 880; duration = 0.05; type = 'triangle'; vol = 0.4; break; 
             case 'missileLaunch': freq = 220; duration = 0.3; type = 'sawtooth'; break; 
             case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; 
