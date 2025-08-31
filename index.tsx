@@ -1,5 +1,3 @@
-// --- START OF FILE index.tsx ---
-
 import { translations } from './translations.js';
 
 // --- SECTION 1: ASSET-IMPORTE ---
@@ -11,7 +9,7 @@ import gruntImgSrc from './assets/images/enemy_grunt.png';
 import tankImgSrc from './assets/images/enemy_tank.png';
 import weaverImgSrc from './assets/images/enemy_weaver.png';
 import shooterImgSrc from './assets/images/enemy_shooter.png';
-import teleporterImgSrc from './assets/images/enemy_teleporter.png'; // NEU: Asset für Teleporter
+import teleporterImgSrc from './assets/images/enemy_teleporter.png';
 import bossSentinelPrimeSrc from './assets/images/boss_sentinel_prime.png';
 import bossVoidSerpentSrc from './assets/images/boss_void_serpent.png';
 import bossOmegaNexusBaseSrc from './assets/images/boss_omega_nexus_base.png';
@@ -38,7 +36,7 @@ import piCoinImgSrc from './assets/images/pi_coin.png';
 // --- SECTION 2: BILD-INITIALISIERUNG ---
 const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
 const playerImg1 = createImage(playerImgSrc1), playerImg2 = createImage(playerImgSrc2), playerImg3 = createImage(playerImgSrc3), playerImg4 = createImage(playerImgSrc4);
-const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), teleporterImg = createImage(teleporterImgSrc); // NEU
+const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), teleporterImg = createImage(teleporterImgSrc);
 const bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
 const bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
 const bossOmegaNexusBaseImg = createImage(bossOmegaNexusBaseSrc);
@@ -51,7 +49,6 @@ const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWea
 // --- SECTION 3: TYP-DEFINITIONEN & LEVEL DEFINITION---
 interface IKeyMap { [key: string]: boolean; }
 interface IStar { pos: Vector2D; s: number; v: number; a: number; }
-// NEUE LEVEL DEFINITION
 interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[]; boss?: string; formation?: string; msgKey: string; s: number; m: number; }
 interface IUIElements { score: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; }
 interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; color: string; }
@@ -87,12 +84,42 @@ class ShockwaveEffect extends Entity {
     update(dt: number): void { const dt_s = dt / 1000; this.radius += 800 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
-// NEUE KLASSE
 class TeleportEffect extends Entity {
-    private life: number = 0.4; private radius: number = 0; private isOpening: boolean; private maxRadius: number = 40;
-    constructor(game: Game, x: number, y: number, isOpening: boolean) { super(game, x, y, 0, 0); this.family = 'effect'; this.isOpening = isOpening; this.radius = isOpening ? 0 : this.maxRadius; }
-    update(dt: number): void { const dt_s = dt / 1000; this.life -= dt_s; this.radius += (this.isOpening ? 1 : -1) * (this.maxRadius / 0.4) * dt_s; if (this.life <= 0) this.destroy(); }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const alpha = this.life / 0.4; ctx.globalAlpha = alpha; ctx.strokeStyle = '#EE82EE'; ctx.lineWidth = 4; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    private life: number = 0.4;
+    private radius: number = 0;
+    private isOpening: boolean;
+    private maxRadius: number = 40;
+
+    constructor(game: Game, x: number, y: number, isOpening: boolean) {
+        super(game, x, y, 0, 0);
+        this.family = 'effect';
+        this.isOpening = isOpening;
+        this.radius = isOpening ? 0 : this.maxRadius;
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.life -= dt_s;
+        this.radius += (this.isOpening ? 1 : -1) * (this.maxRadius / 0.4) * dt_s;
+        if (this.life <= 0) this.destroy();
+    }
+
+    // *** KORRIGIERTE DRAW-METHODE ***
+    draw(ctx: CanvasRenderingContext2D): void {
+        if (this.radius < 0) return;
+
+        ctx.save();
+        const alpha = this.life / 0.4;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = '#EE82EE';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#EE82EE';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
 }
 class Coin extends EntityFamily {
     public value: number; public speed: number = 180;
@@ -149,13 +176,81 @@ class Grunt extends Enemy { private image: HTMLImageElement; constructor(game: G
 class Tank extends Enemy { private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 100), -96, 100, 96, 3, 30, 'TANK'); this.speed = 60 * game.enemySpeedMultiplier; this.collisionDamage = 50; this.image = tankImg; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Weaver extends Enemy { private angle: number; private hSpeed: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 55), -46, 55, 46, 1, 20, 'WEAVER'); this.speed = 80 * game.enemySpeedMultiplier; this.angle = Math.random() * Math.PI * 2; this.hSpeed = (Math.random() * 2 + 1) * 60; this.collisionDamage = 35; this.image = weaverImg; } update(dt: number): void { const dt_s = dt / 1000; super.update(dt); if (this.inFormation) return; this.angle += 3 * dt_s; this.pos.x += Math.sin(this.angle) * this.hSpeed * dt_s; if (this.pos.x < 0 || this.pos.x > this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
-// NEUE KLASSE
 class Teleporter extends Enemy {
-    private teleportCooldown: number = 4000; private isVisible: boolean = true; private visibleTimer: number = 3000; private image: HTMLImageElement;
-    constructor(game: Game) { super(game, Math.random() * (game.width - 60), 50 + Math.random() * (game.height / 3), 60, 60, 2, 80, 'TELEPORTER'); this.speed = 0; this.image = teleporterImg; }
-    update(dt: number): void { if (this.inFormation) return; this.teleportCooldown -= dt; if (this.isVisible) { this.visibleTimer -= dt; if (this.visibleTimer <= 0) { this.isVisible = false; this.game.addEntity(new TeleportEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, false)); this.teleportCooldown = 1000; } } else if (this.teleportCooldown <= 0) { this.teleport(); this.isVisible = true; this.visibleTimer = 3000; } }
-    teleport(): void { this.pos.x = Math.random() * (this.game.width - this.width); this.pos.y = 50 + Math.random() * (this.game.height / 3); this.game.addEntity(new TeleportEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, true)); }
-    draw(ctx: CanvasRenderingContext2D): void { if (this.isVisible) { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
+    private teleportCooldown: number = 4000;
+    private isVisible: boolean = true;
+    private visibleTimer: number = 3000;
+    private image: HTMLImageElement;
+    private fireCooldown: number;
+
+    constructor(game: Game) {
+        super(game, Math.random() * (game.width - 60), 50 + Math.random() * (game.height / 3), 60, 60, 2, 80, 'TELEPORTER');
+        this.speed = 0;
+        this.image = teleporterImg;
+        this.fireCooldown = 2500 + Math.random() * 2000;
+    }
+
+    update(dt: number): void {
+        if (this.inFormation) return;
+
+        this.teleportCooldown -= dt;
+
+        if (this.isVisible) {
+            this.visibleTimer -= dt;
+            if (this.visibleTimer <= 0) {
+                this.isVisible = false;
+                this.game.addEntity(new TeleportEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, false));
+                this.teleportCooldown = 1000;
+            }
+
+            this.fireCooldown -= dt;
+            if (this.fireCooldown <= 0 && this.pos.y > 0 && this.game.player) {
+                this.shoot();
+                this.fireCooldown = 3000;
+            }
+
+        } else if (this.teleportCooldown <= 0) {
+            this.teleport();
+            this.isVisible = true;
+            this.visibleTimer = 3000;
+        }
+    }
+    
+    shoot(): void {
+        if (!this.game.player) return;
+
+        const p = this.game.player;
+        const projectileSpeed = 400;
+        const damage = 20;
+
+        const spawnX = this.pos.x + this.width / 2;
+        const spawnY = this.pos.y + this.height / 2;
+
+        const targetX = p.pos.x + p.width / 2;
+        const targetY = p.pos.y + p.height / 2;
+
+        const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
+
+        const velX = Math.cos(angle) * projectileSpeed;
+        const velY = Math.sin(angle) * projectileSpeed;
+
+        this.game.addEntity(new EnemyProjectile(this.game, spawnX, spawnY, velX, velY, damage));
+    }
+
+    teleport(): void {
+        this.pos.x = Math.random() * (this.game.width - this.width);
+        this.pos.y = 50 + Math.random() * (this.game.height / 3);
+        this.game.addEntity(new TeleportEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, true));
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        if (this.isVisible) {
+            ctx.save();
+            ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+            this.drawHealthBar(ctx);
+            ctx.restore();
+        }
+    }
 }
 class BlackHole extends Entity {
     private life: number = 8000; private pullRadius: number = 300; private killRadius: number = 20;
@@ -174,7 +269,25 @@ class LaserBeam extends EntityFamily {
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const centerX = this.player.pos.x + this.player.width / 2; const beamHeight = this.player.pos.y; ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = '#f0f'; ctx.lineWidth = 15; ctx.shadowColor = '#f0f'; ctx.shadowBlur = 20; ctx.stroke(); ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = '#EE82EE'; ctx.lineWidth = 8; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.stroke(); ctx.beginPath(); ctx.moveTo(centerX + Math.sin(this.phase) * this.amplitude, beamHeight); for (let y = beamHeight; y > 0; y--) { const xOffset = Math.sin(y * this.frequency + this.phase) * this.amplitude; ctx.lineTo(centerX + xOffset, y); } ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
 }
 class HomingMissile extends Projectile { private target: Enemy | null = null; private searchCooldown: number = 0; private lifetime: number = 5000; constructor(game: Game, x: number, y: number) { super(game, x, y, (Math.random() - 0.5) * 200, -300); this.type = 'HOMING_MISSILE'; this.damage = 15; this.width = 8; this.height = 16; } findTarget(): void { const enemies = this.game.entities.filter(e => e.family === 'enemy' && e.isAlive()) as Enemy[]; if (enemies.length === 0) { this.target = null; return; } let closestEnemy: Enemy | null = null; let minDistance = Infinity; enemies.forEach(enemy => { const dist = Math.hypot(this.pos.x - (enemy.pos.x + enemy.width / 2), this.pos.y - (enemy.pos.y + enemy.height / 2)); if (dist < minDistance) { minDistance = dist; closestEnemy = enemy; } }); this.target = closestEnemy; } update(dt: number): void { this.lifetime -= dt; this.searchCooldown -= dt; if (this.searchCooldown <= 0) { this.findTarget(); this.searchCooldown = 500; } if (this.target && this.target.isAlive()) { const speed = 400; const turnFactor = 5; const dt_s = dt / 1000; const targetX = this.target.pos.x + this.target.width / 2; const targetY = this.target.pos.y + this.target.height / 2; const desiredVelX = targetX - this.pos.x; const desiredVelY = targetY - this.pos.y; const mag = Math.hypot(desiredVelX, desiredVelY); const normalizedDesiredVelX = mag > 0 ? (desiredVelX / mag) * speed : 0; const normalizedDesiredVelY = mag > 0 ? (desiredVelY / mag) * speed : 0; this.vel.x += (normalizedDesiredVelX - this.vel.x) * turnFactor * dt_s; this.vel.y += (normalizedDesiredVelY - this.vel.y) * turnFactor * dt_s; } super.update(dt); if (this.lifetime <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2); const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2; ctx.rotate(angle); ctx.fillStyle = '#ff9900'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(0, -this.height / 2); ctx.lineTo(-this.width / 2, this.height / 2); ctx.lineTo(this.width / 2, this.height / 2); ctx.closePath(); ctx.fill(); const flameSize = Math.random() * 8 + 4; ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.moveTo(0, this.height / 2); ctx.lineTo(-this.width / 2 + 2, this.height / 2 + flameSize / 2); ctx.lineTo(0, this.height / 2 + flameSize); ctx.lineTo(this.width / 2 - 2, this.height / 2 + flameSize / 2); ctx.closePath(); ctx.fill(); ctx.restore(); } }
-class EnemyProjectile extends Projectile { public playerDamage: number; constructor(game: Game, x: number, y: number, vX: number = 0, vY: number = 360, playerDamage: number = 25) { super(game, x, y, vX, vY); this.type = 'ENEMY_PROJECTILE'; this.width = 5; this.height=10; this.playerDamage = playerDamage; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#FF4136'; ctx.shadowColor = '#FF4136'; ctx.shadowBlur = 5; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } }
+// *** MODIFIZIERTE/KORRIGIERTE KLASSE ***
+class EnemyProjectile extends Projectile {
+    public playerDamage: number;
+    constructor(game: Game, x: number, y: number, vX: number = 0, vY: number = 360, playerDamage: number = 25) {
+        // KORREKTUR: Explizite Initialisierung, um den Absturz zu verhindern.
+        super(game, x - 2.5, y, vX, vY);
+        this.family = 'projectile';
+        this.type = 'ENEMY_PROJECTILE';
+        this.playerDamage = playerDamage;
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.fillStyle = '#FF4136';
+        ctx.shadowColor = '#FF4136';
+        ctx.shadowBlur = 5;
+        ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+        ctx.restore();
+    }
+}
 class Drone extends EntityFamily {
     private tier: number; private index: number; private orbitRadius: number = 75; private fireCooldown: number = 0; private image: HTMLImageElement;
     constructor(game: Game, tier: number, index: number) { super(game, 0, 0, 36, 36, 'player', 'DRONE'); this.tier = tier; this.index = index; this.image = orbitalDroneImages[this.tier - 1]!; }
@@ -253,7 +366,6 @@ class Player extends EntityFamily {
     isGhosted(): boolean { return this.powerUpManager.isActive('GHOST_PROTOCOL'); }
     isScoreBoosted(): boolean { return this.powerUpManager.isActive('SCORE_BOOST'); }
 }
-// ÜBERARBEITETER BOSS
 class BossSentinelPrime extends Enemy {
     private attackPattern: number = 0; private attackTimer: number = 5000;
     private movementPattern: string = 'ENTER'; private hSpeed: number; private image: HTMLImageElement;
@@ -266,59 +378,55 @@ class BossSentinelPrime extends Enemy {
         this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 75;
     }
 
-    // in der Klasse BossSentinelPrime
+    update(dt: number): void {
+        const dt_s = dt / 1000;
 
-update(dt: number): void {
-    const dt_s = dt / 1000;
-
-    // NEUE, KORRIGIERTE LOGIK FÜR ANGRIFFSVORBEREITUNG
-    if (this.isPreparingCharge) {
-        this.chargePreparationTimer -= dt;
-        if (this.chargePreparationTimer <= 0) {
-            this.executeAttack();
+        if (this.isPreparingCharge) {
+            this.chargePreparationTimer -= dt;
+            if (this.chargePreparationTimer <= 0) {
+                this.executeAttack();
+            }
+            return; 
         }
-        return; // Verhindert Bewegung während der Vorbereitung
-    }
 
-    if (this.isPreparingLineAttack) {
-        this.lineAttackPreparationTimer -= dt;
-        if (this.lineAttackPreparationTimer <= 0) {
-            this.executeAttack();
+        if (this.isPreparingLineAttack) {
+            this.lineAttackPreparationTimer -= dt;
+            if (this.lineAttackPreparationTimer <= 0) {
+                this.executeAttack();
+            }
+            return;
         }
-        return; // Verhindert Bewegung während der Vorbereitung
-    }
-    // ENDE DER KORREKTUR
 
-    if (this.movementPattern === 'ENTER') {
-        this.pos.y += 100 * dt_s;
-        if (this.pos.y >= this.patrolY) {
-            this.pos.y = this.patrolY;
-            this.movementPattern = 'PATROL';
+        if (this.movementPattern === 'ENTER') {
+            this.pos.y += 100 * dt_s;
+            if (this.pos.y >= this.patrolY) {
+                this.pos.y = this.patrolY;
+                this.movementPattern = 'PATROL';
+            }
+        } else if (this.movementPattern === 'PATROL') {
+            this.pos.x += this.hSpeed * dt_s;
+            if (this.pos.x <= 0 || this.pos.x >= this.game.width - this.width) {
+                this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
+                this.hSpeed *= -1;
+            }
         }
-    } else if (this.movementPattern === 'PATROL') {
-        this.pos.x += this.hSpeed * dt_s;
-        if (this.pos.x <= 0 || this.pos.x >= this.game.width - this.width) {
-            this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
-            this.hSpeed *= -1;
-        }
-    }
 
-    this.attackTimer -= dt;
-    if (this.attackTimer <= 0) {
-        this.prepareAttack();
-        this.attackTimer = 5000;
+        this.attackTimer -= dt;
+        if (this.attackTimer <= 0) {
+            this.prepareAttack();
+            this.attackTimer = 5000;
+        }
     }
-}
     
     prepareAttack(): void {
         this.attackPattern = Math.floor(Math.random() * 3);
         switch (this.attackPattern) {
             case 0: // Line Attack
                 this.isPreparingLineAttack = true;
-                this.lineAttackPreparationTimer = 3000; // 3 seconds warning
+                this.lineAttackPreparationTimer = 3000;
                 break;
             case 1: // Radial Burst
-                this.executeAttack(); // No preparation for this one
+                this.executeAttack();
                 break;
             case 2: // Charge
                 if (this.game.player) {
@@ -347,11 +455,11 @@ update(dt: number): void {
                     const targetX = this.game.player.pos.x;
                     const direction = targetX > this.pos.x ? 1 : -1;
                     this.hSpeed = direction * chargeSpeed;
-                    this.movementPattern = 'CHARGE'; // A new pattern to handle the charge logic
+                    this.movementPattern = 'CHARGE';
                     setTimeout(() => {
-                        this.hSpeed = 100 * (Math.random() > 0.5 ? 1 : -1); // reset speed
+                        this.hSpeed = 100 * (Math.random() > 0.5 ? 1 : -1);
                         this.movementPattern = 'PATROL';
-                    }, 1000); // Charge for 1 second
+                    }, 1000);
                 }
                 break;
         }
@@ -383,7 +491,6 @@ class BossVoidSerpent extends Enemy {
     update(dt: number): void { const dt_s = dt / 1000; if (this.pos.y < this.verticalTargetY) { this.pos.y += this.speed * dt_s; } else { this.angle += this.waveSpeed * dt_s; this.pos.x = (this.game.width / 2 - this.width / 2) + Math.sin(this.angle) * this.waveAmplitude; this.verticalTargetY = 80 + Math.cos(this.angle * 0.5) * 40; this.pos.y += (this.verticalTargetY - this.pos.y) * 0.1; } this.attackTimer -= dt; if (this.attackTimer <= 0 && this.pos.y >= 60) { this.attackTimer = Math.max(2000, 3500 - this.game.level * 100); const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height; const attackType = Math.random() > 0.4 ? 'SPREAD' : 'WHIP'; if (attackType === 'SPREAD') { for (let i = -3; i <= 3; i++) { const angle = i * 0.25; this.game.addEntity(new EnemyProjectile(this.game, x + w / 2, y + h * 0.8, Math.sin(angle) * 350, Math.cos(angle) * 350, this.collisionDamage)); } } else { if (this.game.player) { const p = this.game.player; for (let i = 0; i < 3; i++) { setTimeout(() => { const targetX = p.pos.x + p.width/2; const targetY = p.pos.y + p.height/2; const angle = Math.atan2(targetY - (this.pos.y + h), targetX - (this.pos.x + w/2)); this.game.addEntity(new EnemyProjectile(this.game, x + w/2, y + h, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage)); }, i * 150); } } } } }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); }
 }
-// ÜBERARBEITETER BOSS
 class BossOmegaNexus extends Enemy {
     private baseImage: HTMLImageElement; private ringImage: HTMLImageElement; private ringAngle: number = 0;
     private ringRotationSpeed: number = 0.3; private phase: number = 1; private attackTimer: number = 5000;
@@ -391,7 +498,7 @@ class BossOmegaNexus extends Enemy {
     private laserActive: boolean = false; private laserDurationTimer: number = 4000; private bulletHellTimer: number = 200;
     private bulletHellAngle: number = 0;
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 10000, 'BOSS_OMEGA_NEXUS'); // GRÖSSE ANGEPASST
+        super(game, game.width / 2 - 225, -300, 450, 300, health, 10000, 'BOSS_OMEGA_NEXUS');
         this.isBoss = true; this.baseImage = bossOmegaNexusBaseImg; this.ringImage = bossOmegaNexusRingImg; this.collisionDamage = 120;
     }
     takeHit(damage: number): void { super.takeHit(damage); if (!this.isAlive()) return; const healthPercentage = this.health / this.maxHealth; if (this.phase === 1 && healthPercentage <= 0.70) { this.phase = 2; this.attackTimer = 1000; } else if (this.phase === 2 && healthPercentage <= 0.35) { this.phase = 3; } }
@@ -402,7 +509,6 @@ class BossOmegaNexus extends Enemy {
     private fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); this.game.addEntity(new EnemyProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 200); } }
     draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 3000); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.7})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 40 * chargeRatio, 0, Math.PI * 2); ctx.fill(); } if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(centerX - 15, centerY, 30, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(centerX - 25, centerY, 50, this.game.height); } }
 }
-// ÜBERARBEITETER BOSS
 class BossNexusPrime extends Enemy {
     private baseImage: HTMLImageElement; private ringImage: HTMLImageElement; private ringAngle: number = 0;
     private ringRotationSpeed: number = 0.5; private phase: number = 1; private attackTimer: number = 4000;
@@ -412,7 +518,7 @@ class BossNexusPrime extends Enemy {
     private drones: {pos: Vector2D, angle: number}[] = [];
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 25000, 'BOSS_NEXUS_PRIME'); // GRÖSSE ANGEPASST
+        super(game, game.width / 2 - 225, -300, 450, 300, health, 25000, 'BOSS_NEXUS_PRIME');
         this.isBoss = true; this.baseImage = bossOmegaNexusBaseImg; this.ringImage = bossOmegaNexusRingImg; this.collisionDamage = 150;
         this.laserX = this.game.width / 2;
     }
@@ -838,7 +944,7 @@ class UIManager {
             { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low' },
             { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium' },
             { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium' },
-            { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high' }, // NEU
+            { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high' },
             { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high' },
             { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme' },
             { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic' },
@@ -916,7 +1022,6 @@ class Game {
     private container: HTMLElement;
     public scale: number = 1;
 
-    // NEUE EIGENSCHAFTEN FÜR FORMATIONEN
     public isFormationActive: boolean = false;
     private formationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
@@ -1155,36 +1260,31 @@ class Game {
         this.enemySpawnTimer += deltaTime; 
         
         if (this.isFormationActive) {
-    this.updateFormation(deltaTime);
-    if (this.formationEnemies.every(e => !e.isAlive())) {
-        // Wenn die Formation besiegt ist, setzen wir nur noch das Flag zurück.
-        // Der normale Spawn-Vorgang wird im nächsten Frame im 'else'-Block fortgesetzt.
-        this.isFormationActive = false;
-    }
-} else if (this.isBossActive) {
-    // ... (keine Änderung hier)
-    const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy;
-    if (boss) {
-        const healthPercentage = boss.health / boss.maxHealth;
-        const spawnInterval = 1000 + (4000 * healthPercentage);
-        if(this.enemySpawnTimer > spawnInterval) {
-             this.spawnEnemy(true); // Spawn a random add
-             this.enemySpawnTimer = 0;
+            this.updateFormation(deltaTime);
+            if (this.formationEnemies.every(e => !e.isAlive())) {
+                this.isFormationActive = false;
+            }
+        } else if (this.isBossActive) {
+            const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy;
+            if (boss) {
+                const healthPercentage = boss.health / boss.maxHealth;
+                const spawnInterval = 1000 + (4000 * healthPercentage);
+                if(this.enemySpawnTimer > spawnInterval) {
+                     this.spawnEnemy(true);
+                     this.enemySpawnTimer = 0;
+                }
+            } else {
+                this.isBossActive = false;
+            }
+        } else {
+             if (this.enemySpawnTimer > this.enemySpawnInterval) {
+                this.spawnEnemy(); 
+                this.enemySpawnTimer = 0;
+            }
+            if (this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) {
+                this.changeState('LEVEL_START');
+            }
         }
-    } else {
-        this.isBossActive = false; // Boss is defeated
-    }
-} else {
-     // Dieser Block wird nun nach dem Besiegen einer Formation ausgeführt
-     if (this.enemySpawnTimer > this.enemySpawnInterval) {
-        this.spawnEnemy(); 
-        this.enemySpawnTimer = 0;
-    }
-    // Das Level endet, wenn die benötigten Punkte erreicht sind
-    if (this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) {
-        this.changeState('LEVEL_START');
-    }
-}
 
         this.handleCollisions(); 
         this.cleanupEntities(); 
@@ -1238,6 +1338,33 @@ class Game {
     }
 
     updateFormation(dt: number): void {
+        const dt_s = dt / 1000;
+
+        let highestY = this.height;
+        let hasLivingEnemies = false;
+        for (const enemy of this.formationEnemies) {
+            if (enemy.isAlive()) {
+                hasLivingEnemies = true;
+                highestY = Math.min(highestY, enemy.pos.y);
+            }
+        }
+
+        if (!hasLivingEnemies) {
+             this.isFormationActive = false;
+             return;
+        }
+
+        // Einflug-Phase
+        if (highestY < 50) {
+            for(const enemy of this.formationEnemies) {
+                if(enemy.isAlive()) {
+                    enemy.pos.y += 120 * dt_s;
+                }
+            }
+            return; // Keine weitere Bewegung in diesem Frame
+        }
+
+        // Normale Bewegungs-Phase
         this.formationMoveTimer += dt;
         if(this.formationMoveTimer < this.formationMoveInterval) return;
 
@@ -1245,15 +1372,22 @@ class Game {
         let wallHit = false;
         for(const enemy of this.formationEnemies) {
             if(!enemy.isAlive()) continue;
-            enemy.pos.x += 10 * this.formationMovementDirection;
-            if (enemy.pos.x <= 0 || enemy.pos.x + enemy.width >= this.width) {
+
+            const nextX = enemy.pos.x + 10 * this.formationMovementDirection;
+            if (nextX <= 0 || nextX + enemy.width >= this.width) {
                 wallHit = true;
+                break;
             }
         }
+        
         if (wallHit) {
             this.formationMovementDirection *= -1;
             for (const enemy of this.formationEnemies) {
-                enemy.pos.y += this.formationVerticalStep;
+                if(enemy.isAlive()) enemy.pos.y += this.formationVerticalStep;
+            }
+        } else {
+            for (const enemy of this.formationEnemies) {
+                 if(enemy.isAlive()) enemy.pos.x += 10 * this.formationMovementDirection;
             }
         }
     }
@@ -1278,7 +1412,7 @@ class Game {
                 if (enemy) {
                     enemy.pos.x = formationData.startX + c * formationData.hSpacing;
                     enemy.pos.y = formationData.startY + r * formationData.vSpacing;
-                    enemy.speed = 0; // Movement is controlled by formation logic
+                    enemy.speed = 0;
                     enemy.inFormation = true;
                     this.formationEnemies.push(enemy);
                     this.addEntity(enemy);
