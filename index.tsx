@@ -1093,8 +1093,8 @@ class SoundManager {
                     switch (player.powerUpManager.weaponTier) {
                         case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.05; break;
                         case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.05; break;
-                        case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.06; break;
-                        case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.06; break;
+                        case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.04; break;
+                        case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.03; break;
                     }
                 }
                 isHandled = true;
@@ -1316,10 +1316,9 @@ class UIManager {
     }
     
     initButtons(): void {
-        const eventType = this.game.isMobile ? 'touchstart' : 'click';
-    
         const setupButton = (element: HTMLElement | null, action: (e: Event) => void) => {
             if (element) {
+                const eventType = this.game.isMobile ? 'touchstart' : 'click';
                 element.addEventListener(eventType, (e) => {
                     e.preventDefault();
                     if (this.game.isPaused || this.game.gameState === 'MENU') {
@@ -1411,25 +1410,84 @@ class UIManager {
             });
         });
     
-        const inventoryClickHandler = (event: Event) => {
-            if (!this.game.player || this.game.isPaused) return;
-            const target = event.target as HTMLElement;
-            const slot = target.closest('.inventory-slot') as HTMLElement | null;
-            if (slot) {
-                const index = parseInt(slot.dataset.slotIndex || '-1', 10);
-                const type = slot.dataset.inventoryType;
-                if (index > -1 && this.game.player) {
-                    if (type === 'special') {
-                        this.game.player.powerUpManager.activateSpecial(index);
-                    } else if (type === 'ultra') {
-                        this.game.player.powerUpManager.activateUltra(index);
+        // Inventory interaction logic
+        if (this.game.isMobile) {
+            const inventoryTouchStartHandler = (event: Event) => {
+                if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
+                const target = event.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+                if (slot && slot.parentElement === this.specialInventoryEl) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    if (index > -1) {
+                        const item = this.game.player.powerUpManager.specialInventory[index];
+                        if (item && item.type === 'BLACK_HOLE') {
+                            event.preventDefault();
+                            this.game.player.isChargingBlackHole = true;
+                            this.game.player.blackHoleChargeSlot = index;
+                        }
                     }
                 }
-            }
-        };
+            };
     
-        if (this.specialInventoryEl) this.specialInventoryEl.addEventListener(eventType, inventoryClickHandler);
-        if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener(eventType, inventoryClickHandler);
+            const inventoryTouchEndHandler = (event: Event) => {
+                if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
+    
+                if (this.game.player.isChargingBlackHole && this.game.player.blackHoleChargeSlot !== null) {
+                    event.preventDefault();
+                    this.game.player.powerUpManager.activateSpecial(this.game.player.blackHoleChargeSlot);
+                    this.game.player.isChargingBlackHole = false;
+                    this.game.player.blackHoleChargeSlot = null;
+                    return;
+                }
+    
+                const target = event.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+                if (slot) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    const type = slot.dataset.inventoryType;
+                    if (index > -1) {
+                        if (type === 'special') {
+                            const item = this.game.player.powerUpManager.specialInventory[index];
+                            if (item && item.type !== 'BLACK_HOLE') {
+                                this.game.player.powerUpManager.activateSpecial(index);
+                            }
+                        } else if (type === 'ultra') {
+                            this.game.player.powerUpManager.activateUltra(index);
+                        }
+                    }
+                }
+            };
+    
+            if (this.specialInventoryEl) {
+                this.specialInventoryEl.addEventListener('touchstart', inventoryTouchStartHandler, { passive: false });
+                this.specialInventoryEl.addEventListener('touchend', inventoryTouchEndHandler);
+            }
+            if (this.ultraInventoryEl) {
+                this.ultraInventoryEl.addEventListener('touchend', inventoryTouchEndHandler);
+            }
+        } else {
+            const inventoryClickHandler = (event: Event) => {
+                if (!this.game.player || this.game.isPaused) return;
+                const target = event.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+                if (slot) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    const type = slot.dataset.inventoryType;
+                    if (index > -1 && this.game.player) {
+                        if (type === 'special') {
+                            const item = this.game.player.powerUpManager.specialInventory[index];
+                            if (item && item.type !== 'BLACK_HOLE') {
+                                this.game.player.powerUpManager.activateSpecial(index);
+                            }
+                        } else if (type === 'ultra') {
+                            this.game.player.powerUpManager.activateUltra(index);
+                        }
+                    }
+                }
+            };
+            if (this.specialInventoryEl) this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
+            if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+        }
     }
     
     public applySettings(): void { 
