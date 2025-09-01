@@ -989,17 +989,12 @@ class SoundManager {
     private playMenuMusic() {
         if (!this.audioCtx || !this.masterGain || !this.menuMusicBuffer || this.menuMusicSource) return;
 
-        // EIGENEN LAUTSTÄRKEREGLER FÜR MENÜMUSIK ERSTELLEN --- NEU ---
         const menuMusicGain = this.audioCtx.createGain();
-
-        // LAUTSTÄRKE EINSTELLEN (z.B. 0.4 für 40% der Master-Lautstärke) --- NEU ---
-        // Ändern Sie diesen Wert nach Belieben zwischen 0.0 (stumm) und 1.0 (volle Lautstärke).
         menuMusicGain.gain.value = 0.2; 
         
         this.menuMusicSource = this.audioCtx.createBufferSource();
         this.menuMusicSource.buffer = this.menuMusicBuffer;
         this.menuMusicSource.loop = true;
-
 
         this.menuMusicSource.connect(menuMusicGain);
         menuMusicGain.connect(this.masterGain);
@@ -1329,7 +1324,8 @@ class UIManager {
     initButtons(): void {
         const setupButton = (element: HTMLElement | null, action: (e: Event) => void) => {
             if (element) {
-                const eventType = this.game.isMobile ? 'touchstart' : 'click';
+                // HINWEIS: 'click' funktioniert auf Mobilgeräten zuverlässig für ein einfaches Antippen.
+                const eventType = 'click';
                 element.addEventListener(eventType, (e) => {
                     e.preventDefault();
                     if (this.game.isPaused || this.game.gameState === 'MENU') {
@@ -1367,7 +1363,14 @@ class UIManager {
             this.game.changeState('MENU');
         });
 
-        setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
+        // Die mobile Pause-Taste verwendet 'touchstart' für schnellere Reaktion
+        const mobilePauseButton = document.getElementById('mobile-pause-button');
+        if (mobilePauseButton) {
+            mobilePauseButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.game.togglePause();
+            });
+        }
     
         for (const key in this.tabButtons) {
             const button = this.tabButtons[key];
@@ -1421,79 +1424,32 @@ class UIManager {
             });
         });
     
-        if (this.game.isMobile) {
-            const inventoryTouchStartHandler = (event: Event) => {
-                if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
-                const target = event.target as HTMLElement;
-                const slot = target.closest('.inventory-slot') as HTMLElement | null;
-                if (slot && slot.parentElement === this.specialInventoryEl) {
-                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
-                    if (index > -1) {
-                        const item = this.game.player.powerUpManager.specialInventory[index];
-                        if (item && item.type === 'BLACK_HOLE') {
-                            event.preventDefault();
-                            this.game.player.isChargingBlackHole = true;
-                            this.game.player.blackHoleChargeSlot = index;
-                        }
+        // --- KORREKTUR: VEREINFACHTE LOGIK FÜR PC UND MOBIL ---
+        // Der 'inventoryClickHandler' wird jetzt für BEIDE Plattformen verwendet.
+        const inventoryClickHandler = (event: Event) => {
+            if (!this.game.player || this.game.isPaused) return;
+            const target = event.target as HTMLElement;
+            const slot = target.closest('.inventory-slot') as HTMLElement | null;
+            if (slot) {
+                const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                const type = slot.dataset.inventoryType;
+                if (index > -1 && this.game.player) {
+                    if (type === 'special') {
+                        // Die problematische Sonderbehandlung für "BLACK_HOLE" wird entfernt.
+                        // Jedes Item wird sofort aktiviert.
+                        this.game.player.powerUpManager.activateSpecial(index);
+                    } else if (type === 'ultra') {
+                        this.game.player.powerUpManager.activateUltra(index);
                     }
                 }
-            };
-            const inventoryTouchEndHandler = (event: Event) => {
-                if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
-                if (this.game.player.isChargingBlackHole && this.game.player.blackHoleChargeSlot !== null) {
-                    event.preventDefault();
-                    this.game.player.powerUpManager.activateSpecial(this.game.player.blackHoleChargeSlot);
-                    this.game.player.isChargingBlackHole = false;
-                    this.game.player.blackHoleChargeSlot = null;
-                    return;
-                }
-                const target = event.target as HTMLElement;
-                const slot = target.closest('.inventory-slot') as HTMLElement | null;
-                if (slot) {
-                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
-                    const type = slot.dataset.inventoryType;
-                    if (index > -1) {
-                        if (type === 'special') {
-                            const item = this.game.player.powerUpManager.specialInventory[index];
-                            if (item && item.type !== 'BLACK_HOLE') {
-                                this.game.player.powerUpManager.activateSpecial(index);
-                            }
-                        } else if (type === 'ultra') {
-                            this.game.player.powerUpManager.activateUltra(index);
-                        }
-                    }
-                }
-            };
-            if (this.specialInventoryEl) {
-                this.specialInventoryEl.addEventListener('touchstart', inventoryTouchStartHandler, { passive: false });
-                this.specialInventoryEl.addEventListener('touchend', inventoryTouchEndHandler);
             }
-            if (this.ultraInventoryEl) {
-                this.ultraInventoryEl.addEventListener('touchend', inventoryTouchEndHandler);
-            }
-        } else {
-            const inventoryClickHandler = (event: Event) => {
-                if (!this.game.player || this.game.isPaused) return;
-                const target = event.target as HTMLElement;
-                const slot = target.closest('.inventory-slot') as HTMLElement | null;
-                if (slot) {
-                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
-                    const type = slot.dataset.inventoryType;
-                    if (index > -1 && this.game.player) {
-                        if (type === 'special') {
-                            const item = this.game.player.powerUpManager.specialInventory[index];
-                            if (item && item.type !== 'BLACK_HOLE') {
-                                this.game.player.powerUpManager.activateSpecial(index);
-                            }
-                        } else if (type === 'ultra') {
-                            this.game.player.powerUpManager.activateUltra(index);
-                        }
-                    }
-                }
-            };
-            if (this.specialInventoryEl) this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
-            if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
-        }
+        };
+
+        // Weisen Sie denselben Handler beiden Inventaren zu.
+        if (this.specialInventoryEl) this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
+        if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+
+        // Die alte, komplizierte und fehlerhafte mobile Logik wurde komplett entfernt.
     }
     
     public applySettings(): void { 
