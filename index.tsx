@@ -1,3 +1,4 @@
+
 import { translations } from './translations';
 
 // --- SECTION 1: ASSET-IMPORTE ---
@@ -1550,6 +1551,9 @@ class Game {
     private container: HTMLElement;
     public scale: number = 1;
 
+    // HINZUGEFÜGT: Flag für das Reaktivieren des Sounds auf Mobilgeräten
+    public audioNeedsUnlock: boolean = false;
+
     public isFormationActive: boolean = false;
     private activeFormationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
@@ -1595,34 +1599,48 @@ class Game {
     
     initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
+
+        // KORREKTUR: Der Listener für den Sound beim Wiederherstellen der App
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
+                // Versucht nicht mehr, den Sound direkt zu starten, sondern setzt nur ein Flag.
                 if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
-                    this.uiManager.soundManager.audioCtx.resume();
+                    this.audioNeedsUnlock = true;
                 }
             }
         });
 
-        const introTapHandler = (e: Event) => {
-            if (this.gameState === 'INTRO') {
-                e.preventDefault();
-                this.uiManager.soundManager.initAudio();
-                this.changeState('MENU');
+        // HINZUGEFÜGT: Ein Handler, der auf den NÄCHSTEN Tap reagiert, um den Sound wieder freizuschalten.
+        const unlockAudioHandler = () => {
+            if (this.audioNeedsUnlock && this.uiManager.soundManager.audioCtx) {
+                this.uiManager.soundManager.audioCtx.resume().then(() => {
+                    this.audioNeedsUnlock = false; // Flag zurücksetzen
+                });
             }
         };
-        
-        const introAndMenuHandler = (e: Event) => {
+
+        // KORREKTUR: Der problematische "introAndMenuHandler" wurde entfernt und durch einen spezifischeren ersetzt.
+        const tapToStartHandler = (e: Event) => {
+            // Der Sound wird hier ebenfalls freigeschaltet, falls nötig.
+            unlockAudioHandler();
+            
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
                  this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
-                 else if (this.gameState === 'MENU') this.changeState('LEVEL_START', true);
+                 // Diese Logik ist jetzt nicht mehr global und wird nur ausgelöst,
+                 // wenn direkt auf den Canvas getippt wird, nicht auf die Menü-Buttons.
+                 else if (this.gameState === 'MENU' && e.target === this.canvas) {
+                    this.changeState('LEVEL_START', true);
+                 }
             }
         };
 
         if (this.isMobile) {
             this.initMobileControls();
-            window.addEventListener('touchstart', introAndMenuHandler, { passive: false });
+            // KORREKTUR: Der Listener lauscht jetzt auf dem Canvas, nicht mehr global auf dem Window.
+            // Dies verhindert die Kollision mit den UI-Buttons.
+            this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
         } else {
             this.initDesktopControls();
         }
@@ -1644,10 +1662,13 @@ class Game {
         };
     
         this.canvas.addEventListener('touchstart', (e) => {
-            // This ensures the audio context is resumed after being suspended by the browser.
+            // HINZUGEFÜGT: Bei jeder Berührung wird versucht, den Sound freizuschalten, falls nötig.
+            if (this.audioNeedsUnlock) {
+                this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
+            }
+            
             this.uiManager.soundManager.initAudio();
 
-            // The function only runs in "PLAYING" mode and not when paused.
             if (this.gameState !== 'PLAYING' || this.isPaused) {
                 return;
             }
@@ -1655,19 +1676,14 @@ class Game {
             const touch = e.changedTouches[0];
             if (!touch || !specialInventoryEl || !ultraInventoryEl) return;
 
-            // We get the exact positions of the inventory boxes in the viewport.
             const inv1Rect = specialInventoryEl.getBoundingClientRect();
             const inv2Rect = ultraInventoryEl.getBoundingClientRect();
             
-            // We check if the exact click coordinates (clientX/Y) are within one of the boxes.
             const isOnInventory = 
                 (touch.clientX >= inv1Rect.left && touch.clientX <= inv1Rect.right && touch.clientY >= inv1Rect.top && touch.clientY <= inv1Rect.bottom) ||
                 (touch.clientX >= inv2Rect.left && touch.clientX <= inv2Rect.right && touch.clientY >= inv2Rect.top && touch.clientY <= inv2Rect.bottom);
 
-            // *** THE DECISIVE POINT ***
-            // Only if the touch is NOT on the inventory, we start the ship's controls.
             if (!isOnInventory) {
-                // Prevents the page from scrolling when controlling the ship.
                 e.preventDefault(); 
                 
                 const pos = getTouchPos(e);
@@ -1676,16 +1692,11 @@ class Game {
                     this.touchY = pos.y;
                 }
             }
-            // If the touch IS ON the inventory, nothing happens here.
-            // The separate event listeners on the inventory slots (in initButtons) can do their job undisturbed.
-
         }, { passive: false });
     
         this.canvas.addEventListener('touchmove', (e) => {
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
     
-            // 'touchmove' only works if 'touchstart' has previously set this.touchX/Y.
-            // Since this does not happen with a click on the inventory, the ship is not moved.
             if (this.touchX !== null && this.touchY !== null) {
                 e.preventDefault();
                 const pos = getTouchPos(e);
@@ -1697,7 +1708,6 @@ class Game {
         }, { passive: false });
     
         this.canvas.addEventListener('touchend', (e) => {
-            // Resets the controls when the finger leaves the screen.
             const stillOnCanvas = Array.from(e.touches).some(t => (t.target as HTMLElement) === this.canvas);
             if (!stillOnCanvas) {
                 this.touchX = null;
