@@ -1,4 +1,3 @@
-
 import { translations } from './translations';
 
 // --- SECTION 1: ASSET-IMPORTE ---
@@ -272,7 +271,25 @@ class BlackHole extends Entity {
     update(dt: number): void { const dt_s = dt/1000; this.life -= dt; if (this.life <= 0) { this.game.entities.forEach(e => { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius && e instanceof Enemy && !e.isBoss) e.takeHit(9999); }); this.destroy(); this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x, this.pos.y, '#EE82EE')); return; } this.game.entities.forEach(e => { if (e.family === 'enemy' || e.family === 'pickup') { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius) { if (e instanceof Enemy && !e.isBoss) e.stun(50); const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x); const pullSpeed = 180 * (1 - dist / this.pullRadius); e.pos.x += Math.cos(angle) * pullSpeed * dt_s; e.pos.y += Math.sin(angle) * pullSpeed * dt_s; if (dist < this.killRadius) { if (e instanceof Enemy && !e.isBoss) e.takeHit(9999); else if (!(e instanceof Enemy)) e.destroy(); } } } }); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.killRadius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.pullRadius * (this.life / 8000), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
-class Projectile extends EntityFamily { public vel: Vector2D; public damage: number = 1; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) { super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE'); this.vel = new Vector2D(velX, velY); } update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; if (this.pos.y < -this.height || this.pos.y > this.game.height || this.pos.x < -this.width || this.pos.x > this.game.width) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#0ff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 5; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.destroy(); } }
+class Projectile extends EntityFamily {
+    public vel: Vector2D; public damage: number = 1; protected color: string;
+    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600, color: string = '#0ff') {
+        super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE');
+        this.vel = new Vector2D(velX, velY);
+        this.color = color;
+    }
+    update(dt: number): void {
+        const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s;
+        if (this.pos.y < -this.height || this.pos.y > this.game.height || this.pos.x < -this.width || this.pos.x > this.game.width) this.destroy();
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 5;
+        ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+        ctx.restore();
+    }
+    onHit(e: Enemy): void { this.destroy(); }
+}
 class HeavyProjectile extends Projectile {
     constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) {
         super(game, x, y, velX, velY);
@@ -421,7 +438,7 @@ class HomingMissile extends Projectile {
 }
 class SideProjectile extends Projectile {
     constructor(game: Game, x: number, y: number, velX: number, velY: number) {
-        super(game, x, y, velX, velY);
+        super(game, x, y, velX, velY, '#FFA500');
         this.width = 20;
         this.height = 5;
         this.pos.x = x - this.width / 2;
@@ -597,10 +614,24 @@ class PowerUpManager {
         const angle15 = 15 * (Math.PI / 180);
 
         switch (this.weaponTier) {
-            case 1: this.game.addEntity(new Projectile(this.game, x + w / 2, y)); break;
-            case 2: this.game.addEntity(new Projectile(this.game, x + w * 0.2, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.8, y)); break;
-            case 3: this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY)); this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY)); break;
-            case 4: this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY)); this.game.addEntity(new Projectile(this.game, x + w * 0.3, y)); this.game.addEntity(new Projectile(this.game, x + w * 0.7, y)); break;
+            case 1:
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y));
+                break;
+            case 2:
+                this.game.addEntity(new Projectile(this.game, x + w * 0.2, y, 0, -600, '#39FF14'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.8, y, 0, -600, '#39FF14'));
+                break;
+            case 3:
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY, '#FFFF00'));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY, '#FFFF00'));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY, '#FFFF00'));
+                break;
+            case 4:
+                this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY, '#FF4136'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY, '#FF4136'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.3, y, 0, -600, '#FF4136'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.7, y, 0, -600, '#FF4136'));
+                break;
         }
 
         if (this.isActive('SIDE_SHOTS')) {
