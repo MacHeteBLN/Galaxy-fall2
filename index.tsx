@@ -1353,7 +1353,6 @@ class UIManager {
         setupButton(document.getElementById('lang-back-button'), () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; });
         document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => { setupButton(button, () => { this.soundManager.initAudio(); const lang = button.dataset.lang; if (lang) { this.localizationManager.setLanguage(lang); this.populateAllTranslatedContent(); this.langSelectScreen.style.display = 'none'; if (this.langSelectSource === 'settings') { this.menuContainer.style.display = 'flex'; } else { this.game.changeState('INTRO'); } } }); });
     
-        // --- KORREKTUR: SPEZIFISCHE STEUERUNG FÜR MOBIL & PC ---
         if (this.game.isMobile) {
             const inventoryTapHandler = (event: Event) => {
                 if (!this.game.player || this.game.isPaused) return;
@@ -1404,7 +1403,6 @@ class UIManager {
             });
     
         } else {
-            // Logik für den PC
             const inventoryClickHandler = (event: Event) => {
                 if (!this.game.player || this.game.isPaused) return;
                 const target = event.target as HTMLElement;
@@ -1482,8 +1480,7 @@ class UIManager {
     public drawLevelMessage(): void { const ctx = this.ctx; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = "30px 'Press Start 2P'"; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); }
     public drawGameOver(): void { 
         const ctx = this.ctx; 
-        ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
-        ctx.fillRect(0, 0, this.game.width, this.game.height); 
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';         ctx.fillRect(0, 0, this.game.width, this.game.height); 
     }
     public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     public drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
@@ -1632,39 +1629,77 @@ class Game {
     }
 
     initMobileControls(): void {
+        const specialInventoryEl = document.getElementById('special-inventory');
+        const ultraInventoryEl = document.getElementById('ultra-inventory');
+
+        // This function converts touch coordinates to canvas coordinates.
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.canvas.getBoundingClientRect();
-            const x = (e.touches[0].clientX - rect.left) / this.scale;
-            const y = (e.touches[0].clientY - rect.top) / this.scale;
+            const touch = e.changedTouches[0];
+            if (!touch) return null;
+    
+            const x = (touch.clientX - rect.left) / this.scale;
+            const y = (touch.clientY - rect.top) / this.scale;
             return { x, y };
         };
     
         this.canvas.addEventListener('touchstart', (e) => {
-            if ((e.target as HTMLElement) !== this.canvas) {
+            // This ensures the audio context is resumed after being suspended by the browser.
+            this.uiManager.soundManager.initAudio();
+
+            // The function only runs in "PLAYING" mode and not when paused.
+            if (this.gameState !== 'PLAYING' || this.isPaused) {
                 return;
             }
-            if (this.gameState !== 'PLAYING' || this.isPaused) return;
             
-            e.preventDefault();
-            this.uiManager.soundManager.initAudio();
-            const pos = getTouchPos(e as TouchEvent);
-            this.touchX = pos.x;
-            this.touchY = pos.y;
+            const touch = e.changedTouches[0];
+            if (!touch || !specialInventoryEl || !ultraInventoryEl) return;
+
+            // We get the exact positions of the inventory boxes in the viewport.
+            const inv1Rect = specialInventoryEl.getBoundingClientRect();
+            const inv2Rect = ultraInventoryEl.getBoundingClientRect();
+            
+            // We check if the exact click coordinates (clientX/Y) are within one of the boxes.
+            const isOnInventory = 
+                (touch.clientX >= inv1Rect.left && touch.clientX <= inv1Rect.right && touch.clientY >= inv1Rect.top && touch.clientY <= inv1Rect.bottom) ||
+                (touch.clientX >= inv2Rect.left && touch.clientX <= inv2Rect.right && touch.clientY >= inv2Rect.top && touch.clientY <= inv2Rect.bottom);
+
+            // *** THE DECISIVE POINT ***
+            // Only if the touch is NOT on the inventory, we start the ship's controls.
+            if (!isOnInventory) {
+                // Prevents the page from scrolling when controlling the ship.
+                e.preventDefault(); 
+                
+                const pos = getTouchPos(e);
+                if (pos) {
+                    this.touchX = pos.x;
+                    this.touchY = pos.y;
+                }
+            }
+            // If the touch IS ON the inventory, nothing happens here.
+            // The separate event listeners on the inventory slots (in initButtons) can do their job undisturbed.
+
         }, { passive: false });
     
         this.canvas.addEventListener('touchmove', (e) => {
-            if ((e.target as HTMLElement) !== this.canvas) {
-                return;
-            }
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
-            e.preventDefault();
-            const pos = getTouchPos(e as TouchEvent);
-            this.touchX = pos.x;
-            this.touchY = pos.y;
+    
+            // 'touchmove' only works if 'touchstart' has previously set this.touchX/Y.
+            // Since this does not happen with a click on the inventory, the ship is not moved.
+            if (this.touchX !== null && this.touchY !== null) {
+                e.preventDefault();
+                const pos = getTouchPos(e);
+                if (pos) {
+                    this.touchX = pos.x;
+                    this.touchY = pos.y;
+                }
+            }
         }, { passive: false });
     
         this.canvas.addEventListener('touchend', (e) => {
-            if (e.touches.length === 0) {
+            // Resets the controls when the finger leaves the screen.
+            const stillOnCanvas = Array.from(e.touches).some(t => (t.target as HTMLElement) === this.canvas);
+            if (!stillOnCanvas) {
                 this.touchX = null;
                 this.touchY = null;
             }
