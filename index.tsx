@@ -1324,8 +1324,7 @@ class UIManager {
     initButtons(): void {
         const setupButton = (element: HTMLElement | null, action: (e: Event) => void) => {
             if (element) {
-                // HINWEIS: 'click' funktioniert auf Mobilgeräten zuverlässig für ein einfaches Antippen.
-                const eventType = 'click';
+                const eventType = this.game.isMobile ? 'touchstart' : 'click';
                 element.addEventListener(eventType, (e) => {
                     e.preventDefault();
                     if (this.game.isPaused || this.game.gameState === 'MENU') {
@@ -1336,120 +1335,98 @@ class UIManager {
             }
         };
     
-        setupButton(this.mainMenuElements.restart, () => { 
-            this.soundManager.initAudio(); 
-            this.game.changeState('LEVEL_START', true); 
-        });
+        setupButton(this.mainMenuElements.restart, () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); });
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
-    
-        setupButton(document.getElementById('exit-button'), () => {
-            if (this.game.isMobile) {
-                this.menuContainer.style.display = 'none';
-                const exitScreen = document.getElementById('exit-screen');
-                if (exitScreen) {
-                    exitScreen.style.display = 'flex';
-                }
-                this.soundManager.toggleMusic(false);
-            } else {
-                window.close();
-            }
-        });
-
-        setupButton(document.getElementById('restart-from-gameover-button'), () => {
-            this.game.changeState('LEVEL_START', true);
-        });
-        setupButton(document.getElementById('quit-from-gameover-button'), () => {
-            this.game.changeState('MENU');
-        });
-
-        // Die mobile Pause-Taste verwendet 'touchstart' für schnellere Reaktion
-        const mobilePauseButton = document.getElementById('mobile-pause-button');
-        if (mobilePauseButton) {
-            mobilePauseButton.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.game.togglePause();
-            });
-        }
-    
-        for (const key in this.tabButtons) {
-            const button = this.tabButtons[key];
-            if (button) {
-                setupButton(button, () => this.showTab(key));
-            }
-        }
-    
+        setupButton(document.getElementById('exit-button'), () => { if (this.game.isMobile) { const exitScreen = document.getElementById('exit-screen'); if (exitScreen) { exitScreen.style.display = 'flex'; } this.soundManager.toggleMusic(false); } else { window.close(); } });
+        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('LEVEL_START', true); });
+        setupButton(document.getElementById('quit-from-gameover-button'), () => { this.game.changeState('MENU'); });
+        setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
+        for (const key in this.tabButtons) { setupButton(this.tabButtons[key], () => this.showTab(key)); }
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
-        if (volSlider) {
-            volSlider.addEventListener('input', (e: any) => {
-                this.settings.masterVolume = parseFloat(e.target.value);
-                this.applySettings();
-                this.saveSettings();
-            });
-            volSlider.value = this.settings.masterVolume.toString();
-        }
-    
+        if (volSlider) { volSlider.addEventListener('input', (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }); volSlider.value = this.settings.masterVolume.toString(); }
         setupButton(document.getElementById('toggle-music'), () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); });
         setupButton(document.getElementById('toggle-sfx'), () => { this.settings.sfx = !this.settings.sfx; this.applySettings(); this.saveSettings(); });
         setupButton(document.getElementById('toggle-particles'), () => { this.settings.particles = (this.settings.particles + 1) % 3; this.applySettings(); this.saveSettings(); });
         setupButton(document.getElementById('toggle-shake'), () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); });
-        
-        setupButton(document.getElementById('toggle-language'), () => {
-            this.langSelectSource = 'settings';
-            this.menuContainer.style.display = 'none';
-            this.langSelectScreen.style.display = 'flex';
-            this.langBackButton.style.display = 'block';
-        });
-        
-        setupButton(document.getElementById('lang-back-button'), () => {
-            this.langSelectScreen.style.display = 'none';
-            this.menuContainer.style.display = 'flex';
-            this.langSelectSource = 'startup';
-        });
+        setupButton(document.getElementById('toggle-language'), () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; });
+        setupButton(document.getElementById('lang-back-button'), () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; });
+        document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => { setupButton(button, () => { this.soundManager.initAudio(); const lang = button.dataset.lang; if (lang) { this.localizationManager.setLanguage(lang); this.populateAllTranslatedContent(); this.langSelectScreen.style.display = 'none'; if (this.langSelectSource === 'settings') { this.menuContainer.style.display = 'flex'; } else { this.game.changeState('INTRO'); } } }); });
     
-        document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => {
-            setupButton(button, () => {
-                this.soundManager.initAudio();
-                const lang = button.dataset.lang;
-                if (lang) {
-                    this.localizationManager.setLanguage(lang);
-                    this.populateAllTranslatedContent();
-                    this.langSelectScreen.style.display = 'none';
-                    if (this.langSelectSource === 'settings') {
-                        this.menuContainer.style.display = 'flex';
-                    } else {
-                        this.game.changeState('INTRO');
+        // --- KORREKTUR: SPEZIFISCHE STEUERUNG FÜR MOBIL & PC ---
+        if (this.game.isMobile) {
+            const inventoryTapHandler = (event: Event) => {
+                if (!this.game.player || this.game.isPaused) return;
+                const target = event.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+    
+                if (slot) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    const type = slot.dataset.inventoryType;
+                    if (index > -1 && this.game.player) {
+                        if (type === 'special') {
+                            const item = this.game.player.powerUpManager.specialInventory[index];
+                            if (item && item.type !== 'BLACK_HOLE') {
+                                this.game.player.powerUpManager.activateSpecial(index);
+                            }
+                        } else if (type === 'ultra') {
+                            this.game.player.powerUpManager.activateUltra(index);
+                        }
                     }
+                }
+            };
+    
+            this.specialInventoryEl.addEventListener('click', inventoryTapHandler);
+            this.ultraInventoryEl.addEventListener('click', inventoryTapHandler);
+    
+            this.specialInventoryEl.addEventListener('touchstart', (e) => {
+                if (!this.game.player || this.game.isPaused) return;
+                const target = e.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+                if (slot) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    const item = this.game.player.powerUpManager.specialInventory[index];
+                    if (item && item.type === 'BLACK_HOLE') {
+                        e.preventDefault();
+                        this.game.player.isChargingBlackHole = true;
+                        this.game.player.blackHoleChargeSlot = index;
+                    }
+                }
+            }, { passive: false });
+    
+            window.addEventListener('touchend', (e) => {
+                if (this.game.player && this.game.player.isChargingBlackHole) {
+                    e.preventDefault();
+                    this.game.player.powerUpManager.activateSpecial(this.game.player.blackHoleChargeSlot!);
+                    this.game.player.isChargingBlackHole = false;
+                    this.game.player.blackHoleChargeSlot = null;
                 }
             });
-        });
     
-        // --- KORREKTUR: VEREINFACHTE LOGIK FÜR PC UND MOBIL ---
-        // Der 'inventoryClickHandler' wird jetzt für BEIDE Plattformen verwendet.
-        const inventoryClickHandler = (event: Event) => {
-            if (!this.game.player || this.game.isPaused) return;
-            const target = event.target as HTMLElement;
-            const slot = target.closest('.inventory-slot') as HTMLElement | null;
-            if (slot) {
-                const index = parseInt(slot.dataset.slotIndex || '-1', 10);
-                const type = slot.dataset.inventoryType;
-                if (index > -1 && this.game.player) {
-                    if (type === 'special') {
-                        // Die problematische Sonderbehandlung für "BLACK_HOLE" wird entfernt.
-                        // Jedes Item wird sofort aktiviert.
-                        this.game.player.powerUpManager.activateSpecial(index);
-                    } else if (type === 'ultra') {
-                        this.game.player.powerUpManager.activateUltra(index);
+        } else {
+            // Logik für den PC
+            const inventoryClickHandler = (event: Event) => {
+                if (!this.game.player || this.game.isPaused) return;
+                const target = event.target as HTMLElement;
+                const slot = target.closest('.inventory-slot') as HTMLElement | null;
+                if (slot) {
+                    const index = parseInt(slot.dataset.slotIndex || '-1', 10);
+                    const type = slot.dataset.inventoryType;
+                    if (index > -1 && this.game.player) {
+                        if (type === 'special') {
+                            const item = this.game.player.powerUpManager.specialInventory[index];
+                            if (item && item.type !== 'BLACK_HOLE') {
+                                this.game.player.powerUpManager.activateSpecial(index);
+                            }
+                        } else if (type === 'ultra') {
+                            this.game.player.powerUpManager.activateUltra(index);
+                        }
                     }
                 }
-            }
-        };
-
-        // Weisen Sie denselben Handler beiden Inventaren zu.
-        if (this.specialInventoryEl) this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
-        if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
-
-        // Die alte, komplizierte und fehlerhafte mobile Logik wurde komplett entfernt.
+            };
+            if (this.specialInventoryEl) this.specialInventoryEl.addEventListener('click', inventoryClickHandler);
+            if (this.ultraInventoryEl) this.ultraInventoryEl.addEventListener('click', inventoryClickHandler);
+        }
     }
     
     public applySettings(): void { 
