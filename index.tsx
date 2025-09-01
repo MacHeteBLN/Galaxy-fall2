@@ -1438,10 +1438,8 @@ class UIManager {
                     }
                 }
             };
-    
             const inventoryTouchEndHandler = (event: Event) => {
                 if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
-    
                 if (this.game.player.isChargingBlackHole && this.game.player.blackHoleChargeSlot !== null) {
                     event.preventDefault();
                     this.game.player.powerUpManager.activateSpecial(this.game.player.blackHoleChargeSlot);
@@ -1449,7 +1447,6 @@ class UIManager {
                     this.game.player.blackHoleChargeSlot = null;
                     return;
                 }
-    
                 const target = event.target as HTMLElement;
                 const slot = target.closest('.inventory-slot') as HTMLElement | null;
                 if (slot) {
@@ -1467,7 +1464,6 @@ class UIManager {
                     }
                 }
             };
-    
             if (this.specialInventoryEl) {
                 this.specialInventoryEl.addEventListener('touchstart', inventoryTouchStartHandler, { passive: false });
                 this.specialInventoryEl.addEventListener('touchend', inventoryTouchEndHandler);
