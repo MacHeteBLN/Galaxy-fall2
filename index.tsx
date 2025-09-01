@@ -988,11 +988,22 @@ class SoundManager {
 
     private playMenuMusic() {
         if (!this.audioCtx || !this.masterGain || !this.menuMusicBuffer || this.menuMusicSource) return;
+
+        // EIGENEN LAUTSTÄRKEREGLER FÜR MENÜMUSIK ERSTELLEN --- NEU ---
+        const menuMusicGain = this.audioCtx.createGain();
+
+        // LAUTSTÄRKE EINSTELLEN (z.B. 0.4 für 40% der Master-Lautstärke) --- NEU ---
+        // Ändern Sie diesen Wert nach Belieben zwischen 0.0 (stumm) und 1.0 (volle Lautstärke).
+        menuMusicGain.gain.value = 0.2; 
         
         this.menuMusicSource = this.audioCtx.createBufferSource();
         this.menuMusicSource.buffer = this.menuMusicBuffer;
         this.menuMusicSource.loop = true;
-        this.menuMusicSource.connect(this.masterGain);
+
+
+        this.menuMusicSource.connect(menuMusicGain);
+        menuMusicGain.connect(this.masterGain);
+
         this.menuMusicSource.start();
     }
 
@@ -1410,7 +1421,6 @@ class UIManager {
             });
         });
     
-        // Inventory interaction logic
         if (this.game.isMobile) {
             const inventoryTouchStartHandler = (event: Event) => {
                 if (!this.game.player || this.game.isPaused || this.game.gameState !== 'PLAYING') return;
@@ -1701,6 +1711,9 @@ class Game {
         };
     
         this.canvas.addEventListener('touchstart', (e) => {
+            if ((e.target as HTMLElement) !== this.canvas) {
+                return;
+            }
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
             
             e.preventDefault();
@@ -1711,6 +1724,9 @@ class Game {
         }, { passive: false });
     
         this.canvas.addEventListener('touchmove', (e) => {
+            if ((e.target as HTMLElement) !== this.canvas) {
+                return;
+            }
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
             e.preventDefault();
             const pos = getTouchPos(e as TouchEvent);
