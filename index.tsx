@@ -1619,13 +1619,22 @@ class Game {
     resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const scale = Math.min(screenWidth / this.baseWidth, screenHeight / this.baseHeight);
-        this.scale = scale;
-        this.container.style.transformOrigin = 'top left';
-        this.container.style.transform = `scale(${scale})`;
-        this.container.style.left = `${(screenWidth - this.baseWidth * scale) / 2}px`;
-        this.container.style.top = `${(screenHeight - this.baseHeight * scale) / 2}px`;
-        this.container.style.position = 'absolute';
+    
+        // Entfernen Sie alle Transformationen, die von altem Code übrig geblieben sein könnten.
+        this.container.style.transform = '';
+        this.container.style.left = '';
+        this.container.style.top = '';
+    
+        // Aktualisieren Sie die internen logischen Dimensionen des Spiels.
+        this.width = screenWidth;
+        this.height = screenHeight - 50; // Das obere UI-Panel ist 50px hoch
+    
+        // Aktualisieren Sie die Abmessungen des eigentlichen Canvas-Elements.
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+    
+        // Erstellen Sie das Sternenfeld neu, damit es zu den neuen Dimensionen passt.
+        this.createParallaxStarfield();
     }
     
     initEventListeners(): void {
@@ -1687,8 +1696,9 @@ class Game {
             const touch = e.changedTouches[0];
             if (!touch) return null;
     
-            const x = (touch.clientX - rect.left) / this.scale;
-            const y = (touch.clientY - rect.top) / this.scale;
+            // Da wir keine Skalierung mehr verwenden, ist die Berechnung einfacher.
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
             return { x, y };
         };
     
@@ -1959,7 +1969,7 @@ class Game {
     }
     
     draw(): void {
-        this.ctx.clearRect(0, 0, this.baseWidth, this.baseHeight);
+        this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawParallaxStarfield();
 
         if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED') {
@@ -2148,8 +2158,8 @@ class Game {
         }
     }
 
-    createParallaxStarfield(): void { this.stars = []; for (let i = 0; i < 300; i++) { const l = i < 100 ? 1 : (i < 200 ? 2 : 3); this.stars.push({ pos: new Vector2D(Math.random() * this.baseWidth, Math.random() * this.baseHeight), s: (4 - l) * 0.8, v: (4 - l) * 24, a: 1 - (l / 4) }); } }
-    updateParallaxStarfield(dt: number): void { this.stars.forEach(s => { s.pos.y += s.v * (dt / 1000); if (s.pos.y > this.baseHeight) { s.pos.y = -(Math.random() * 50); s.pos.x = Math.random() * this.baseWidth; } }); }
+    createParallaxStarfield(): void { this.stars = []; for (let i = 0; i < 300; i++) { const l = i < 100 ? 1 : (i < 200 ? 2 : 3); this.stars.push({ pos: new Vector2D(Math.random() * this.width, Math.random() * this.height), s: (4 - l) * 0.8, v: (4 - l) * 24, a: 1 - (l / 4) }); } }
+    updateParallaxStarfield(dt: number): void { this.stars.forEach(s => { s.pos.y += s.v * (dt / 1000); if (s.pos.y > this.height) { s.pos.y = -(Math.random() * 50); s.pos.x = Math.random() * this.width; } }); }
     drawParallaxStarfield(): void { this.stars.forEach(s => { this.ctx.fillStyle = `rgba(255,255,255,${s.a})`; this.ctx.beginPath(); this.ctx.arc(s.pos.x, s.pos.y, s.s, 0, Math.PI * 2); this.ctx.fill(); }); }
     
     createEnemyByType(type: string): Enemy | null {
