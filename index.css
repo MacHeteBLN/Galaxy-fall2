@@ -184,7 +184,6 @@ canvas {
     color: var(--purple-glow);
 }
 
-/* KORRIGIERT: Problematische Regel entfernt. JavaScript kontrolliert jetzt die Sichtbarkeit. */
 #weapon-status {
     position: absolute;
     bottom: 80px; /* Position über dem Inventar */
@@ -227,9 +226,10 @@ canvas {
 }
 
 .menu-header h1 {
-    font-size: 50px;
     margin: 0;
     text-align: center;
+    /* NEU: Skalierbare Schriftgröße */
+    font-size: clamp(28px, 8vw, 50px);
 }
 
 #menu-highscore {
@@ -475,6 +475,11 @@ canvas {
     text-shadow: 0 0 10px var(--cyan-glow);
 }
 
+/* NEU: H1-Tag zum Game Over-Titel hinzugefügt und Schriftart skaliert */
+#game-over-container .menu h1 {
+    font-size: clamp(32px, 10vw, 70px);
+}
+
 .final-score-container {
     color: var(--text-color);
     font-size: 24px;
@@ -498,17 +503,20 @@ canvas {
     text-align: center;
     color: var(--cyan-glow);
     text-shadow: 0 0 10px var(--cyan-glow);
+    padding: 20px; /* Sicherstellen, dass Text nicht am Rand klebt */
 }
 
 #exit-screen h1 {
-    font-size: 50px;
     margin-bottom: 20px;
+    /* KORRIGIERT: Kleinere Minimalgröße und sanftere Skalierung */
+    font-size: clamp(24px, 8vw, 50px);
 }
 
 #exit-screen p {
-    font-size: 18px;
     color: var(--text-color);
     text-shadow: none;
+    /* NEU: Skalierbare Schriftgröße */
+    font-size: clamp(14px, 4vw, 18px);
 }
 
 .timer-warning {

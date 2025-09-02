@@ -1509,7 +1509,19 @@ class UIManager {
             listEl.innerHTML += `<div class="powerup-entry"> <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/> <div class="powerup-info"> <div class="powerup-title"> <span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div>`;
         });
     }
-    public drawLevelMessage(): void { const ctx = this.ctx; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = "30px 'Press Start 2P'"; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); }
+    public drawLevelMessage(): void { 
+        const ctx = this.ctx; 
+        // --- NEU: Skalierungsfaktor basierend auf der Breite ---
+        const scaleFactor = this.game.width / this.game.baseWidth;
+        const fontSize = Math.max(16, 30 * scaleFactor); // Mindestgröße 16px
+        
+        ctx.textAlign = 'center'; 
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+        ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); 
+        ctx.fillStyle = '#FFFF00'; 
+        ctx.font = `${fontSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
+        ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); 
+    }
     public drawGameOver(): void { 
         const ctx = this.ctx; 
         ctx.fillStyle = 'rgba(0,0,0,0.7)';         ctx.fillRect(0, 0, this.game.width, this.game.height); 
@@ -2200,15 +2212,21 @@ class Game {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = 1;
-    
+        
+        // --- NEU: Skalierungsfaktor basierend auf der Breite ---
+        const scaleFactor = Math.min(1.0, w / this.baseWidth);
+        const titleSize = Math.max(28, 60 * scaleFactor);
+        const subtitleSize = Math.max(32, 80 * scaleFactor);
+        const promptSize = Math.max(14, 20 * scaleFactor);
+
         const alpha1 = Math.min(1, t / 2000);
         ctx.globalAlpha = alpha1;
-        ctx.font = "60px 'Press Start 2P'";
+        ctx.font = `${titleSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
         ctx.fillStyle = '#0ff';
         const pulse = Math.sin(t / 400) * 5 + 15;
         ctx.shadowColor = '#0ff';
         ctx.shadowBlur = pulse;
-        ctx.fillText("GALAXY FALL", w / 2, h / 2 - 40);
+        ctx.fillText("GALAXY FALL", w / 2, h / 2 - (subtitleSize / 2));
         ctx.shadowBlur = 0;
     
         if (t > 1500) {
@@ -2218,12 +2236,12 @@ class Game {
             
             ctx.save();
             ctx.globalAlpha = alpha2;
-            ctx.font = "80px 'Press Start 2P'";
+            ctx.font = `${subtitleSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
             ctx.fillStyle = '#FFD700';
             ctx.shadowColor = '#FFA500';
             ctx.shadowBlur = 20;
             
-            ctx.translate(w / 2, h / 2 + 60);
+            ctx.translate(w / 2, h / 2 + (titleSize / 1.5));
             ctx.scale(scale, scale);
             ctx.fillText("PI EDITION", 0, 0);
             ctx.restore();
@@ -2234,7 +2252,7 @@ class Game {
             const alpha3 = Math.sin(t3 / 500) * 0.4 + 0.6;
             ctx.globalAlpha = alpha3;
             ctx.fillStyle = `rgba(255, 255, 255, ${alpha3})`;
-            ctx.font = "20px 'Press Start 2P'";
+            ctx.font = `${promptSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
             const promptKey = this.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
             ctx.fillText(this.uiManager.localizationManager.translate(promptKey), w / 2, h / 2 + 180);
         }
