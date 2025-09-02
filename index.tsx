@@ -69,6 +69,21 @@ interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[
 interface IUIElements { score: HTMLElement; coins: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; levelDisplay: HTMLElement; }
 interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; color: string; }
 interface IInventoryItem { type: string; count: number; }
+interface IShopItem {
+    id: string;
+    type: 'PERMANENT' | 'CONSUMABLE';
+    nameKey: string;
+    descKey: string;
+    iconSrc: string;
+    maxLevel: number;
+    cost: number[]; // Array für Kosten pro Level
+    applyEffect?: (game: Game, level: number) => void;
+}
+
+interface IPlayerUpgrades {
+    [key: string]: number; // Map von item.id zu Level
+}
+
 
 // --- SECTION 4: KERN-KLASSEN ---
 class Vector2D { public x: number; public y: number; constructor(x: number, y: number) { this.x = x; this.y = y; } }
@@ -164,7 +179,9 @@ class Coin extends EntityFamily {
     public onCollect(): void { 
         if (this.game.player) { 
             this.game.uiManager.soundManager.play('coinCollect');
-            this.game.coins += 1;
+            const coinBonus = this.game.shopManager.getUpgradeLevel('coin_value');
+            this.game.coins += (1 + coinBonus);
+            this.game.saveGameData(); // Münzenstand speichern
         } 
         this.destroy(); 
     }
@@ -643,16 +660,27 @@ class PowerUpManager {
     }
 }
 class Player extends EntityFamily {
-    public speed: number = 400; public lives: number = 3; public maxLives: number = 5;
-    public energy: number = 100; public fireCooldown: number = 0;
+    public speed: number;
+    public lives: number;
+    public maxLives: number;
+    public energy: number;
+    public fireCooldown: number = 0;
     public powerUpManager: PowerUpManager; public drones: Drone[] = [];
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
     public isChargingBlackHole: boolean = false;
     public blackHoleChargeSlot: number | null = null;
-    constructor(game: Game) {
+    
+    constructor(game: Game, initialStats: { lives: number, energy: number, speed: number }) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
+        
+        this.lives = initialStats.lives;
+        this.maxLives = 3 + game.shopManager.getUpgradeLevel('start_lives');
+        this.energy = initialStats.energy;
+        this.speed = initialStats.speed;
+        
         this.powerUpManager = new PowerUpManager(this);
     }
+
     update(dt: number): void {
         const dt_s = dt / 1000;
         
@@ -892,6 +920,93 @@ class BossNexusPrime extends Enemy {
 }
 
 // --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
+
+class ShopManager {
+    public game: Game;
+    public playerUpgrades: IPlayerUpgrades;
+    public readonly shopItems: IShopItem[];
+
+    constructor(game: Game) {
+        this.game = game;
+        this.playerUpgrades = this.loadUpgrades();
+
+        this.shopItems = [
+            // --- PERMANENTE UPGRADES ---
+            {
+                id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
+                iconSrc: powerupExtraLifeSrc, maxLevel: 2, cost: [150, 300]
+            },
+            {
+                id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc',
+                iconSrc: powerupRepairKitSrc, maxLevel: 3, cost: [100, 200, 400]
+            },
+            {
+                id: 'start_speed', type: 'PERMANENT', nameKey: 'shop_start_speed_name', descKey: 'shop_start_speed_desc',
+                iconSrc: powerupRapidFireSrc, maxLevel: 3, cost: [200, 400, 600]
+            },
+            {
+                id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc',
+                iconSrc: piCoin2ImgSrc, maxLevel: 4, cost: [250, 500, 1000, 2000]
+            },
+        ];
+    }
+
+    public loadUpgrades(): IPlayerUpgrades {
+        const saved = localStorage.getItem('galaxyFallUpgrades');
+        return saved ? JSON.parse(saved) : {};
+    }
+
+    public saveUpgrades(): void {
+        localStorage.setItem('galaxyFallUpgrades', JSON.stringify(this.playerUpgrades));
+    }
+
+    public getUpgradeLevel(itemId: string): number {
+        return this.playerUpgrades[itemId] || 0;
+    }
+
+    public getCost(item: IShopItem): number | null {
+        const currentLevel = this.getUpgradeLevel(item.id);
+        if (currentLevel >= item.maxLevel) return null;
+        return item.cost[currentLevel]!;
+    }
+
+    public purchaseItem(itemId: string): boolean {
+        const item = this.shopItems.find(i => i.id === itemId);
+        if (!item) return false;
+
+        const cost = this.getCost(item);
+        if (cost === null || this.game.coins < cost) {
+            this.game.uiManager.soundManager.play('uiError');
+            return false;
+        }
+
+        this.game.coins -= cost;
+        this.playerUpgrades[item.id] = (this.playerUpgrades[item.id] || 0) + 1;
+
+        this.saveUpgrades();
+        this.game.saveGameData();
+
+        this.game.uiManager.soundManager.play('purchaseSuccess');
+        return true;
+    }
+
+    public getInitialPlayerStats(): { lives: number, energy: number, speed: number } {
+        const baseLives = 3;
+        const baseEnergy = 100;
+        const baseSpeed = 400;
+
+        const bonusLives = this.getUpgradeLevel('start_lives');
+        const bonusEnergy = this.getUpgradeLevel('start_energy') * 10;
+        const bonusSpeed = this.getUpgradeLevel('start_speed') * 20;
+
+        return {
+            lives: baseLives + bonusLives,
+            energy: baseEnergy + bonusEnergy,
+            speed: baseSpeed + bonusSpeed,
+        };
+    }
+}
+
 class SoundManager {
     public audioCtx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
@@ -1164,6 +1279,8 @@ class SoundManager {
             case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; 
             case 'shieldDown': freq = 300; duration = 0.2; type = 'square'; break;
             case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
+            case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
+            case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
         } 
         const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); 
     }
@@ -1176,6 +1293,9 @@ class UIManager {
     private levelDisplayContainer: HTMLElement; 
     private gameOverContainer: HTMLElement;
     private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
+    private shopContainer: HTMLElement;
+    private shopCoinsEl: HTMLElement;
+    private shopItemsContainerEl: HTMLElement;
     
     constructor(game: Game, ui: IUIElements) {
         this.game = game;
@@ -1202,6 +1322,11 @@ class UIManager {
         this.localizationManager = new LocalizationManager();
         this.soundManager = new SoundManager(this);
         (document.getElementById('coin-icon') as HTMLImageElement).src = piCoin2ImgSrc;
+        
+        this.shopContainer = document.getElementById('shop-container')!;
+        this.shopCoinsEl = document.getElementById('shop-coins')!;
+        this.shopItemsContainerEl = document.getElementById('shop-items-container')!;
+        (document.getElementById('shop-coin-icon') as HTMLImageElement).src = piCoin2ImgSrc;
         
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
         this.togglePauseMenu = this.togglePauseMenu.bind(this);
@@ -1339,6 +1464,91 @@ class UIManager {
         }
     }
 
+    public toggleShopScreen(show: boolean): void {
+        if (show) {
+            this.renderShop();
+            this.shopContainer.style.display = 'flex';
+        } else {
+            this.shopContainer.style.display = 'none';
+        }
+    }
+
+    public renderShop(): void {
+        const shopManager = this.game.shopManager;
+        const t = (key: string) => this.localizationManager.translate(key);
+        
+        this.shopCoinsEl.textContent = this.game.coins.toString();
+        this.shopItemsContainerEl.innerHTML = '';
+
+        const categories: { [key: string]: IShopItem[] } = {
+            'PERMANENT': shopManager.shopItems.filter(i => i.type === 'PERMANENT'),
+            'CONSUMABLE': shopManager.shopItems.filter(i => i.type === 'CONSUMABLE')
+        };
+
+        for (const categoryKey in categories) {
+            const items = categories[categoryKey]!;
+            if (items.length === 0) continue;
+
+            const categoryTitle = document.createElement('h2');
+            categoryTitle.className = 'shop-category';
+            categoryTitle.textContent = t(`shop_category_${categoryKey.toLowerCase()}`);
+            this.shopItemsContainerEl.appendChild(categoryTitle);
+
+            items.forEach(item => {
+                const currentLevel = shopManager.getUpgradeLevel(item.id);
+                const cost = shopManager.getCost(item);
+                const isMaxed = currentLevel >= item.maxLevel;
+                const canAfford = cost !== null && this.game.coins >= cost;
+
+                const itemEl = document.createElement('div');
+                itemEl.className = 'shop-item';
+                
+                let buttonText = '';
+                let buttonClass = '';
+
+                if (isMaxed) {
+                    buttonText = t('btn_max_level');
+                    buttonClass = 'maxed';
+                } else {
+                    buttonText = t('btn_buy');
+                }
+                
+                itemEl.innerHTML = `
+                    <img src="${item.iconSrc}" alt="${t(item.nameKey)}" class="shop-item-icon">
+                    <div class="shop-item-details">
+                        <h3 class="shop-item-title">${t(item.nameKey)}</h3>
+                        <p class="shop-item-desc">${t(item.descKey)}</p>
+                        <div class="shop-item-level">${t('level')}: ${currentLevel} / ${item.maxLevel}</div>
+                    </div>
+                    <div class="shop-item-purchase">
+                        <button class="shop-buy-button ${buttonClass}" id="buy-${item.id}">
+                            ${isMaxed ? `<span>${buttonText}</span>` : `
+                            <div class="shop-item-cost">
+                                <span>${buttonText}</span>
+                                <img src="${piCoin2ImgSrc}" alt="Coin"/>
+                                <span>${cost}</span>
+                            </div>
+                            `}
+                        </button>
+                    </div>
+                `;
+
+                this.shopItemsContainerEl.appendChild(itemEl);
+
+                const buyButton = document.getElementById(`buy-${item.id}`)! as HTMLButtonElement;
+                if (isMaxed || !canAfford) {
+                    buyButton.disabled = true;
+                }
+
+                buyButton.addEventListener('click', () => {
+                    if (shopManager.purchaseItem(item.id)) {
+                        this.renderShop();
+                    }
+                });
+            });
+        }
+    }
+
     public showTab(tabName: string): void {
         for (const key in this.tabPanes) {
             const pane = this.tabPanes[key]!;
@@ -1374,6 +1584,20 @@ class UIManager {
         setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('LEVEL_START', true); });
         setupButton(document.getElementById('quit-from-gameover-button'), () => { this.game.changeState('MENU'); });
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
+        
+        const shopButton = document.getElementById('shop-button');
+        const shopBackButton = document.getElementById('shop-back-button');
+
+        setupButton(shopButton, () => {
+            this.toggleMainMenu(false);
+            this.toggleShopScreen(true);
+        });
+
+        setupButton(shopBackButton, () => {
+            this.toggleShopScreen(false);
+            this.toggleMainMenu(true);
+        });
+
         for (const key in this.tabButtons) { setupButton(this.tabButtons[key], () => this.showTab(key)); }
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) { volSlider.addEventListener('input', (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }); volSlider.value = this.settings.masterVolume.toString(); }
@@ -1511,15 +1735,14 @@ class UIManager {
     }
     public drawLevelMessage(): void { 
         const ctx = this.ctx; 
-        // --- NEU: Skalierungsfaktor basierend auf der Breite ---
         const scaleFactor = this.game.width / this.game.baseWidth;
-        const fontSize = Math.max(16, 30 * scaleFactor); // Mindestgröße 16px
+        const fontSize = Math.max(16, 30 * scaleFactor);
         
         ctx.textAlign = 'center'; 
         ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
         ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); 
         ctx.fillStyle = '#FFFF00'; 
-        ctx.font = `${fontSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
+        ctx.font = `${fontSize}px 'Press Start 2P'`;
         ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); 
     }
     public drawGameOver(): void { 
@@ -1585,7 +1808,7 @@ const LEVELS: ILevelDefinition[] = [
 
 
 class Game {
-    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
@@ -1594,7 +1817,6 @@ class Game {
     private container: HTMLElement;
     public scale: number = 1;
 
-    // HINZUGEFÜGT: Flag für das Reaktivieren des Sounds auf Mobilgeräten
     public audioNeedsUnlock: boolean = false;
 
     public isFormationActive: boolean = false;
@@ -1614,9 +1836,13 @@ class Game {
         this.width = this.baseWidth;
         this.height = this.baseHeight;
         this.container = document.getElementById('gameContainer')!;
-        this.highscore = parseInt(localStorage.getItem('galaxyFallCelestialHighscore') || '0');
         this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        this.uiManager = new UIManager(this, ui); 
+        
+        this.shopManager = new ShopManager(this);
+        this.uiManager = new UIManager(this, ui);
+        
+        this.loadGameData();
+        
         this.initEventListeners(); 
         this.createParallaxStarfield(); 
         this.uiManager.populateAllTranslatedContent();
@@ -1628,60 +1854,65 @@ class Game {
         }
     }
 
+    public saveGameData(): void {
+        localStorage.setItem('galaxyFallSave', JSON.stringify({
+            coins: this.coins,
+            highscore: this.highscore
+        }));
+    }
+
+    public loadGameData(): void {
+        const saved = localStorage.getItem('galaxyFallSave');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.coins = data.coins || 0;
+            this.highscore = data.highscore || 0;
+        }
+    }
+
     resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
     
-        // Entfernen Sie alle Transformationen, die von altem Code übrig geblieben sein könnten.
         this.container.style.transform = '';
         this.container.style.left = '';
         this.container.style.top = '';
     
-        // Aktualisieren Sie die internen logischen Dimensionen des Spiels.
         this.width = screenWidth;
-        this.height = screenHeight - 50; // Das obere UI-Panel ist 50px hoch
+        this.height = screenHeight - 50;
     
-        // Aktualisieren Sie die Abmessungen des eigentlichen Canvas-Elements.
         this.canvas.width = this.width;
         this.canvas.height = this.height;
     
-        // Erstellen Sie das Sternenfeld neu, damit es zu den neuen Dimensionen passt.
         this.createParallaxStarfield();
     }
     
     initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
 
-        // KORREKTUR: Der Listener für den Sound beim Wiederherstellen der App
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                // Versucht nicht mehr, den Sound direkt zu starten, sondern setzt nur ein Flag.
                 if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
                     this.audioNeedsUnlock = true;
                 }
             }
         });
 
-        // HINZUGEFÜGT: Ein Handler, der auf den NÄCHSTEN Tap reagiert, um den Sound wieder freizuschalten.
         const unlockAudioHandler = () => {
             if (this.audioNeedsUnlock && this.uiManager.soundManager.audioCtx) {
                 this.uiManager.soundManager.audioCtx.resume().then(() => {
-                    this.audioNeedsUnlock = false; // Flag zurücksetzen
+                    this.audioNeedsUnlock = false;
                 });
             }
         };
 
-        // KORREKTUR: Der problematische "introAndMenuHandler" wurde entfernt und durch einen spezifischeren ersetzt.
         const tapToStartHandler = (e: Event) => {
-            // Der Sound wird hier ebenfalls freigeschaltet, falls nötig.
             unlockAudioHandler();
             
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
                  this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
-                 // Diese Logik ist jetzt nicht mehr global und wird nur ausgelöst,
-                 // wenn direkt auf den Canvas getippt wird, nicht auf die Menü-Buttons.
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
                     this.changeState('LEVEL_START', true);
                  }
@@ -1690,8 +1921,6 @@ class Game {
 
         if (this.isMobile) {
             this.initMobileControls();
-            // KORREKTUR: Der Listener lauscht jetzt auf dem Canvas, nicht mehr global auf dem Window.
-            // Dies verhindert die Kollision mit den UI-Buttons.
             this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
         } else {
             this.initDesktopControls();
@@ -1702,20 +1931,17 @@ class Game {
         const specialInventoryEl = document.getElementById('special-inventory');
         const ultraInventoryEl = document.getElementById('ultra-inventory');
 
-        // This function converts touch coordinates to canvas coordinates.
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.canvas.getBoundingClientRect();
             const touch = e.changedTouches[0];
             if (!touch) return null;
     
-            // Da wir keine Skalierung mehr verwenden, ist die Berechnung einfacher.
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
             return { x, y };
         };
     
         this.canvas.addEventListener('touchstart', (e) => {
-            // HINZUGEFÜGT: Bei jeder Berührung wird versucht, den Sound freizuschalten, falls nötig.
             if (this.audioNeedsUnlock) {
                 this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
             }
@@ -1839,6 +2065,7 @@ class Game {
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
         this.uiManager.toggleGameOverScreen(false);
+        this.uiManager.toggleShopScreen(false);
 
         if (newState === 'PAUSED') {
             this.isPaused = true;
@@ -1877,8 +2104,8 @@ class Game {
                 if (!this.player || !this.player.isAlive()) {
                     this.level = 1;
                     this.score = 0;
-                    this.coins = 0;
-                    this.player = new Player(this);
+                    const initialStats = this.shopManager.getInitialPlayerStats();
+                    this.player = new Player(this, initialStats);
                     this.entities = [this.player];
                 } else {
                     this.level++;
@@ -1902,16 +2129,16 @@ class Game {
             case 'GAME_OVER':
                 if (this.score > this.highscore) {
                     this.highscore = this.score;
-                    localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString());
                 }
+                this.saveGameData();
                 this.uiManager.soundManager.setTrack('normal');
                 this.uiManager.toggleGameOverScreen(true);
                 break;
             case 'WIN':
                 if (this.score > this.highscore) {
                     this.highscore = this.score;
-                    localStorage.setItem('galaxyFallCelestialHighscore', this.score.toString());
                 }
+                this.saveGameData();
                 this.uiManager.soundManager.setTrack('normal');
                 break;
         }
@@ -2213,7 +2440,6 @@ class Game {
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = 1;
         
-        // --- NEU: Skalierungsfaktor basierend auf der Breite ---
         const scaleFactor = Math.min(1.0, w / this.baseWidth);
         const titleSize = Math.max(28, 60 * scaleFactor);
         const subtitleSize = Math.max(32, 80 * scaleFactor);
@@ -2221,7 +2447,7 @@ class Game {
 
         const alpha1 = Math.min(1, t / 2000);
         ctx.globalAlpha = alpha1;
-        ctx.font = `${titleSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
+        ctx.font = `${titleSize}px 'Press Start 2P'`;
         ctx.fillStyle = '#0ff';
         const pulse = Math.sin(t / 400) * 5 + 15;
         ctx.shadowColor = '#0ff';
@@ -2236,7 +2462,7 @@ class Game {
             
             ctx.save();
             ctx.globalAlpha = alpha2;
-            ctx.font = `${subtitleSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
+            ctx.font = `${subtitleSize}px 'Press Start 2P'`;
             ctx.fillStyle = '#FFD700';
             ctx.shadowColor = '#FFA500';
             ctx.shadowBlur = 20;
@@ -2252,7 +2478,7 @@ class Game {
             const alpha3 = Math.sin(t3 / 500) * 0.4 + 0.6;
             ctx.globalAlpha = alpha3;
             ctx.fillStyle = `rgba(255, 255, 255, ${alpha3})`;
-            ctx.font = `${promptSize}px 'Press Start 2P'`; // Dynamische Schriftgröße
+            ctx.font = `${promptSize}px 'Press Start 2P'`;
             const promptKey = this.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
             ctx.fillText(this.uiManager.localizationManager.translate(promptKey), w / 2, h / 2 + 180);
         }

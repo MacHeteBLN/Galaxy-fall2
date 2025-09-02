@@ -35,19 +35,17 @@ body {
 canvas {
     display: block;
     position: absolute;
-    top: 50px;
+    top: 90px; /* Höhe der beiden UI-Leisten */
     left: 0;
     background-color: transparent;
     z-index: 1;
 }
 
 /* --- SPIEL-UI (OBEN & UNTEN) --- */
-#ui-panel {
+#ui-panel, #ui-panel-bottom {
     position: absolute;
-    top: 0;
     left: 0;
     width: 100%;
-    height: 50px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -59,6 +57,16 @@ canvas {
     z-index: 10;
 }
 
+#ui-panel {
+    top: 0;
+    height: 50px;
+}
+
+#ui-panel-bottom {
+    top: 50px;
+    height: 40px;
+}
+
 .left-stats,
 .right-stats {
     display: flex;
@@ -66,7 +74,7 @@ canvas {
     gap: 25px;
 }
 
-#ui-panel .ui-item {
+#ui-panel .ui-item, #ui-panel-bottom .ui-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -78,13 +86,13 @@ canvas {
     vertical-align: middle;
 }
 
-#ui-panel .ui-icon {
+#ui-panel .ui-icon, #ui-panel-bottom .ui-icon {
     width: 22px;
     height: 22px;
     vertical-align: middle;
 }
 
-#ui-panel #lives-display {
+#lives-display {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -118,18 +126,7 @@ canvas {
 }
 
 #level-display-container {
-    display: none;
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    z-index: 10;
-    font-size: 14px;
-    text-transform: uppercase;
-    background: rgba(0, 10, 20, 0.7);
-    padding: 5px 10px;
-    border: 2px solid var(--border-color);
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+   display: none; /* Wird nicht mehr angezeigt */
 }
 
 #special-inventory,
@@ -210,10 +207,10 @@ canvas {
 /* --- MENÜ & OVERLAYS --- */
 #menu-container {
     position: absolute;
-    top: 50px;
+    top: 90px; /* Angepasst an die Höhe der UI-Leisten */
     left: 0;
     width: 100%;
-    height: calc(100% - 50px);
+    height: calc(100% - 90px); /* Angepasst */
     background: var(--menu-bg);
     z-index: 20;
     display: none;
@@ -228,7 +225,6 @@ canvas {
 .menu-header h1 {
     margin: 0;
     text-align: center;
-    /* NEU: Skalierbare Schriftgröße */
     font-size: clamp(28px, 8vw, 50px);
 }
 
@@ -475,7 +471,6 @@ canvas {
     text-shadow: 0 0 10px var(--cyan-glow);
 }
 
-/* NEU: H1-Tag zum Game Over-Titel hinzugefügt und Schriftart skaliert */
 #game-over-container .menu h1 {
     font-size: clamp(32px, 10vw, 70px);
 }
@@ -503,19 +498,17 @@ canvas {
     text-align: center;
     color: var(--cyan-glow);
     text-shadow: 0 0 10px var(--cyan-glow);
-    padding: 20px; /* Sicherstellen, dass Text nicht am Rand klebt */
+    padding: 20px;
 }
 
 #exit-screen h1 {
     margin-bottom: 20px;
-    /* KORRIGIERT: Kleinere Minimalgröße und sanftere Skalierung */
     font-size: clamp(24px, 8vw, 50px);
 }
 
 #exit-screen p {
     color: var(--text-color);
     text-shadow: none;
-    /* NEU: Skalierbare Schriftgröße */
     font-size: clamp(14px, 4vw, 18px);
 }
 
@@ -533,9 +526,190 @@ canvas {
     100% { filter: brightness(1); }
 }
 
+
+/* =================================== */
+/*        SHOP-STYLING & KORREKTUR     */
+/* =================================== */
+
+#shop-container {
+    position: absolute;
+    top: 90px; /* Angepasst */
+    left: 0;
+    width: 100%;
+    height: calc(100% - 90px); /* Angepasst */
+    background: var(--menu-bg);
+    z-index: 20;
+    display: none;
+    justify-content: center; /* Zentriert das .menu-Element */
+    align-items: flex-start; /* Oben ausrichten */
+    padding: 20px 0;
+    box-sizing: border-box;
+}
+
+/* Stellt das Layout für den inneren .menu-Container ein */
+#shop-container .menu {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    max-width: 800px; /* Limitiert die Breite auf großen Bildschirmen */
+    height: 100%;
+    overflow: hidden; /* Verhindert, dass Elemente überlappen */
+}
+
+#shop-container .menu-header {
+    width: 100%;
+    text-align: center;
+    position: relative;
+    flex-shrink: 0; /* Verhindert, dass der Header schrumpft */
+}
+
+#shop-coin-display {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 2px solid #FFD700;
+    color: #FFD700;
+    font-size: 18px;
+}
+
+#shop-coin-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+}
+
+/* KORRIGIERTER Container für Shop-Items */
+#shop-items-container {
+    width: 100%;
+    flex-grow: 1; /* WICHTIG: Nimmt den verfügbaren Platz ein */
+    overflow-y: auto; /* WICHTIG: Fügt Scrollleiste bei Bedarf hinzu */
+    padding: 20px;
+    margin: 20px 0; /* Abstand oben und unten */
+    background: rgba(0,0,0,0.3);
+    -webkit-overflow-scrolling: touch;
+}
+
+.shop-category {
+    color: var(--cyan-glow);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-size: 22px;
+    margin: 20px 0 15px 0;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.shop-item {
+    display: flex;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid #444;
+    padding: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+    gap: 20px;
+    transition: border-color 0.3s;
+}
+
+.shop-item:hover {
+    border-color: var(--border-color);
+}
+
+.shop-item-icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.shop-item-details {
+    flex-grow: 1;
+}
+
+.shop-item-title {
+    font-size: 16px;
+    color: var(--text-color);
+    margin: 0 0 8px 0;
+}
+
+.shop-item-desc {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.shop-item-level {
+    font-size: 12px;
+    color: var(--cyan-glow);
+    margin-top: 10px;
+}
+
+.shop-item-purchase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+}
+
+.shop-buy-button {
+    background: none;
+    border: 2px solid #2ECC40; /* Grün für Kaufen */
+    color: #2ECC40;
+    padding: 12px 20px;
+    font-family: var(--main-font);
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.shop-buy-button:hover:not(:disabled) {
+    background: #2ECC40;
+    color: var(--bg-color);
+}
+
+.shop-buy-button:disabled {
+    border-color: #555;
+    color: #555;
+    cursor: not-allowed;
+}
+
+.shop-buy-button.maxed {
+    border-color: #FFD700;
+    color: #FFD700;
+    cursor: default;
+}
+
+.shop-buy-button .shop-item-cost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.shop-item-cost img {
+    width: 16px;
+    height: 16px;
+}
+
+/* Stellt sicher, dass der Zurück-Button immer unten ist */
+#shop-container .menu-button#shop-back-button {
+    flex-shrink: 0; /* Verhindert, dass der Button schrumpft */
+    align-self: center; /* Zentriert den Button horizontal */
+}
+
 /* --- MEDIA QUERIES --- */
 @media (max-width: 800px) {
-    #ui-panel {
+    #ui-panel, #ui-panel-bottom {
         font-size: 11px;
         padding: 0 10px;
         gap: 10px;
@@ -583,6 +757,21 @@ canvas {
     .setting-item .menu-button {
         font-size: 14px;
         padding: 8px 15px;
+    }
+
+    /* Shop-Anpassungen für Mobile */
+    .shop-item {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    .shop-item-purchase {
+        margin-top: 15px;
+    }
+    #shop-coin-display {
+        position: static;
+        margin: 10px auto;
+        width: fit-content;
     }
 }
 
