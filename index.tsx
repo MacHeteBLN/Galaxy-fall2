@@ -1387,34 +1387,50 @@ class UIManager {
         if (!this.game.player) {
             this.weaponTierDisplayEl.innerHTML = '';
             this.weaponStatusEl.innerHTML = '';
+            this.weaponStatusEl.style.display = 'none';
             return;
         }
-        const t = (key: string) => this.localizationManager.translate(key);
+    
         const pm = this.game.player.powerUpManager;
-        
+    
+        // Waffen-Stufe Anzeige (bleibt unverändert)
         const tierImageSrc = powerUpImageSources['WEAPON_UP'];
         let tierHTML = `<img src="${tierImageSrc}" alt="Waffenstufe" class="ui-icon" />: ${pm.weaponTier}`;
         let tierTimer = pm.weaponTierTimer;
-        
+    
         if (tierTimer > 0 && pm.weaponTier > 1) {
             const seconds = Math.ceil(tierTimer / 1000);
             tierHTML += ` <span class="${seconds <= 5 ? 'timer-warning' : ''}">(${seconds}s)</span>`;
         }
         this.weaponTierDisplayEl.innerHTML = tierHTML;
-
-        let activeBuffs = '';
-        if (pm.isActive('RAPID_FIRE')) {
-            activeBuffs += ` ${t('buff_rf')}(${Math.ceil(pm.timers['RAPID_FIRE']!/1000)}s)`;
+    
+        // Neue Logik für die Anzeige der Power-up-Timer mit Icons
+        const buffsToShow = [
+            'RAPID_FIRE', 'GHOST_PROTOCOL', 'ORBITAL_DRONE',
+            'LASER_BEAM', 'HOMING_MISSILES', 'SCORE_BOOST', 'SIDE_SHOTS'
+        ];
+    
+        let activeBuffsHTML = '';
+    
+        for (const buffType of buffsToShow) {
+            if (pm.isActive(buffType)) {
+                const imageSrc = powerUpImageSources[buffType];
+                const seconds = Math.ceil(pm.timers[buffType]! / 1000);
+    
+                activeBuffsHTML += `
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <img src="${imageSrc}" alt="${buffType}" style="width: 24px; height: 24px;" />
+                        <span>${seconds}s</span>
+                    </div>
+                `;
+            }
         }
-        if (pm.isActive('SIDE_SHOTS')) {
-            activeBuffs += ` ${t('buff_sideshots')}(${Math.ceil(pm.timers['SIDE_SHOTS']!/1000)}s)`;
-        }
-        if (pm.isActive('ORBITAL_DRONE')) {
-            activeBuffs += ` ${t('buff_orbital')}(${this.game.player.drones.length}x) (${Math.ceil(pm.timers['ORBITAL_DRONE']!/1000)}s)`;
-        }
-        if (activeBuffs.trim() !== '') {
-            this.weaponStatusEl.innerHTML = activeBuffs.trim();
-            this.weaponStatusEl.style.display = 'block';
+    
+        if (activeBuffsHTML !== '') {
+            this.weaponStatusEl.innerHTML = activeBuffsHTML;
+            this.weaponStatusEl.style.display = 'flex';
+            this.weaponStatusEl.style.gap = '15px';
+            this.weaponStatusEl.style.alignItems = 'center';
         } else {
             this.weaponStatusEl.innerHTML = '';
             this.weaponStatusEl.style.display = 'none';
@@ -2208,7 +2224,7 @@ class Game {
     }
     
     draw(): void {
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.ctx.clearRect(0, 0,this.width, this.height);
         this.drawParallaxStarfield();
 
         if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED') {
