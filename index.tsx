@@ -285,7 +285,7 @@ class Teleporter extends Enemy {
 class BlackHole extends Entity {
     private life: number = 10000; private pullRadius: number = 300; private killRadius: number = 20;
     constructor(game: Game, x: number, y: number) { super(game, x, y, 0, 0); this.type = 'EFFECT'; }
-    update(dt: number): void { const dt_s = dt/1000; this.life -= dt; if (this.life <= 0) { this.game.entities.forEach(e => { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius && e instanceof Enemy && !e.isBoss) e.takeHit(9999); }); this.destroy(); this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x, this.pos.y, '#EE82EE')); return; } this.game.entities.forEach(e => { if (e.family === 'enemy' || e.family === 'pickup') { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius) { if (e instanceof Enemy && !e.isBoss) e.stun(50); const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x); const pullSpeed = 180 * (1 - dist / this.pullRadius); e.pos.x += Math.cos(angle) * pullSpeed * dt_s; e.pos.y += Math.sin(angle) * pullSpeed * dt_s; if (dist < this.killRadius) { if (e instanceof Enemy && !e.isBoss) e.takeHit(9999); else if (!(e instanceof Enemy)) e.destroy(); } } } }); }
+    update(dt: number): void { const dt_s = dt/1000; this.life -= dt; if (this.life <= 0) { this.game.entities.forEach(e => { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius && e instanceof Enemy && !e.isBoss) e.takeHit(9999); }); this.destroy(); this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x, this.pos.y, '#EE82EE')); return; } this.game.entities.forEach(e => { if (e.family === 'enemy' || e.family === 'pickup') { const dist = Math.hypot(this.pos.x - (e.pos.x + e.width/2), this.pos.y - (e.pos.y + e.height/2)); if (dist < this.pullRadius) { const isBoss = e instanceof Enemy && e.isBoss; if (!isBoss) { if (e instanceof Enemy) e.stun(50); const angle = Math.atan2(this.pos.y - e.pos.y, this.pos.x - e.pos.x); const pullSpeed = 180 * (1 - dist / this.pullRadius); e.pos.x += Math.cos(angle) * pullSpeed * dt_s; e.pos.y += Math.sin(angle) * pullSpeed * dt_s; if (dist < this.killRadius) { if (e instanceof Enemy) e.takeHit(9999); else e.destroy(); } } } } }); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.killRadius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.pullRadius * (this.life / 8000), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
 class Projectile extends EntityFamily {
@@ -762,7 +762,7 @@ class BossSentinelPrime extends Enemy {
 
     constructor(game: Game, health: number, speedMultiplier: number) {
         super(game, game.width / 2 - 225, -300, 450, 300, health, 5000, 'BOSS_SENTINEL_PRIME');
-        this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 75;
+        this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50;
     }
 
     update(dt: number): void {
@@ -810,7 +810,7 @@ class BossSentinelPrime extends Enemy {
         switch (this.attackPattern) {
             case 0: // Line Attack
                 this.isPreparingLineAttack = true;
-                this.lineAttackPreparationTimer = 3000;
+                this.lineAttackPreparationTimer = 1500;
                 break;
             case 1: // Radial Burst
                 this.executeAttack();
@@ -828,7 +828,11 @@ class BossSentinelPrime extends Enemy {
         const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
         switch (this.attackPattern) {
             case 0: // Line Attack
-                for (let i = 0; i < 10; i++) this.game.addEntity(new EnemyProjectile(this.game, x + (i * w / 9), y + h, 0, 360, this.collisionDamage));
+                const attackWidth = w * 0.7;
+                const startX = x + (w * 0.15);
+                for (let i = 0; i < 7; i++) {
+                    this.game.addEntity(new EnemyProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
+                }
                 break;
             case 1: // Radial Burst
                 for (let i = 0; i < 12; i++) {
@@ -857,11 +861,11 @@ class BossSentinelPrime extends Enemy {
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
         if (this.isPreparingLineAttack) {
-            const glow = (1 - this.lineAttackPreparationTimer / 3000) * 0.8;
+            const glow = (1 - this.lineAttackPreparationTimer / 1500) * 0.8;
             ctx.shadowColor = `rgba(255, 0, 0, ${glow})`;
             ctx.shadowBlur = 30;
         } else if (this.isPreparingCharge) {
-            ctx.shadowColor = '#FF4136';
+            ctx.shadowColor = '#FFD700';
             ctx.shadowBlur = 20;
         }
         ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
@@ -1292,6 +1296,7 @@ class UIManager {
     public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
     private levelDisplayContainer: HTMLElement; 
     private gameOverContainer: HTMLElement;
+    private modeSelectContainer: HTMLElement; // NEU
     private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     private shopContainer: HTMLElement;
     private shopCoinsEl: HTMLElement;
@@ -1313,6 +1318,7 @@ class UIManager {
         this.levelDisplayContainer = ui.levelDisplay;
         this.menuContainer = document.getElementById('menu-container')!;
         this.gameOverContainer = document.getElementById('game-over-container')!;
+        this.modeSelectContainer = document.getElementById('mode-select-container')!; // NEU
         this.langSelectScreen = document.getElementById('language-select-screen')!;
         this.langBackButton = document.getElementById('lang-back-button')!;
         this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, };
@@ -1341,8 +1347,9 @@ class UIManager {
     update(): void {
         this.scoreEl.textContent = this.game.score.toString();
         this.coinsEl.textContent = this.game.coins.toString();
-        this.levelEl.textContent = this.game.level > 50 ? 'MAX' : this.game.level.toString();
-        if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN'].includes(this.game.gameState)) {
+        // GEÄNDERT: Zeigt das aktuelle Level auch im Endlos-Modus an
+        this.levelEl.textContent = this.game.level.toString();
+        if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN', 'MODE_SELECT'].includes(this.game.gameState)) {
             this.highscoreEl.textContent = this.game.highscore.toString();
         }
         if (!this.game.player || !this.game.player.isAlive()) {
@@ -1479,6 +1486,11 @@ class UIManager {
             this.gameOverContainer.style.display = 'none';
         }
     }
+    
+    // NEUE METHODE
+    public toggleModeSelectScreen(show: boolean): void {
+        this.modeSelectContainer.style.display = show ? 'flex' : 'none';
+    }
 
     public toggleShopScreen(show: boolean): void {
         if (show) {
@@ -1585,7 +1597,7 @@ class UIManager {
                 const eventType = this.game.isMobile ? 'touchstart' : 'click';
                 element.addEventListener(eventType, (e) => {
                     e.preventDefault();
-                    if (this.game.isPaused || this.game.gameState === 'MENU') {
+                    if (this.game.isPaused || this.game.gameState === 'MENU' || this.game.gameState === 'MODE_SELECT') {
                         this.soundManager.play('uiClick');
                     }
                     action(e);
@@ -1593,13 +1605,28 @@ class UIManager {
             }
         };
     
-        setupButton(this.mainMenuElements.restart, () => { this.soundManager.initAudio(); this.game.changeState('LEVEL_START', true); });
+        // GEÄNDERT: "Spiel starten" führt jetzt zur Modusauswahl
+        setupButton(this.mainMenuElements.restart, () => { 
+            this.soundManager.initAudio(); 
+            this.game.changeState('MODE_SELECT'); 
+        });
+        
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
         setupButton(document.getElementById('exit-button'), () => { if (this.game.isMobile) { const exitScreen = document.getElementById('exit-screen'); if (exitScreen) { exitScreen.style.display = 'flex'; } this.soundManager.toggleMusic(false); } else { window.close(); } });
-        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('LEVEL_START', true); });
+        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('MODE_SELECT'); });
         setupButton(document.getElementById('quit-from-gameover-button'), () => { this.game.changeState('MENU'); });
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
+
+        // NEU: Buttons für die Modusauswahl
+        setupButton(document.getElementById('select-campaign-button'), () => {
+            this.game.gameMode = 'CAMPAIGN';
+            this.game.changeState('LEVEL_START', true);
+        });
+        setupButton(document.getElementById('select-endless-button'), () => {
+            this.game.gameMode = 'ENDLESS';
+            this.game.changeState('LEVEL_START', true);
+        });
         
         const shopButton = document.getElementById('shop-button');
         const shopBackButton = document.getElementById('shop-back-button');
@@ -1826,6 +1853,8 @@ const LEVELS: ILevelDefinition[] = [
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
+    public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN'; // NEU: Spielmodus speichern
+    
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
     public touchY: number | null = null;
@@ -1930,7 +1959,7 @@ class Game {
                  this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
-                    this.changeState('LEVEL_START', true);
+                    this.changeState('MODE_SELECT'); // GEÄNDERT
                  }
             }
         };
@@ -2027,7 +2056,7 @@ class Game {
                     this.changeState('MENU');
                 } else if (this.gameState === 'MENU') {
                     this.uiManager.soundManager.initAudio();
-                    this.changeState('LEVEL_START', true);
+                    this.changeState('MODE_SELECT'); // GEÄNDERT
                 } else if (['WIN'].includes(this.gameState)) {
                     this.changeState('MENU');
                 }
@@ -2078,10 +2107,12 @@ class Game {
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
 
+        // GEÄNDERT: Alle UI-Overlays ausblenden
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
         this.uiManager.toggleGameOverScreen(false);
         this.uiManager.toggleShopScreen(false);
+        this.uiManager.toggleModeSelectScreen(false);
 
         if (newState === 'PAUSED') {
             this.isPaused = true;
@@ -2100,6 +2131,9 @@ class Game {
                 this.uiManager.toggleMainMenu(true);
                 this.uiManager.soundManager.setTrack('menu');
                 break;
+            case 'MODE_SELECT': // NEUER STATE
+                this.uiManager.toggleModeSelectScreen(true);
+                break;
             case 'PAUSED':
                 this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.togglePauseMenu(true);
@@ -2115,7 +2149,6 @@ class Game {
                 if (forceReset) {
                     this.player = null;
                     this.level = 0;
-                    this.coins = 0;
                 }
                 if (!this.player || !this.player.isAlive()) {
                     this.level = 1;
@@ -2126,10 +2159,13 @@ class Game {
                 } else {
                     this.level++;
                 }
-                if (this.level > LEVELS.length) {
+                
+                // GEÄNDERT: Sieg-Bedingung hängt vom Spielmodus ab
+                if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
                     this.changeState('WIN');
                     return;
                 }
+
                 this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 this.isBossActive = false;
                 this.isFormationActive = false;
@@ -2147,7 +2183,7 @@ class Game {
                     this.highscore = this.score;
                 }
                 this.saveGameData();
-                this.uiManager.soundManager.setTrack('normal');
+                this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.toggleGameOverScreen(true);
                 break;
             case 'WIN':
@@ -2155,7 +2191,7 @@ class Game {
                     this.highscore = this.score;
                 }
                 this.saveGameData();
-                this.uiManager.soundManager.setTrack('normal');
+                this.uiManager.soundManager.setTrack('menu');
                 break;
         }
     }
@@ -2260,15 +2296,140 @@ class Game {
         }
     }
 
+    private generateEndlessWave(waveNumber: number): ILevelDefinition {
+        const t = (key: string) => this.uiManager.localizationManager.translate(key);
+
+        const isBreatherWave = (waveNumber > 0 && waveNumber % 4 === 0);
+
+        let healthMultiplier = 1 + (waveNumber * 0.02);
+        let speedMultiplier = 1 + (waveNumber * 0.015);
+        
+        let budget = 8 + Math.pow(waveNumber, 1.25);
+        if (isBreatherWave) {
+            budget *= 0.6; 
+        }
+
+        const enemyCosts = { 'GRUNT': 1, 'WEAVER': 2, 'TANK': 3, 'SHOOTER': 4, 'TELEPORTER': 6 };
+        const weightedEnemyTypes = [
+            { type: 'GRUNT', weight: 5 },
+            { type: 'WEAVER', weight: 4 },
+            { type: 'TANK', weight: 3 },
+            { type: 'SHOOTER', weight: 3 },
+            { type: 'TELEPORTER', weight: 2 },
+        ];
+        
+        const enemyPool: string[] = [];
+        let totalPointsInPool = 0;
+        let tempBudget = budget;
+
+        while (tempBudget > 0) {
+            const totalWeight = weightedEnemyTypes.reduce((sum, e) => sum + e.weight, 0);
+            let randomWeight = Math.random() * totalWeight;
+            
+            let chosenEnemyType = 'GRUNT';
+            for (const enemy of weightedEnemyTypes) {
+                randomWeight -= enemy.weight;
+                if (randomWeight <= 0) {
+                    chosenEnemyType = enemy.type;
+                    break;
+                }
+            }
+            
+            const cost = enemyCosts[chosenEnemyType as keyof typeof enemyCosts];
+            if (tempBudget - cost >= 0) {
+                enemyPool.push(chosenEnemyType);
+                tempBudget -= cost;
+                totalPointsInPool += (this.createEnemyByType(chosenEnemyType)?.pointsValue || 10);
+            } else {
+                if (tempBudget - enemyCosts['GRUNT'] >= 0) {
+                    enemyPool.push('GRUNT');
+                    tempBudget -= enemyCosts['GRUNT'];
+                    totalPointsInPool += (this.createEnemyByType('GRUNT')?.pointsValue || 10);
+                } else {
+                    break; 
+                }
+            }
+        }
+        if (enemyPool.length === 0) enemyPool.push('GRUNT');
+
+        let spawnInterval = Math.max(200, 800 - waveNumber * 10);
+        if (isBreatherWave) {
+            spawnInterval *= 1.5;
+        }
+
+        let affix = 'none';
+        let msgKey = isBreatherWave ? t('endless_wave_breather') : `${t('endless_wave')} ${waveNumber}`;
+        
+        if (!isBreatherWave && Math.random() < 0.25) {
+            const possibleAffixes = ['Frenzy', 'Thick Skins', 'Bullet Hell', 'Blink Storm'];
+            affix = possibleAffixes[Math.floor(Math.random() * possibleAffixes.length)]!;
+            
+            switch(affix) {
+                case 'Frenzy':
+                    speedMultiplier *= 1.3;
+                    spawnInterval *= 0.7;
+                    msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_frenzy')}`;
+                    break;
+                case 'Thick Skins':
+                    healthMultiplier *= 1.5;
+                    for(let i = 0; i < Math.ceil(enemyPool.length / 4); i++) {
+                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'TANK';
+                    }
+                    msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_thick_skins')}`;
+                    break;
+                case 'Bullet Hell':
+                    for(let i = 0; i < Math.ceil(enemyPool.length / 2); i++) {
+                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'SHOOTER';
+                    }
+                    msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_bullet_hell')}`;
+                    break;
+                case 'Blink Storm':
+                    for(let i = 0; i < Math.ceil(enemyPool.length / 2); i++) {
+                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'TELEPORTER';
+                    }
+                    msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_blink_storm')}`;
+                    break;
+            }
+        }
+        
+        const waveDurationSeconds = 35;
+        const expectedSpawns = (waveDurationSeconds * 1000) / spawnInterval;
+        const avgPoints = totalPointsInPool / enemyPool.length;
+        const scoreToEarn = Math.floor(expectedSpawns * avgPoints * waveNumber * 0.8);
+
+        return {
+            wave: waveNumber,
+            scoreToEarn: scoreToEarn,
+            enemies: enemyPool,
+            msgKey: msgKey,
+            s: spawnInterval,
+            m: speedMultiplier,
+            h: healthMultiplier,
+        };
+    }
+
     configureLevel(): void { 
-        const levelData = LEVELS[this.level - 1]!; 
-        if (!levelData) { this.changeState('WIN'); return; } 
+        let levelData: ILevelDefinition;
+
+        if (this.gameMode === 'CAMPAIGN') {
+            if (this.level > LEVELS.length) { 
+                this.changeState('WIN');
+                return;
+            }
+            levelData = LEVELS[this.level - 1]!;
+        } else {
+            levelData = this.generateEndlessWave(this.level);
+        }
+
         this.enemySpawnTypes = levelData.enemies; 
         this.enemySpawnInterval = levelData.s; 
         this.enemySpeedMultiplier = levelData.m; 
-        this.enemyHealthMultiplier = levelData.h ?? (1 + Math.floor(this.level / 10)); 
-        this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey); 
-        this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); 
+        this.enemyHealthMultiplier = levelData.h ?? 1; 
+        this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) || levelData.msgKey; 
+        this.levelScoreToEarn = levelData.scoreToEarn; 
+        this.enemySpawnTimer = 0; 
+        this.uiManager.update(); 
+
         if (levelData.isMultiFormation) {
             this.isMultiFormationWaveActive = true;
             this.multiFormationStage = 1;
@@ -2278,7 +2439,7 @@ class Game {
             this.isBossActive = true; 
             this.spawnEnemy(false, levelData.boss); 
             this.uiManager.soundManager.setTrack('boss'); 
-        } else if (levelData.formation) {
+        } else if (levelData.formation && levelData.formation !== 'random') {
             this.isFormationActive = true;
             this.spawnFormation(levelData.formation);
             if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');

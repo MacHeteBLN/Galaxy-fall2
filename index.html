@@ -74,7 +74,7 @@
     <div id="weapon-status"></div>
     
     <!-- Menü-Container (für Pause und Hauptmenü) -->
-    <div id="menu-container">
+    <div id="menu-container" style="display: none;">
         <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
         <div class="menu-tabs">
             <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
@@ -87,7 +87,7 @@
             <div id="spiel-view" class="tab-pane active">
                  <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
                  <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
-                 <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
+                 <button class="menu-button" id="restart-button" data-translate-key="btn_start_game">Spiel starten</button>
                  <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
                  <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
                  <div id="menu-highscore">
@@ -133,8 +133,21 @@
         </div>
     </div>
 
+    <!-- NEUER CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
+    <div id="mode-select-container" style="display: none;">
+        <div class="menu">
+            <div class="menu-header">
+                <h1 data-translate-key="mode_select_title">Choose Mode</h1>
+            </div>
+            <div class="menu-content" style="flex-direction: column; gap: 15px; padding: 20px;">
+                <button id="select-campaign-button" class="menu-button" data-translate-key="btn_campaign">Campaign</button>
+                <button id="select-endless-button" class="menu-button" data-translate-key="btn_endless">Endless</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Container für den Game-Over-Bildschirm -->
-    <div id="game-over-container">
+    <div id="game-over-container" style="display: none;">
         <div class="menu">
             <div class="menu-header">
                 <h1 data-translate-key="game_over_title">Game Over</h1>
@@ -148,7 +161,7 @@
     </div>
 
     <!-- KORREKTER SHOP-CONTAINER -->
-    <div id="shop-container">
+    <div id="shop-container" style="display: none;">
         <div class="menu">
             <!-- Header mit Titel und Münzanzeige -->
             <div class="menu-header">
@@ -170,7 +183,7 @@
     </div>
 
     <!-- Container für den "Goodbye"-Bildschirm (nur für Mobilgeräte) -->
-    <div id="exit-screen">
+    <div id="exit-screen" style="display: none;">
         <div class="menu">
             <h1 data-translate-key="exit_title">Bis bald!</h1>
             <p data-translate-key="exit_message">Du kannst diesen Tab jetzt sicher schließen.</p>
