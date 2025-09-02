@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Galaxy Fall: Celestial</title>
+    <title>Galaxy Fall: PI Edition</title>
     
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-C6pESg5Z.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-Bq57TBkX.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-B40VBKZw.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-CtTBpQ-y.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -43,10 +43,20 @@
             </div>
         </div>
         <div class="right-stats">
-            <div class="ui-item" id="lives-display"></div>
-            <div class="ui-item" id="weapon-tier-display"></div>
             <div class="ui-item" id="energy-display">
                 <div id="energy-bar-container"><div id="energy-bar"></div></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ui-panel-bottom">
+        <div class="left-stats">
+            <div class="ui-item" id="lives-display"></div>
+            <div class="ui-item" id="weapon-tier-display"></div>
+        </div>
+        <div class="right-stats">
+            <div class="ui-item">
+                <span data-translate-key="level">Level</span>: <span id="level">1</span>
             </div>
         </div>
     </div>
@@ -59,7 +69,7 @@
     </div>
     
     <div id="level-display-container">
-        <span data-translate-key="level">Level</span>: <span id="level">1</span>
+        <!-- Dieser Container wird nicht mehr verwendet, aber aus Kompatibilitätsgründen beibehalten -->
     </div>
 
     <div id="weapon-status"></div>
@@ -77,6 +87,7 @@
         <div class="menu-content">
             <div id="spiel-view" class="tab-pane active">
                  <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
+                 <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
                  <button class="menu-button" id="restart-button" data-translate-key="btn_restart">Neu starten</button>
                  <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
                  <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
@@ -137,6 +148,28 @@
         </div>
     </div>
 
+    <!-- KORREKTER SHOP-CONTAINER -->
+    <div id="shop-container">
+        <div class="menu">
+            <!-- Header mit Titel und Münzanzeige -->
+            <div class="menu-header">
+                <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
+                <div id="shop-coin-display">
+                    <img id="shop-coin-icon" src="" alt="Coins"/>
+                    <span id="shop-coins">0</span>
+                </div>
+            </div>
+            
+            <!-- Container für die Shop-Items -->
+            <div class="info-panel" id="shop-items-container">
+                <!-- Shop-Inhalte werden hier dynamisch per JavaScript eingefügt -->
+            </div>
+
+            <!-- Der entscheidende "Zurück"-Button -->
+            <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
+        </div>
+    </div>
+
     <!-- Container für den "Goodbye"-Bildschirm (nur für Mobilgeräte) -->
     <div id="exit-screen">
         <div class="menu">
@@ -145,6 +178,7 @@
         </div>
     </div>
 
-</div>
+</div>
+<!-- Das Skript wird als Modul geladen, um 'import' zu ermöglichen -->
 </body>
 </html>
