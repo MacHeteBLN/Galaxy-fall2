@@ -1613,8 +1613,20 @@ class UIManager {
         
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
-        setupButton(document.getElementById('exit-button'), () => { if (this.game.isMobile) { const exitScreen = document.getElementById('exit-screen'); if (exitScreen) { exitScreen.style.display = 'flex'; } this.soundManager.toggleMusic(false); } else { window.close(); } });
-        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('MODE_SELECT'); });
+
+setupButton(document.getElementById('exit-button'), () => { 
+    if (this.game.isMobile) { 
+        const exitScreen = document.getElementById('exit-screen'); 
+        if (exitScreen) { 
+            exitScreen.style.display = 'flex'; 
+            // FIX: Anwenden der Übersetzungen auf den neu sichtbaren Bildschirm.
+            this.localizationManager.applyTranslationsToUI();
+        } 
+        this.soundManager.toggleMusic(false); 
+    } else { 
+        window.close(); 
+    } 
+});        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('MODE_SELECT'); });
         setupButton(document.getElementById('quit-from-gameover-button'), () => { this.game.changeState('MENU'); });
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
 
