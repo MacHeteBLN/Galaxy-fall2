@@ -806,8 +806,8 @@ canvas {
 
 @media (hover: none) and (pointer: coarse) {
     #mobile-pause-button {
-    display: block !important;
-}
+        display: block;
+    }
     .slot-key {
         display: none;
     }
