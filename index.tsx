@@ -2158,6 +2158,8 @@ class Game {
                     this.entities = [this.player];
                 } else {
                     this.level++;
+                    // *** KORREKTUR: Die Filterung wird nur hier ausgeführt ***
+                    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 }
                 
                 // GEÄNDERT: Sieg-Bedingung hängt vom Spielmodus ab
@@ -2166,7 +2168,6 @@ class Game {
                     return;
                 }
 
-                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 this.isBossActive = false;
                 this.isFormationActive = false;
                 this.isMultiFormationWaveActive = false;
