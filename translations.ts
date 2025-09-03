@@ -824,4 +824,3 @@ export const translations = {
   ja, 
   it
 };
-// --- END OF FILE translations.ts ---
