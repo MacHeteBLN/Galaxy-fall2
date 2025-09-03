@@ -2107,7 +2107,17 @@ class Game {
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
 
-        // GEÄNDERT: Alle UI-Overlays ausblenden
+        // *** KORREKTUR: Sichtbarkeit des mobilen Pause-Buttons steuern ***
+        const mobilePauseButton = document.getElementById('mobile-pause-button')!;
+        if (this.isMobile) {
+            if (newState === 'PLAYING') {
+                mobilePauseButton.style.display = 'block';
+            } else {
+                mobilePauseButton.style.display = 'none';
+            }
+        }
+        // ***************************************************************
+
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
         this.uiManager.toggleGameOverScreen(false);
@@ -2119,8 +2129,10 @@ class Game {
         } else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') {
             this.isPaused = false;
         }
+
         const oldState = this.gameState;
         this.gameState = newState;
+
         switch (newState) {
             case 'INTRO':
                 this.introAnimationTimer = 0;
@@ -2131,7 +2143,7 @@ class Game {
                 this.uiManager.toggleMainMenu(true);
                 this.uiManager.soundManager.setTrack('menu');
                 break;
-            case 'MODE_SELECT': // NEUER STATE
+            case 'MODE_SELECT':
                 this.uiManager.toggleModeSelectScreen(true);
                 break;
             case 'PAUSED':
@@ -2139,30 +2151,34 @@ class Game {
                 this.uiManager.togglePauseMenu(true);
                 break;
             case 'PLAYING':
-                if (this.isBossActive) {
-                    this.uiManager.soundManager.setTrack('boss');
-                } else {
-                    this.uiManager.soundManager.setTrack('normal');
+                if (oldState === 'PAUSED') {
+                    // Nur die Musik wieder aufnehmen, wenn wir aus der Pause kommen
+                    if (this.isBossActive) {
+                        this.uiManager.soundManager.setTrack('boss');
+                    } else {
+                        this.uiManager.soundManager.setTrack('normal');
+                    }
                 }
                 break;
             case 'LEVEL_START':
-                if (forceReset) {
-                    this.player = null;
-                    this.level = 0;
-                }
-                if (!this.player || !this.player.isAlive()) {
+                // *** KORREKTUR: Logik für Neustart/nächstes Level komplett überarbeitet ***
+                const isNewGame = forceReset || !this.player || !this.player.isAlive();
+
+                if (isNewGame) {
+                    // Dies ist ein komplett neues Spiel
                     this.level = 1;
                     this.score = 0;
+                    this.entities = []; // Liste komplett leeren
                     const initialStats = this.shopManager.getInitialPlayerStats();
                     this.player = new Player(this, initialStats);
-                    this.entities = [this.player];
+                    this.addEntity(this.player);
                 } else {
+                    // Dies ist der Übergang zum nächsten Level
                     this.level++;
-                    // *** KORREKTUR: Die Filterung wird nur hier ausgeführt ***
+                    // Alte Gegner etc. entfernen, aber Spieler und Powerups behalten
                     this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 }
-                
-                // GEÄNDERT: Sieg-Bedingung hängt vom Spielmodus ab
+
                 if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
                     this.changeState('WIN');
                     return;
@@ -2173,6 +2189,7 @@ class Game {
                 this.isMultiFormationWaveActive = false;
                 this.activeFormationEnemies = [];
                 this.scoreEarnedThisLevel = 0;
+                
                 this.configureLevel();
                 this.changeState('PLAYING_TRANSITION');
                 break;
