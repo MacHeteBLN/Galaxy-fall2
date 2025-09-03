@@ -1,3 +1,5 @@
+// --- START OF FILE translations.ts ---
+
 const en = {
   lang_native_name: 'English',
   score: 'Score', level: 'Level', lives: 'Lives', highscore: 'Highscore',
@@ -128,6 +130,8 @@ const en = {
   intro_prompt: "Press ENTER to Begin",
   intro_prompt_mobile: "Tap to Start Game",
   lang_select_title: "SELECT LANGUAGE",
+  exit_title: "See You Soon!",
+  exit_message: "You can now safely close this tab.",
   w_tier: "W-Tier", off: "OFF", low: "LOW", high: "HIGH", on: "ON",
   buff_rf: "RF", buff_sideshots: "W<>", buff_orbital: "O",
 };
@@ -262,6 +266,8 @@ const de = {
   intro_prompt: "ENTER drücken zum Starten",
   intro_prompt_mobile: "Tippen zum Starten",
   lang_select_title: "SPRACHE WÄHLEN",
+  exit_title: "Bis bald!",
+  exit_message: "Du kannst diesen Tab jetzt sicher schließen.",
   w_tier: "W-Stufe", off: "AUS", low: "NIEDRIG", high: "HOCH", on: "AN",
   buff_rf: "SF", buff_sideshots: "S<>", buff_orbital: "O",
 };
@@ -396,6 +402,8 @@ const es = {
   intro_prompt: "Presiona ENTER para Empezar",
   intro_prompt_mobile: "Toca para Empezar",
   lang_select_title: "SELECCIONAR IDIOMA",
+  exit_title: "¡Hasta pronto!",
+  exit_message: "Ahora puedes cerrar esta pestaña de forma segura.",
   w_tier: "N-Arma", off: "NO", low: "BAJO", high: "ALTO", on: "SÍ",
   buff_rf: "FR", buff_sideshots: "D<>", buff_orbital: "O",
 };
@@ -530,6 +538,8 @@ const zh = {
     intro_prompt: "按 ENTER 开始",
     intro_prompt_mobile: "点击开始",
     lang_select_title: "选择语言",
+    exit_title: "再会！",
+    exit_message: "您现在可以安全地关闭此标签页了。",
     w_tier: "武器等级", off: "关", low: "低", high: "高", on: "开",
     buff_rf: "速射", buff_sideshots: "侧射", buff_orbital: "浮游",
 };
@@ -664,6 +674,8 @@ const ja = {
   intro_prompt: "ENTERキーで開始",
   intro_prompt_mobile: "タップして開始",
   lang_select_title: "言語を選択",
+  exit_title: "またね！",
+  exit_message: "このタブは安全に閉じることができます。",
   w_tier: "Wティア", off: "オフ", low: "低", high: "高", on: "オン",
   buff_rf: "連射", buff_sideshots: "横", buff_orbital: "ド",
 };
@@ -798,6 +810,8 @@ const it = {
   intro_prompt: "Premi INVIO per Iniziare",
   intro_prompt_mobile: "Tocca per Iniziare",
   lang_select_title: "SELEZIONA LINGUA",
+  exit_title: "A presto!",
+  exit_message: "Ora puoi chiudere questa scheda in sicurezza.",
   w_tier: "L-Arma", off: "NO", low: "BASSO", high: "ALTO", on: "SÌ",
   buff_rf: "FR", buff_sideshots: "CL<>", buff_orbital: "O",
 };
@@ -810,3 +824,4 @@ export const translations = {
   ja, 
   it
 };
+// --- END OF FILE translations.ts ---
