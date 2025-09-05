@@ -71,17 +71,116 @@ interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; 
 interface IInventoryItem { type: string; count: number; }
 interface IShopItem {
     id: string;
-    type: 'PERMANENT' | 'CONSUMABLE';
+    type: 'PERMANENT' | 'CONSUMABLE' | 'PI_BUNDLE'; // Erweitert
     nameKey: string;
     descKey: string;
     iconSrc: string;
-    maxLevel: number;
-    cost: number[]; // Array für Kosten pro Level
+    maxLevel?: number; // Optional für Bundles
+    cost?: number[]; // Optional für Bundles
+    pi_cost?: number; // NEU
+    coin_reward?: number; // NEU
     applyEffect?: (game: Game, level: number) => void;
 }
 
 interface IPlayerUpgrades {
     [key: string]: number; // Map von item.id zu Level
+}
+
+// --- NEU: Pi Manager Klasse ---
+class PiManager {
+    private game: Game;
+    public isAuthenticated: boolean = false;
+    public username: string = '';
+    public uid: string = '';
+    private Pi: any;
+
+    constructor() {
+        // Sicherstellen, dass window.Pi existiert
+        this.Pi = (window as any).Pi;
+        if (!this.Pi) {
+            console.error("Pi SDK not found!");
+        }
+    }
+    
+    public setGame(game: Game) {
+        this.game = game;
+    }
+
+    public async authenticate() {
+        if (!this.Pi) return;
+        console.log("Starting Pi authentication...");
+        try {
+            const scopes = ['username', 'payments'];
+            const authResult = await this.Pi.authenticate(scopes, this.onIncompletePaymentFound.bind(this));
+            this.isAuthenticated = true;
+            this.username = authResult.user.username;
+            this.uid = authResult.user.uid;
+            console.log(`Successfully authenticated as ${this.username} (UID: ${this.uid})`);
+            
+            // UI nach erfolgreicher Authentifizierung aktualisieren
+            this.game.uiManager.renderShop();
+
+        } catch (err) {
+            console.error("Pi authentication failed:", err);
+            alert("Pi-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.");
+        }
+    }
+
+    private onIncompletePaymentFound(payment: any) {
+        console.warn("Incomplete payment found:", payment);
+        // Hier könnte Logik implementiert werden, um die Zahlung abzuschließen oder abzubrechen.
+        // Für dieses Beispiel wird sie nur in der Konsole protokolliert.
+    }
+    
+    public createPayment(bundle: IShopItem) {
+        if (!this.Pi || !this.isAuthenticated || !bundle.pi_cost || !bundle.coin_reward) {
+            console.error("Cannot create payment. Not authenticated or bundle is invalid.");
+            return;
+        }
+
+        const paymentData = {
+            amount: bundle.pi_cost,
+            memo: `Kauf von ${bundle.coin_reward} In-Game Münzen`,
+            metadata: { 
+                bundleId: bundle.id,
+                coins: bundle.coin_reward 
+            },
+        };
+
+        const callbacks = {
+            onReadyForServerApproval: (paymentId: string) => {
+                console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
+                console.log("--> HINWEIS: An dieser Stelle würde der Client die 'paymentId' an den eigenen Server senden.");
+                console.log("--> Der Server würde dann mit seinem API-Schlüssel den Pi-API-Endpunkt '/v2/payments/" + paymentId + "/approve' aufrufen.");
+                // Da wir keinen Server haben, simulieren wir hier nichts weiter. Der Prozess wartet auf die Aktion des Nutzers.
+            },
+            onReadyForServerCompletion: (paymentId: string, txid: string) => {
+                console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
+                console.log("--> HINWEIS: An dieser Stelle würde der Client 'paymentId' und 'txid' an den eigenen Server senden.");
+                console.log("--> Der Server würde den Pi-API-Endpunkt '/v2/payments/" + paymentId + "/complete' aufrufen, die Transaktion verifizieren und dann die In-Game-Münzen in der Datenbank des Nutzers gutschreiben.");
+
+                // In dieser reinen Client-Side-Demo schreiben wir die Münzen direkt gut.
+                // ACHTUNG: Dies ist in einer echten Anwendung UNSICHER!
+                this.game.awardPiCoinBundle(bundle);
+                alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
+            },
+            onCancel: (paymentId: string) => {
+                console.log(`[CLIENT-SIDE] Payment cancelled: ${paymentId}`);
+                alert("Zahlungsvorgang abgebrochen.");
+            },
+            onError: (error: any, payment: any) => {
+                console.error("[CLIENT-SIDE] Payment error:", error);
+                if (payment) console.error("--> Payment details:", payment);
+                alert("Ein Fehler ist während der Zahlung aufgetreten.");
+            },
+        };
+
+        try {
+            this.Pi.createPayment(paymentData, callbacks);
+        } catch(err) {
+            console.error("Error calling createPayment:", err);
+        }
+    }
 }
 
 
@@ -935,6 +1034,19 @@ class ShopManager {
         this.playerUpgrades = this.loadUpgrades();
 
         this.shopItems = [
+            // --- PI COIN BUNDLES (NEU) ---
+            {
+                id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc',
+                iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000
+            },
+            {
+                id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc',
+                iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500
+            },
+            {
+                id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc',
+                iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000
+            },
             // --- PERMANENTE UPGRADES ---
             {
                 id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
@@ -969,6 +1081,7 @@ class ShopManager {
     }
 
     public getCost(item: IShopItem): number | null {
+        if (item.type !== 'PERMANENT' || !item.maxLevel || !item.cost) return null;
         const currentLevel = this.getUpgradeLevel(item.id);
         if (currentLevel >= item.maxLevel) return null;
         return item.cost[currentLevel]!;
@@ -977,6 +1090,12 @@ class ShopManager {
     public purchaseItem(itemId: string): boolean {
         const item = this.shopItems.find(i => i.id === itemId);
         if (!item) return false;
+
+        // NEUE Logik für Pi Bundles
+        if (item.type === 'PI_BUNDLE') {
+            this.game.piManager.createPayment(item);
+            return true; // Der Kaufprozess ist asynchron, wir geben hier true zurück.
+        }
 
         const cost = this.getCost(item);
         if (cost === null || this.game.coins < cost) {
@@ -1503,76 +1622,114 @@ class UIManager {
 
     public renderShop(): void {
         const shopManager = this.game.shopManager;
+        const piManager = this.game.piManager;
         const t = (key: string) => this.localizationManager.translate(key);
-        
+    
         this.shopCoinsEl.textContent = this.game.coins.toString();
         this.shopItemsContainerEl.innerHTML = '';
-
+    
+        // Update Pi-Anzeige
+        const piUserDisplay = document.getElementById('pi-user-display')!;
+        if (piManager.isAuthenticated) {
+            document.getElementById('pi-username')!.textContent = piManager.username;
+            piUserDisplay.style.display = 'block';
+        } else {
+            piUserDisplay.style.display = 'none';
+        }
+    
         const categories: { [key: string]: IShopItem[] } = {
+            'PI_BUNDLE': shopManager.shopItems.filter(i => i.type === 'PI_BUNDLE'),
             'PERMANENT': shopManager.shopItems.filter(i => i.type === 'PERMANENT'),
             'CONSUMABLE': shopManager.shopItems.filter(i => i.type === 'CONSUMABLE')
         };
-
+    
+        // Pi-Login-Button, falls nicht verbunden
+        if (!piManager.isAuthenticated) {
+            const connectButton = document.createElement('button');
+            connectButton.id = 'pi-connect-btn';
+            connectButton.className = 'pi-connect-button';
+            connectButton.textContent = "Mit Pi Wallet verbinden";
+            connectButton.onclick = () => piManager.authenticate();
+            this.shopItemsContainerEl.appendChild(connectButton);
+        }
+    
         for (const categoryKey in categories) {
             const items = categories[categoryKey]!;
             if (items.length === 0) continue;
-
+    
             const categoryTitle = document.createElement('h2');
             categoryTitle.className = 'shop-category';
-            categoryTitle.textContent = t(`shop_category_${categoryKey.toLowerCase()}`);
+            const categoryTranslationKey = categoryKey === 'PI_BUNDLE' ? 'shop_category_pi_bundles' : `shop_category_${categoryKey.toLowerCase()}`;
+            categoryTitle.textContent = t(categoryTranslationKey);
             this.shopItemsContainerEl.appendChild(categoryTitle);
-
+    
             items.forEach(item => {
-                const currentLevel = shopManager.getUpgradeLevel(item.id);
-                const cost = shopManager.getCost(item);
-                const isMaxed = currentLevel >= item.maxLevel;
-                const canAfford = cost !== null && this.game.coins >= cost;
-
                 const itemEl = document.createElement('div');
                 itemEl.className = 'shop-item';
-                
-                let buttonText = '';
-                let buttonClass = '';
-
-                if (isMaxed) {
-                    buttonText = t('btn_max_level');
-                    buttonClass = 'maxed';
-                } else {
-                    buttonText = t('btn_buy');
+                if (item.type === 'PI_BUNDLE') {
+                    itemEl.classList.add('pi-bundle');
                 }
-                
+    
+                let buttonHTML = '';
+                let buttonDisabled = false;
+    
+                if (item.type === 'PI_BUNDLE') {
+                    buttonHTML = `
+                        <button class="shop-buy-button pi-purchase" id="buy-${item.id}">
+                            <div class="shop-item-cost">
+                                <span>${t('btn_buy')}</span>
+                                <span class="pi-symbol">π</span>
+                                <span>${item.pi_cost?.toFixed(2)}</span>
+                            </div>
+                        </button>`;
+                    buttonDisabled = !piManager.isAuthenticated;
+                } else if (item.type === 'PERMANENT') {
+                    const currentLevel = shopManager.getUpgradeLevel(item.id);
+                    const cost = shopManager.getCost(item);
+                    const isMaxed = currentLevel >= item.maxLevel!;
+                    const canAfford = cost !== null && this.game.coins >= cost;
+    
+                    if (isMaxed) {
+                        buttonHTML = `<button class="shop-buy-button maxed" disabled><span>${t('btn_max_level')}</span></button>`;
+                        buttonDisabled = true;
+                    } else {
+                        buttonHTML = `
+                            <button class="shop-buy-button" id="buy-${item.id}">
+                                <div class="shop-item-cost">
+                                    <span>${t('btn_buy')}</span>
+                                    <img src="${piCoin2ImgSrc}" alt="Coin"/>
+                                    <span>${cost}</span>
+                                </div>
+                            </button>`;
+                        buttonDisabled = !canAfford;
+                    }
+                }
+    
                 itemEl.innerHTML = `
                     <img src="${item.iconSrc}" alt="${t(item.nameKey)}" class="shop-item-icon">
                     <div class="shop-item-details">
                         <h3 class="shop-item-title">${t(item.nameKey)}</h3>
                         <p class="shop-item-desc">${t(item.descKey)}</p>
-                        <div class="shop-item-level">${t('level')}: ${currentLevel} / ${item.maxLevel}</div>
+                        ${item.maxLevel ? `<div class="shop-item-level">${t('level')}: ${shopManager.getUpgradeLevel(item.id)} / ${item.maxLevel}</div>` : ''}
                     </div>
                     <div class="shop-item-purchase">
-                        <button class="shop-buy-button ${buttonClass}" id="buy-${item.id}">
-                            ${isMaxed ? `<span>${buttonText}</span>` : `
-                            <div class="shop-item-cost">
-                                <span>${buttonText}</span>
-                                <img src="${piCoin2ImgSrc}" alt="Coin"/>
-                                <span>${cost}</span>
-                            </div>
-                            `}
-                        </button>
+                        ${buttonHTML}
                     </div>
                 `;
-
+    
                 this.shopItemsContainerEl.appendChild(itemEl);
-
-                const buyButton = document.getElementById(`buy-${item.id}`)! as HTMLButtonElement;
-                if (isMaxed || !canAfford) {
-                    buyButton.disabled = true;
+    
+                const buyButton = document.getElementById(`buy-${item.id}`) as HTMLButtonElement;
+                if (buyButton) {
+                    buyButton.disabled = buttonDisabled;
+                    buyButton.addEventListener('click', () => {
+                        shopManager.purchaseItem(item.id);
+                        // Neu rendern, um Button-Status zu aktualisieren (z.B. nach Kauf)
+                        if (item.type === 'PERMANENT') {
+                            this.renderShop();
+                        }
+                    });
                 }
-
-                buyButton.addEventListener('click', () => {
-                    if (shopManager.purchaseItem(item.id)) {
-                        this.renderShop();
-                    }
-                });
             });
         }
     }
@@ -1863,7 +2020,7 @@ const LEVELS: ILevelDefinition[] = [
 
 
 class Game {
-    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     
     public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN'; // NEU: Spielmodus speichern
     
@@ -1897,6 +2054,8 @@ class Game {
         
         this.shopManager = new ShopManager(this);
         this.uiManager = new UIManager(this, ui);
+        this.piManager = new PiManager();
+        this.piManager.setGame(this); // Wichtig: Referenz übergeben
         
         this.loadGameData();
         
@@ -1924,6 +2083,15 @@ class Game {
             const data = JSON.parse(saved);
             this.coins = data.coins || 0;
             this.highscore = data.highscore || 0;
+        }
+    }
+    
+    // NEUE Methode zur Gutschrift gekaufter Münzen
+    public awardPiCoinBundle(bundle: IShopItem) {
+        if (bundle.coin_reward) {
+            this.coins += bundle.coin_reward;
+            this.saveGameData();
+            this.uiManager.renderShop(); // Shop-UI aktualisieren (Münzanzeige)
         }
     }
 

@@ -170,6 +170,10 @@
                     <img id="shop-coin-icon" src="" alt="Coins"/>
                     <span id="shop-coins">0</span>
                 </div>
+                <!-- NEU: Pi-Benutzerinfo-Anzeige -->
+                <div id="pi-user-display" style="display: none;">
+                    Verbunden als: <span id="pi-username"></span>
+                </div>
             </div>
             
             <!-- Container für die Shop-Items -->
@@ -191,6 +195,14 @@
     </div>
 
 </div>
+
+<!-- HINZUGEFÜGT: Pi Network SDK Integration -->
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>
+    // Initialisiert das Pi SDK im Sandbox-Modus für die Entwicklung.
+    Pi.init({ version: "2.0", sandbox: true });
+</script>
+
 <!-- Das Skript wird als Modul geladen, um 'import' zu ermöglichen -->
 <script type="module" src="./index.js"></script>
 </body>

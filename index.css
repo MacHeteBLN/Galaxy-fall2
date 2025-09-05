@@ -7,6 +7,9 @@
     --text-color: #fff;
     --border-color: var(--cyan-glow);
     --menu-bg: rgba(0, 10, 20, 0.95);
+    /* NEU: Pi-Farben */
+    --pi-purple: #593183;
+    --pi-yellow: #F8B230;
 }
 
 * {
@@ -811,4 +814,58 @@ canvas {
     .slot-key {
         display: none;
     }
+}
+
+
+/* =================================== */
+/*        NEU: PI-STYLING              */
+/* =================================== */
+
+#pi-user-display {
+    font-size: 12px;
+    color: var(--pi-yellow);
+    margin-top: 10px;
+    text-align: center;
+}
+
+#pi-user-display #pi-username {
+    font-weight: bold;
+}
+
+.pi-connect-button {
+    background-color: var(--pi-purple);
+    border: 2px solid var(--pi-yellow);
+    color: var(--text-color);
+    padding: 15px 25px;
+    font-family: var(--main-font);
+    font-size: 18px;
+    cursor: pointer;
+    margin: 20px;
+    width: 80%;
+    max-width: 400px;
+    transition: background-color 0.3s;
+}
+
+.pi-connect-button:hover {
+    background-color: #6a419a;
+}
+
+.shop-buy-button.pi-purchase {
+    border-color: var(--pi-yellow);
+    color: var(--pi-yellow);
+}
+
+.shop-buy-button.pi-purchase:hover:not(:disabled) {
+    background: var(--pi-yellow);
+    color: var(--pi-purple);
+}
+
+.shop-item.pi-bundle {
+    border-left: 5px solid var(--pi-purple);
+}
+
+.shop-item-cost .pi-symbol {
+    font-family: sans-serif; /* Für ein besseres Pi-Symbol */
+    font-weight: bold;
+    color: var(--pi-yellow);
 }
