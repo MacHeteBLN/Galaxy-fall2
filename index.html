@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-hC_P1Vuu.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-DC6yWrqp.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-BkYK-21Q.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-BM7qi4_N.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -171,6 +171,10 @@
                     <img id="shop-coin-icon" src="" alt="Coins"/>
                     <span id="shop-coins">0</span>
                 </div>
+                <!-- NEU: Pi-Benutzerinfo-Anzeige -->
+                <div id="pi-user-display" style="display: none;">
+                    Verbunden als: <span id="pi-username"></span>
+                </div>
             </div>
             
             <!-- Container für die Shop-Items -->
@@ -192,6 +196,14 @@
     </div>
 
 </div>
+
+<!-- HINZUGEFÜGT: Pi Network SDK Integration -->
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>
+    // Initialisiert das Pi SDK im Sandbox-Modus für die Entwicklung.
+    Pi.init({ version: "2.0", sandbox: true });
+</script>
+
 <!-- Das Skript wird als Modul geladen, um 'import' zu ermöglichen -->
 </body>
 </html>
