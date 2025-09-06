@@ -1,10 +1,12 @@
+
 import { translations } from './translations';
 
-// --- SECTION 1: ASSET-IMPORTE ---
 import playerImgSrc1 from './assets/images/player_tier1.png';
 import playerImgSrc2 from './assets/images/player_tier2.png';
 import playerImgSrc3 from './assets/images/player_tier3.png';
 import playerImgSrc4 from './assets/images/player_tier4.png';
+import playerImgSrcVoid from './assets/images/player_skin_void.png';
+import playerImgSrcGold from './assets/images/player_skin_gold.png';
 import gruntImgSrc from './assets/images/enemy_grunt.png';
 import tankImgSrc from './assets/images/enemy_tank.png';
 import weaverImgSrc from './assets/images/enemy_weaver.png';
@@ -27,6 +29,17 @@ import powerupOrbitalDroneSrc from './assets/images/powerups/powerup_orbital_dro
 import powerupNukeSrc from './assets/images/powerups/powerup_nuke.png';
 import powerupBlackHoleSrc from './assets/images/powerups/powerup_black_hole.png';
 import powerupScoreBoostSrc from './assets/images/powerups/powerup_score_boost.png';
+import iconCoinMagnetSrc from './assets/images/icons/icon_coin_magnet.png';
+import iconReviveChanceSrc from './assets/images/icons/icon_revive_chance.png';
+import iconInventorySizeSrc from './assets/images/icons/icon_inventory_size.png';
+import iconBossSlayerSrc from './assets/images/icons/icon_boss_slayer.png';
+import iconWeaponPrestigeSrc from './assets/images/icons/icon_weapon_prestige.png';
+import iconTrailRainbowSrc from './assets/images/icons/icon_trail_rainbow.png';
+// --- NEU: Bild-Importe für Phönix-Kerne ---
+import phoenixCoreBlueSrc from './assets/images/crystal_blue.png';
+import phoenixCoreYellowSrc from './assets/images/crystal_yellow.png';
+import phoenixCorePurpleSrc from './assets/images/crystal_purple.png';
+
 import orbitalDrone1ImgSrc from './assets/images/orbital_drone_1.png';
 import orbitalDrone2ImgSrc from './assets/images/orbital_drone_2.png';
 import orbitalDrone3ImgSrc from './assets/images/orbital_drone_3.png';
@@ -48,10 +61,14 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
+const API_BASE_URL = 'https://api.galaxy-fall-pi.com';
+
 
 // --- SECTION 2: BILD-INITIALISIERUNG ---
 const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
 const playerImg1 = createImage(playerImgSrc1), playerImg2 = createImage(playerImgSrc2), playerImg3 = createImage(playerImgSrc3), playerImg4 = createImage(playerImgSrc4);
+const playerImgVoid = createImage(playerImgSrcVoid);
+const playerImgGold = createImage(playerImgSrcGold);
 const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), teleporterImg = createImage(teleporterImgSrc);
 const bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
 const bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
@@ -61,6 +78,22 @@ const orbitalDroneImages = [createImage(orbitalDrone1ImgSrc), createImage(orbita
 const piCoinImg = createImage(piCoinImgSrc);
 const powerUpImages: { [key: string]: HTMLImageElement } = { 'WEAPON_UP': createImage(powerupWeaponUpSrc), 'RAPID_FIRE': createImage(powerupRapidFireSrc), 'SIDE_SHOTS': createImage(powerupSideShotsSrc), 'LASER_BEAM': createImage(powerupLaserBeamSrc), 'HOMING_MISSILES': createImage(powerupHomingMissilesSrc), 'SHIELD': createImage(powerupShieldSrc), 'REPAIR_KIT': createImage(powerupRepairKitSrc), 'EXTRA_LIFE': createImage(powerupExtraLifeSrc), 'GHOST_PROTOCOL': createImage(powerupGhostProtocolSrc), 'ORBITAL_DRONE': createImage(powerupOrbitalDroneSrc), 'NUKE': createImage(powerupNukeSrc), 'BLACK_HOLE': createImage(powerupBlackHoleSrc), 'SCORE_BOOST': createImage(powerupScoreBoostSrc), };
 const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWeaponUpSrc, 'RAPID_FIRE': powerupRapidFireSrc, 'SIDE_SHOTS': powerupSideShotsSrc, 'LASER_BEAM': powerupLaserBeamSrc, 'HOMING_MISSILES': powerupHomingMissilesSrc, 'SHIELD': powerupShieldSrc, 'REPAIR_KIT': powerupRepairKitSrc, 'EXTRA_LIFE': powerupExtraLifeSrc, 'GHOST_PROTOCOL': powerupGhostProtocolSrc, 'ORBITAL_DRONE': powerupOrbitalDroneSrc, 'NUKE': powerupNukeSrc, 'BLACK_HOLE': powerupBlackHoleSrc, 'SCORE_BOOST': powerupScoreBoostSrc, };
+// --- NEU: Initialisierung der Phönix-Kern-Bilder ---
+const phoenixCoreImages: { [key: string]: HTMLImageElement } = {
+    'BLUE': createImage(phoenixCoreBlueSrc),
+    'YELLOW': createImage(phoenixCoreYellowSrc),
+    'PURPLE': createImage(phoenixCorePurpleSrc),
+};
+
+const playerImageMap: { [key: string]: HTMLImageElement } = {
+    'skin_default': playerImg1,
+    'skin_sentinel': playerImg2,
+    'skin_renegade': playerImg3,
+    'skin_avenger': playerImg4,
+    'skin_void': playerImgVoid,
+    'skin_gold': playerImgGold,
+};
+
 
 // --- SECTION 3: TYP-DEFINITIONEN & LEVEL DEFINITION---
 interface IKeyMap { [key: string]: boolean; }
@@ -69,24 +102,43 @@ interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[
 interface IUIElements { score: HTMLElement; coins: HTMLElement; level: HTMLElement; highscore: HTMLElement; specialInventory: HTMLElement; ultraInventory: HTMLElement; livesDisplay: HTMLElement; weaponStatus: HTMLElement; energyBar: HTMLElement; weaponTierDisplay: HTMLElement; levelDisplay: HTMLElement; }
 interface IParticle { pos: Vector2D; vel: Vector2D; size: number; life: number; color: string; }
 interface IInventoryItem { type: string; count: number; }
+
 interface IShopItem {
     id: string;
-    type: 'PERMANENT' | 'CONSUMABLE' | 'PI_BUNDLE'; // Erweitert
+    type: 'PERMANENT' | 'CONSUMABLE' | 'COSMETIC' | 'PI_BUNDLE' | 'ULTIMATE';
     nameKey: string;
     descKey: string;
     iconSrc: string;
-    maxLevel?: number; // Optional für Bundles
-    cost?: number[]; // Optional für Bundles
-    pi_cost?: number; // NEU
-    coin_reward?: number; // NEU
-    applyEffect?: (game: Game, level: number) => void;
+    maxLevel?: number;
+    cost?: number[];      
+    pi_cost?: number;     
+    coin_reward?: number; 
+    applyEffect?: (game: Game) => void; 
+    cosmeticType?: 'player_skin' | 'projectile_style' | 'engine_trail'; 
 }
 
 interface IPlayerUpgrades {
-    [key: string]: number; // Map von item.id zu Level
+    [key: string]: number; 
 }
 
-// --- NEU: Pi Manager Klasse ---
+interface IPlayerCosmetics {
+    unlocked_skins: string[];
+    unlocked_projectiles: string[];
+    unlocked_trails: string[]; 
+    equipped_skin: string;
+    equipped_projectile: string;
+    equipped_trail: string; 
+}
+
+interface ILeaderboardEntry {
+    rank: number;
+    username: string;
+    score: number;
+    waves: number;
+}
+
+
+// --- Pi Manager Klasse ---
 class PiManager {
     private game: Game;
     public isAuthenticated: boolean = false;
@@ -95,7 +147,6 @@ class PiManager {
     private Pi: any;
 
     constructor() {
-        // Sicherstellen, dass window.Pi existiert
         this.Pi = (window as any).Pi;
         if (!this.Pi) {
             console.error("Pi SDK not found!");
@@ -117,7 +168,6 @@ class PiManager {
             this.uid = authResult.user.uid;
             console.log(`Successfully authenticated as ${this.username} (UID: ${this.uid})`);
             
-            // UI nach erfolgreicher Authentifizierung aktualisieren
             this.game.uiManager.renderShop();
 
         } catch (err) {
@@ -128,8 +178,6 @@ class PiManager {
 
     private onIncompletePaymentFound(payment: any) {
         console.warn("Incomplete payment found:", payment);
-        // Hier könnte Logik implementiert werden, um die Zahlung abzuschließen oder abzubrechen.
-        // Für dieses Beispiel wird sie nur in der Konsole protokolliert.
     }
     
     public createPayment(bundle: IShopItem) {
@@ -150,17 +198,9 @@ class PiManager {
         const callbacks = {
             onReadyForServerApproval: (paymentId: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
-                console.log("--> HINWEIS: An dieser Stelle würde der Client die 'paymentId' an den eigenen Server senden.");
-                console.log("--> Der Server würde dann mit seinem API-Schlüssel den Pi-API-Endpunkt '/v2/payments/" + paymentId + "/approve' aufrufen.");
-                // Da wir keinen Server haben, simulieren wir hier nichts weiter. Der Prozess wartet auf die Aktion des Nutzers.
             },
             onReadyForServerCompletion: (paymentId: string, txid: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
-                console.log("--> HINWEIS: An dieser Stelle würde der Client 'paymentId' und 'txid' an den eigenen Server senden.");
-                console.log("--> Der Server würde den Pi-API-Endpunkt '/v2/payments/" + paymentId + "/complete' aufrufen, die Transaktion verifizieren und dann die In-Game-Münzen in der Datenbank des Nutzers gutschreiben.");
-
-                // In dieser reinen Client-Side-Demo schreiben wir die Münzen direkt gut.
-                // ACHTUNG: Dies ist in einer echten Anwendung UNSICHER!
                 this.game.awardPiCoinBundle(bundle);
                 alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
             },
@@ -250,6 +290,121 @@ class TeleportEffect extends Entity {
         ctx.restore();
     }
 }
+// --- NEU: Visueller Effekt für die Wiederbelebung ---
+class ReviveEffect extends Entity {
+    private radius: number = 0;
+    private life: number = 0.8;
+    private initialLife: number = 0.8;
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0);
+        this.family = 'effect';
+        this.type = 'REVIVE_EFFECT';
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.radius += 600 * dt_s;
+        this.life -= dt_s;
+        if (this.life <= 0) this.destroy();
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.globalAlpha = this.life / this.initialLife;
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 8;
+        ctx.shadowColor = '#FFFFFF';
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+// --- NEU: Klasse für die UI-Anzeige der Kristalle ---
+class PhoenixCoreUI extends Entity {
+    private pulseTimer: number = 0;
+
+    constructor(game: Game) {
+        super(game, game.width - 150, 10, 140, 40); // Oben rechts positioniert
+    }
+
+    update(dt: number): void {
+        this.pulseTimer += dt / 1000;
+        this.pos.x = this.game.width - 160; // Position an Bildschirmbreite anpassen
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        if (!this.game.player || this.game.gameState === 'REVIVING') return;
+
+        const crystals = this.game.player.availableReviveCrystals;
+        if (crystals.length === 0) return;
+
+        const scalePulse = 1.0 + Math.sin(this.pulseTimer * 3) * 0.05;
+        const alphaPulse = 0.8 + Math.sin(this.pulseTimer * 3) * 0.2;
+
+        ctx.save();
+        ctx.globalAlpha = alphaPulse;
+
+        crystals.forEach((crystalType, index) => {
+            const img = phoenixCoreImages[crystalType];
+            if (!img) return;
+            const w = 40 * scalePulse;
+            const h = 40 * scalePulse;
+            const x = this.pos.x + (index * 45);
+            const y = this.pos.y;
+            
+            ctx.drawImage(img, x, y, w, h);
+        });
+        
+        ctx.restore();
+    }
+}
+
+// --- NEU: Klasse für die Wiederbelebungs-Animation ---
+class ReviveCrystalAnimation extends Entity {
+    private target: Player;
+    private image: HTMLImageElement;
+    private rotationAngle: number = 0;
+    private rotationSpeed: number = 3; 
+    private speed: number = 800; 
+
+    constructor(game: Game, startX: number, startY: number, target: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE') {
+        super(game, startX, startY, 40, 40);
+        this.family = 'effect';
+        this.target = target;
+        this.image = phoenixCoreImages[crystalType];
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+
+        this.rotationSpeed += 20 * dt_s;
+        this.rotationAngle += this.rotationSpeed * dt_s;
+
+        const targetX = this.target.pos.x + this.target.width / 2;
+        const targetY = this.target.pos.y + this.target.height / 2;
+        const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
+        this.pos.x += Math.cos(angle) * this.speed * dt_s;
+        this.pos.y += Math.sin(angle) * this.speed * dt_s;
+
+        const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y);
+        if (dist < 20) {
+            this.target.finalizeRevive(); 
+            this.destroy();
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(this.rotationAngle);
+        ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
+        ctx.restore();
+    }
+}
 class Coin extends EntityFamily {
     public value: number; public speed: number = 180;
     private image: HTMLImageElement;
@@ -280,7 +435,7 @@ class Coin extends EntityFamily {
             this.game.uiManager.soundManager.play('coinCollect');
             const coinBonus = this.game.shopManager.getUpgradeLevel('coin_value');
             this.game.coins += (1 + coinBonus);
-            this.game.saveGameData(); // Münzenstand speichern
+            this.game.saveGameData(); 
         } 
         this.destroy(); 
     }
@@ -646,7 +801,28 @@ class PowerUpManager {
     onPlayerHit(): void { if (this.weaponTier > 1) { this.weaponTier--; this.setWeaponTierTimer(); } }
     collectSpecial(type: string): void { this.collectToInventory(type, this.specialInventory, 3); }
     collectUltra(type: string): void { this.collectToInventory(type, this.ultraInventory, 2); }
-    private collectToInventory(type: string, inventory: IInventoryItem[], maxSize: number): void { const existing = inventory.find(item => item.type === type); if (existing) existing.count++; else if (inventory.length < maxSize) inventory.push({ type, count: 1 }); this.game.uiManager.soundManager.play('powerup'); }
+
+    private collectToInventory(type: string, inventory: IInventoryItem[], maxSlots: number): void {
+        const stackSizeLevels = [5, 10, 25];
+        let currentMaxStackSize = 5; 
+        if (inventory === this.specialInventory) {
+            const upgradeLevel = this.game.shopManager.getUpgradeLevel('special_stack_size');
+            currentMaxStackSize = stackSizeLevels[upgradeLevel] || 5;
+        }
+
+        const existing = inventory.find(item => item.type === type);
+        
+        if (existing) {
+            if (existing.count < currentMaxStackSize) {
+                existing.count++;
+                this.game.uiManager.soundManager.play('powerup');
+            } 
+        } else if (inventory.length < maxSlots) {
+            inventory.push({ type, count: 1 });
+            this.game.uiManager.soundManager.play('powerup');
+        }
+    }
+
     activateSpecial(slotIndex: number): void {
         const special = this.specialInventory[slotIndex];
         if (!special) return;
@@ -662,6 +838,9 @@ class PowerUpManager {
     }
     activateUltra(slotIndex: number): void { const ultra = this.ultraInventory[slotIndex]; if (!ultra) return; if (this.ultraWeapon) this.deactivate(this.ultraWeapon); this.activate(ultra.type); ultra.count--; if (ultra.count <= 0) this.ultraInventory.splice(slotIndex, 1); }
     activate(type: string, duration?: number): void {
+        const durationUpgradeLevel = this.game.shopManager.getUpgradeLevel('powerup_duration');
+        const durationMultiplier = 1 + (durationUpgradeLevel * 0.1);
+
         const W_ULTRA_DURATIONS: {[key: string]: number} = {'LASER_BEAM': 7750, 'HOMING_MISSILES': 15000};
         const W_TEMP_DURATIONS: {[key: string]: number} = {'SIDE_SHOTS': 15000, 'RAPID_FIRE': 30000};
         const DEFENSE_TYPES = ['SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL'];
@@ -673,12 +852,13 @@ class PowerUpManager {
                 this.player.drones.push(new Drone(this.game, droneTier, this.player.drones.length));
                 this.player.drones.forEach((drone, index) => drone.updateIndex(index));
             }
-            this.timers['ORBITAL_DRONE'] = 30000;
+            this.timers['ORBITAL_DRONE'] = 30000 * durationMultiplier;
         } else if (type === 'WEAPON_UP') {
             if (this.weaponTier < 4) this.weaponTier++;
             this.setWeaponTierTimer();
         } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) {
-            this.timers[type] = duration ?? W_TEMP_DURATIONS[type]!;
+            const baseDuration = duration ?? W_TEMP_DURATIONS[type]!;
+            this.timers[type] = baseDuration * durationMultiplier;
         } else if (Object.keys(W_ULTRA_DURATIONS).includes(type)) {
             this.ultraWeapon = type;
             this.timers[type] = duration ?? W_ULTRA_DURATIONS[type]!;
@@ -686,11 +866,12 @@ class PowerUpManager {
             if (type === 'EXTRA_LIFE') {
                 if (this.player.lives < this.player.maxLives) this.player.lives++;
             } else if (type === 'REPAIR_KIT') {
-                this.player.energy = 100;
+                this.player.energy = this.player.maxEnergy;
             } else if (type === 'SHIELD') {
                 this.timers[type] = Infinity;
             } else {
-                this.timers[type] = duration ?? 15000;
+                const baseGhostDuration = duration ?? 15000;
+                this.timers[type] = duration ? baseGhostDuration : baseGhostDuration * durationMultiplier;
             }
         } else if (SPECIAL_TYPES.includes(type)) {
             if (type === 'NUKE') {
@@ -698,7 +879,7 @@ class PowerUpManager {
                 this.game.addEntity(new NukeEffect(this.game));
                 this.game.uiManager.soundManager.play('nuke');
             } else if (type === 'SCORE_BOOST') {
-                this.timers[type] = 20000;
+                this.timers[type] = 20000 * durationMultiplier;
             }
         }
         this.game.uiManager.soundManager.play('powerup');
@@ -729,24 +910,31 @@ class PowerUpManager {
         const velY = -600;
         const angle15 = 15 * (Math.PI / 180);
 
+        let projectileColor = '#0ff';
+        switch (this.weaponTier) {
+            case 2: projectileColor = '#B10DC9'; break;
+            case 3: projectileColor = '#FFFF00'; break;
+            case 4: projectileColor = '#FF4136'; break;
+        }
+
         switch (this.weaponTier) {
             case 1:
-                this.game.addEntity(new Projectile(this.game, x + w / 2, y));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY, projectileColor));
                 break;
             case 2:
-                this.game.addEntity(new Projectile(this.game, x + w * 0.2, y, 0, -600, '#39FF14'));
-                this.game.addEntity(new Projectile(this.game, x + w * 0.8, y, 0, -600, '#39FF14'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.2, y, 0, velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.8, y, 0, velY, projectileColor));
                 break;
             case 3:
-                this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY, '#FFFF00'));
-                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY, '#FFFF00'));
-                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY, '#FFFF00'));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, 0, velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(-angle15) * Math.abs(velY), Math.cos(-angle15) * velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w / 2, y, Math.sin(angle15) * Math.abs(velY), Math.cos(angle15) * velY, projectileColor));
                 break;
             case 4:
-                this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY, '#FF4136'));
-                this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY, '#FF4136'));
-                this.game.addEntity(new Projectile(this.game, x + w * 0.3, y, 0, -600, '#FF4136'));
-                this.game.addEntity(new Projectile(this.game, x + w * 0.7, y, 0, -600, '#FF4136'));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.1, y, -150, velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.9, y, 150, velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.3, y, 0, velY, projectileColor));
+                this.game.addEntity(new Projectile(this.game, x + w * 0.7, y, 0, velY, projectileColor));
                 break;
         }
 
@@ -763,21 +951,36 @@ class Player extends EntityFamily {
     public lives: number;
     public maxLives: number;
     public energy: number;
+    public maxEnergy: number; 
     public fireCooldown: number = 0;
     public powerUpManager: PowerUpManager; public drones: Drone[] = [];
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
     public isChargingBlackHole: boolean = false;
     public blackHoleChargeSlot: number | null = null;
+    // --- NEU: Eigenschaft für Wiederbelebungs-Kristalle ---
+    public availableReviveCrystals: ('BLUE' | 'YELLOW' | 'PURPLE')[] = [];
     
-    constructor(game: Game, initialStats: { lives: number, energy: number, speed: number }) {
+    constructor(game: Game, initialStats: { lives: number, energy: number, speed: number, maxEnergy: number }) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
         
         this.lives = initialStats.lives;
         this.maxLives = 3 + game.shopManager.getUpgradeLevel('start_lives');
         this.energy = initialStats.energy;
+        this.maxEnergy = initialStats.maxEnergy;
         this.speed = initialStats.speed;
         
         this.powerUpManager = new PowerUpManager(this);
+        // --- NEU: Initialisierung der Kristalle ---
+        this.initializeReviveCrystals();
+    }
+
+    // --- NEU: Methode zur Initialisierung der Kristalle ---
+    public initializeReviveCrystals(): void {
+        this.availableReviveCrystals = [];
+        const reviveLevel = this.game.shopManager.getUpgradeLevel('revive_chance');
+        if (reviveLevel >= 1) this.availableReviveCrystals.push('BLUE');
+        if (reviveLevel >= 2) this.availableReviveCrystals.push('YELLOW');
+        if (reviveLevel >= 3) this.availableReviveCrystals.push('PURPLE');
     }
 
     update(dt: number): void {
@@ -816,15 +1019,10 @@ class Player extends EntityFamily {
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
         ctx.globalAlpha = this.isGhosted() ? 0.5 : 1;
-        const tier = this.powerUpManager.weaponTier;
-        let currentImage: HTMLImageElement;
-        switch (tier) {
-            case 1: currentImage = playerImg1; break;
-            case 2: currentImage = playerImg2; break;
-            case 3: currentImage = playerImg3; break;
-            case 4: currentImage = playerImg4; break;
-            default: currentImage = playerImg1;
-        }
+        
+        const equippedSkinId = this.game.shopManager.playerCosmetics.equipped_skin;
+        const currentImage = playerImageMap[equippedSkinId] || playerImageMap['skin_default'];
+        
         const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2);
         const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2);
 
@@ -847,7 +1045,54 @@ class Player extends EntityFamily {
         ctx.restore();
     }
     shoot(): void { this.powerUpManager.shoot(); }
-    takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = 100; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
+
+    // --- MODIFIZIERT: Komplette takeHit-Methode ---
+    takeHit(damagePercentage: number): void {
+        if (this.isGhosted()) return;
+        if (this.isShielded()) {
+            this.powerUpManager.deactivate('SHIELD');
+            this.game.uiManager.soundManager.play('shieldDown');
+            return;
+        }
+        this.powerUpManager.onPlayerHit();
+        this.energy -= damagePercentage;
+        this.game.uiManager.soundManager.play('playerHit');
+
+        if (this.energy <= 0) {
+            this.lives--;
+
+            if (this.lives <= 0) {
+                // Prüfe, ob Wiederbelebungs-Kristalle vorhanden sind
+                if (this.availableReviveCrystals.length > 0) {
+                    const crystalToUse = this.availableReviveCrystals.shift()!; // Nimmt den ersten verfügbaren Kristall
+                    this.game.startReviveSequence(this, crystalToUse);
+                    return; // Verhindert das "Game Over", die Animation übernimmt
+                }
+
+                // Kein Kristall verfügbar -> Game Over
+                this.destroy();
+                this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2));
+                this.game.uiManager.soundManager.play('playerExplosion');
+            } else {
+                // Normaler Lebensverlust, kein Game Over
+                this.energy = this.maxEnergy;
+                this.pos.x = this.game.width / 2 - this.width / 2;
+                this.pos.y = this.game.height - 80;
+                this.powerUpManager.activate('GHOST_PROTOCOL', 5000);
+            }
+        }
+    }
+
+    // --- NEU: Methode wird von der Animation aufgerufen ---
+    public finalizeRevive(): void {
+        this.lives = 1;
+        this.energy = this.maxEnergy * 0.5; // Stellt 50% Energie wieder her
+        this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
+        this.game.uiManager.soundManager.play('revive');
+        this.powerUpManager.activate('GHOST_PROTOCOL', 3000); // Kurze Unverwundbarkeit
+        this.game.changeState('PLAYING'); // Spiel fortsetzen
+    }
+
     isShielded(): boolean { return this.powerUpManager.isActive('SHIELD'); }
     isGhosted(): boolean { return this.powerUpManager.isActive('GHOST_PROTOCOL'); }
     isScoreBoosted(): boolean { return this.powerUpManager.isActive('SCORE_BOOST'); }
@@ -907,14 +1152,14 @@ class BossSentinelPrime extends Enemy {
     prepareAttack(): void {
         this.attackPattern = Math.floor(Math.random() * 3);
         switch (this.attackPattern) {
-            case 0: // Line Attack
+            case 0: 
                 this.isPreparingLineAttack = true;
                 this.lineAttackPreparationTimer = 1500;
                 break;
-            case 1: // Radial Burst
+            case 1: 
                 this.executeAttack();
                 break;
-            case 2: // Charge
+            case 2: 
                 if (this.game.player) {
                     this.isPreparingCharge = true;
                     this.chargePreparationTimer = 1500;
@@ -926,20 +1171,20 @@ class BossSentinelPrime extends Enemy {
     executeAttack(): void {
         const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
         switch (this.attackPattern) {
-            case 0: // Line Attack
+            case 0: 
                 const attackWidth = w * 0.7;
                 const startX = x + (w * 0.15);
                 for (let i = 0; i < 7; i++) {
                     this.game.addEntity(new EnemyProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
                 }
                 break;
-            case 1: // Radial Burst
+            case 1: 
                 for (let i = 0; i < 12; i++) {
                     const angle = i * Math.PI / 6;
                     this.game.addEntity(new EnemyProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
                 }
                 break;
-            case 2: // Charge
+            case 2: 
                 if (this.game.player) {
                     const chargeSpeed = 600;
                     const targetX = this.game.player.pos.x;
@@ -1027,14 +1272,164 @@ class BossNexusPrime extends Enemy {
 class ShopManager {
     public game: Game;
     public playerUpgrades: IPlayerUpgrades;
+    public playerCosmetics: IPlayerCosmetics;
     public readonly shopItems: IShopItem[];
 
     constructor(game: Game) {
         this.game = game;
         this.playerUpgrades = this.loadUpgrades();
+        this.playerCosmetics = this.loadCosmetics();
 
         this.shopItems = [
-            // --- PI COIN BUNDLES (NEU) ---
+            // ========== KATEGORIE: PERMANENTE UPGRADES ==========
+            {
+                id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
+                iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000]
+            },
+            {
+                id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc',
+                iconSrc: powerupRepairKitSrc, maxLevel: 10, cost: [100, 200, 400, 800, 1600, 3200, 5000, 7500, 10000, 15000]
+            },
+            {
+                id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc',
+                iconSrc: piCoin2ImgSrc, maxLevel: 10, cost: [250, 500, 1250, 3000, 7500, 15000, 25000, 40000, 60000, 90000]
+            },
+            {
+                id: 'powerup_duration', type: 'PERMANENT', nameKey: 'shop_powerup_duration_name', descKey: 'shop_powerup_duration_desc',
+                iconSrc: powerupScoreBoostSrc, maxLevel: 10, cost: [500, 1000, 2000, 4000, 8000, 12000, 18000, 25000, 35000, 50000]
+            },
+            {
+                id: 'luck_chance', type: 'PERMANENT', nameKey: 'shop_luck_chance_name', descKey: 'shop_luck_chance_desc',
+                iconSrc: powerupSideShotsSrc, maxLevel: 5, cost: [1000, 2500, 5000, 10000, 20000]
+            },
+             {
+                id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc',
+                iconSrc: powerupNukeSrc, maxLevel: 1, cost: [25000]
+            },
+            {
+                id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc',
+                iconSrc: iconCoinMagnetSrc, maxLevel: 5, cost: [5000, 10000, 20000, 35000, 50000]
+            },
+            {
+                id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc',
+                iconSrc: iconReviveChanceSrc, maxLevel: 3, cost: [15000, 30000, 75000]
+            },
+            {
+                id: 'special_stack_size', 
+                type: 'PERMANENT', 
+                nameKey: 'shop_special_stack_name',
+                descKey: 'shop_special_stack_desc',
+                iconSrc: iconInventorySizeSrc, 
+                maxLevel: 2, 
+                cost: [20000, 50000]
+            },
+            {
+                id: 'ultimate_drone_mastery', type: 'ULTIMATE', nameKey: 'shop_ultimate_drone_mastery_name', descKey: 'shop_ultimate_drone_mastery_desc',
+                iconSrc: orbitalDrone1ImgSrc, maxLevel: 1, cost: [75000]
+            },
+            {
+                id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc',
+                iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000]
+            },
+            // ========== KATEGORIE: VERBRAUCHSGEGENSTÄNDE ==========
+            {
+                id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc',
+                iconSrc: powerupShieldSrc, cost: [400], 
+                applyEffect: (game) => { game.player?.powerUpManager.activate('SHIELD'); }
+            },
+            {
+                id: 'consume_nuke', type: 'CONSUMABLE', nameKey: 'shop_consume_nuke_name', descKey: 'shop_consume_nuke_desc',
+                iconSrc: powerupNukeSrc, cost: [1000],
+                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('NUKE'); }
+            },
+            {
+                id: 'consume_extralife', type: 'CONSUMABLE', nameKey: 'shop_consume_extralife_name', descKey: 'shop_consume_extralife_desc',
+                iconSrc: powerupExtraLifeSrc, cost: [2500],
+                applyEffect: (game) => { if(game.player && game.player.lives < game.player.maxLives) game.player.lives++; }
+            },
+            {
+                id: 'consume_ghost', type: 'CONSUMABLE', nameKey: 'shop_consume_ghost_name', descKey: 'shop_consume_ghost_desc',
+                iconSrc: powerupGhostProtocolSrc, cost: [1500],
+                applyEffect: (game) => { game.player?.powerUpManager.activate('GHOST_PROTOCOL', 30000); }
+            },
+            {
+                id: 'consume_boss_slayer', type: 'CONSUMABLE', nameKey: 'shop_consume_boss_slayer_name', descKey: 'shop_consume_boss_slayer_desc',
+                iconSrc: iconBossSlayerSrc, cost: [5000],
+                applyEffect: (game) => { /* TODO */ }
+            },
+            {
+                id: 'consume_black_hole', type: 'CONSUMABLE', nameKey: 'shop_consume_black_hole_name', descKey: 'shop_consume_black_hole_desc',
+                iconSrc: powerupBlackHoleSrc, cost: [1200],
+                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('BLACK_HOLE'); }
+            },
+            {
+                id: 'consume_score_boost', type: 'CONSUMABLE', nameKey: 'shop_consume_score_boost_name', descKey: 'shop_consume_score_boost_desc',
+                iconSrc: powerupScoreBoostSrc, cost: [800],
+                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('SCORE_BOOST'); }
+            },
+            {
+                id: 'consume_laser_beam', type: 'CONSUMABLE', nameKey: 'shop_consume_laser_beam_name', descKey: 'shop_consume_laser_beam_desc',
+                iconSrc: powerupLaserBeamSrc, cost: [1750],
+                applyEffect: (game) => { game.player?.powerUpManager.collectUltra('LASER_BEAM'); }
+            },
+            {
+                id: 'consume_homing_missiles', type: 'CONSUMABLE', nameKey: 'shop_consume_homing_missiles_name', descKey: 'shop_consume_homing_missiles_desc',
+                iconSrc: powerupHomingMissilesSrc, cost: [1750],
+                applyEffect: (game) => { game.player?.powerUpManager.collectUltra('HOMING_MISSILES'); }
+            },
+            {
+                id: 'consume_rapid_fire', type: 'CONSUMABLE', nameKey: 'shop_consume_rapid_fire_name', descKey: 'shop_consume_rapid_fire_desc',
+                iconSrc: powerupRapidFireSrc, cost: [1000],
+                applyEffect: (game) => { game.player?.powerUpManager.activate('RAPID_FIRE'); }
+            },
+            {
+                id: 'consume_side_shots', type: 'CONSUMABLE', nameKey: 'shop_consume_side_shots_name', descKey: 'shop_consume_side_shots_desc',
+                iconSrc: powerupSideShotsSrc, cost: [1000],
+                applyEffect: (game) => { game.player?.powerUpManager.activate('SIDE_SHOTS'); }
+            },
+             {
+                id: 'consume_orbital_drone', type: 'CONSUMABLE', nameKey: 'shop_consume_orbital_drone_name', descKey: 'shop_consume_orbital_drone_desc',
+                iconSrc: powerupOrbitalDroneSrc, cost: [2000],
+                applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); }
+            },
+            // ========== KATEGORIE: KOSMETISCHE ITEMS ==========
+            {
+                id: 'skin_sentinel', type: 'COSMETIC', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc',
+                iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_renegade', type: 'COSMETIC', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc',
+                iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin'
+            },
+             {
+                id: 'skin_avenger', type: 'COSMETIC', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc',
+                iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_void', type: 'COSMETIC', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc',
+                iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_gold', type: 'COSMETIC', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc',
+                iconSrc: playerImgSrcGold, cost: [80000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc',
+                iconSrc: powerUpImageSources['WEAPON_UP'], cost: [5000], cosmeticType: 'projectile_style'
+            },
+             {
+                id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc',
+                iconSrc: powerupRapidFireSrc, cost: [7500], cosmeticType: 'projectile_style'
+            },
+            {
+                id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc',
+                iconSrc: powerupBlackHoleSrc, cost: [7500], cosmeticType: 'projectile_style'
+            },
+            {
+                id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc',
+                iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail'
+            },
+            // ========== KATEGORIE: PI MÜNZPAKETE ==========
             {
                 id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc',
                 iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000
@@ -1047,54 +1442,53 @@ class ShopManager {
                 id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc',
                 iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000
             },
-            // --- PERMANENTE UPGRADES ---
             {
-                id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
-                iconSrc: powerupExtraLifeSrc, maxLevel: 2, cost: [150, 300]
+                id: 'pi_bundle_4', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_4_name', descKey: 'shop_pi_bundle_4_desc',
+                iconSrc: piCoin2ImgSrc, pi_cost: 5.0, coin_reward: 65000
             },
-            {
-                id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc',
-                iconSrc: powerupRepairKitSrc, maxLevel: 3, cost: [100, 200, 400]
-            },
-            {
-                id: 'start_speed', type: 'PERMANENT', nameKey: 'shop_start_speed_name', descKey: 'shop_start_speed_desc',
-                iconSrc: powerupRapidFireSrc, maxLevel: 3, cost: [200, 400, 600]
-            },
-            {
-                id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc',
-                iconSrc: piCoin2ImgSrc, maxLevel: 4, cost: [250, 500, 1000, 2000]
+             {
+                id: 'pi_bundle_5', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_5_name', descKey: 'shop_pi_bundle_5_desc',
+                iconSrc: piCoin2ImgSrc, pi_cost: 10.0, coin_reward: 150000
             },
         ];
     }
 
-    public loadUpgrades(): IPlayerUpgrades {
-        const saved = localStorage.getItem('galaxyFallUpgrades');
-        return saved ? JSON.parse(saved) : {};
-    }
+    public loadUpgrades = (): IPlayerUpgrades => JSON.parse(localStorage.getItem('galaxyFallUpgrades') || '{}');
+    public saveUpgrades = (): void => localStorage.setItem('galaxyFallUpgrades', JSON.stringify(this.playerUpgrades));
 
-    public saveUpgrades(): void {
-        localStorage.setItem('galaxyFallUpgrades', JSON.stringify(this.playerUpgrades));
-    }
-
-    public getUpgradeLevel(itemId: string): number {
-        return this.playerUpgrades[itemId] || 0;
-    }
+    public loadCosmetics = (): IPlayerCosmetics => JSON.parse(localStorage.getItem('galaxyFallCosmetics') || JSON.stringify({
+        unlocked_skins: ['skin_default'],
+        unlocked_projectiles: ['default'],
+        unlocked_trails: ['default'],
+        equipped_skin: 'skin_default',
+        equipped_projectile: 'default',
+        equipped_trail: 'default',
+    }));
+    public saveCosmetics = (): void => localStorage.setItem('galaxyFallCosmetics', JSON.stringify(this.playerCosmetics));
+    
+    public getUpgradeLevel = (itemId: string): number => this.playerUpgrades[itemId] || 0;
 
     public getCost(item: IShopItem): number | null {
-        if (item.type !== 'PERMANENT' || !item.maxLevel || !item.cost) return null;
-        const currentLevel = this.getUpgradeLevel(item.id);
-        if (currentLevel >= item.maxLevel) return null;
-        return item.cost[currentLevel]!;
+        if (!item.cost) return null;
+        if (item.type === 'PERMANENT' || item.type === 'ULTIMATE') {
+             if (!item.maxLevel) return null;
+             const currentLevel = this.getUpgradeLevel(item.id);
+             if (currentLevel >= item.maxLevel) return null;
+             return item.cost[currentLevel]!;
+        }
+        if (item.type === 'CONSUMABLE' || item.type === 'COSMETIC') {
+            return item.cost[0]!;
+        }
+        return null;
     }
 
     public purchaseItem(itemId: string): boolean {
         const item = this.shopItems.find(i => i.id === itemId);
         if (!item) return false;
 
-        // NEUE Logik für Pi Bundles
         if (item.type === 'PI_BUNDLE') {
             this.game.piManager.createPayment(item);
-            return true; // Der Kaufprozess ist asynchron, wir geben hier true zurück.
+            return true;
         }
 
         const cost = this.getCost(item);
@@ -1104,28 +1498,66 @@ class ShopManager {
         }
 
         this.game.coins -= cost;
-        this.playerUpgrades[item.id] = (this.playerUpgrades[item.id] || 0) + 1;
 
-        this.saveUpgrades();
+        if (item.type === 'PERMANENT' || item.type === 'ULTIMATE') {
+            this.playerUpgrades[item.id] = (this.playerUpgrades[item.id] || 0) + 1;
+            this.saveUpgrades();
+        } else if (item.type === 'CONSUMABLE' && item.applyEffect) {
+            item.applyEffect(this.game);
+        } else if (item.type === 'COSMETIC' && item.cosmeticType) {
+            if (item.cosmeticType === 'player_skin') {
+                this.playerCosmetics.unlocked_skins.push(item.id);
+            } else if (item.cosmeticType === 'projectile_style') {
+                this.playerCosmetics.unlocked_projectiles.push(item.id);
+            } else if (item.cosmeticType === 'engine_trail') {
+                this.playerCosmetics.unlocked_trails.push(item.id);
+            }
+            this.saveCosmetics();
+            this.equipCosmetic(item.id, item.cosmeticType);
+        }
+
         this.game.saveGameData();
-
         this.game.uiManager.soundManager.play('purchaseSuccess');
         return true;
     }
 
-    public getInitialPlayerStats(): { lives: number, energy: number, speed: number } {
+    public equipCosmetic(itemId: string, type: 'player_skin' | 'projectile_style' | 'engine_trail') {
+        if (type === 'player_skin') {
+            this.playerCosmetics.equipped_skin = itemId;
+        } else if (type === 'projectile_style') {
+            this.playerCosmetics.equipped_projectile = itemId;
+        } else if (type === 'engine_trail') {
+            this.playerCosmetics.equipped_trail = itemId;
+        }
+        this.saveCosmetics();
+    }
+    
+    public isCosmeticUnlocked(itemId: string, type: 'player_skin' | 'projectile_style' | 'engine_trail'): boolean {
+        if (type === 'player_skin') {
+            return this.playerCosmetics.unlocked_skins.includes(itemId);
+        } else if (type === 'projectile_style') {
+            return this.playerCosmetics.unlocked_projectiles.includes(itemId);
+        } else if (type === 'engine_trail') {
+            return this.playerCosmetics.unlocked_trails.includes(itemId);
+        }
+        return false;
+    }
+
+    public getInitialPlayerStats(): { lives: number, energy: number, speed: number, maxEnergy: number } {
         const baseLives = 3;
         const baseEnergy = 100;
-        const baseSpeed = 400;
+        const baseSpeed = 560;
 
         const bonusLives = this.getUpgradeLevel('start_lives');
         const bonusEnergy = this.getUpgradeLevel('start_energy') * 10;
-        const bonusSpeed = this.getUpgradeLevel('start_speed') * 20;
+        
+        const totalEnergy = baseEnergy + bonusEnergy;
 
         return {
             lives: baseLives + bonusLives,
-            energy: baseEnergy + bonusEnergy,
-            speed: baseSpeed + bonusSpeed,
+            energy: totalEnergy,
+            maxEnergy: totalEnergy,
+            speed: baseSpeed,
         };
     }
 }
@@ -1404,22 +1836,42 @@ class SoundManager {
             case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
             case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
             case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
+            // --- MODIFIZIERT: Neuer Soundeffekt für Wiederbelebung ---
+            case 'revive': 
+                freq = 400; 
+                duration = 0.8; 
+                type = 'triangle'; 
+                vol = 0.7; 
+                const oscRevive = this.audioCtx.createOscillator();
+                const gainRevive = this.audioCtx.createGain();
+                oscRevive.connect(gainRevive);
+                gainRevive.connect(this.masterGain);
+                oscRevive.type = type;
+                oscRevive.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+                oscRevive.frequency.linearRampToValueAtTime(freq * 3, this.audioCtx.currentTime + duration * 0.9);
+                gainRevive.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
+                gainRevive.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration);
+                oscRevive.start(this.audioCtx.currentTime);
+                oscRevive.stop(this.audioCtx.currentTime + duration);
+                return; 
         } 
         const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); 
     }
 }
 
-class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string): string { return this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
+class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string, replacements?: {[key:string]:string}): string { let text = this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; if (replacements) { Object.keys(replacements).forEach(rKey => { text = text.replace(`{${rKey}}`, replacements[rKey]!); }); } return text; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
 
 class UIManager {
     public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
     private levelDisplayContainer: HTMLElement; 
     private gameOverContainer: HTMLElement;
-    private modeSelectContainer: HTMLElement; // NEU
+    private modeSelectContainer: HTMLElement;
     private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
     private shopContainer: HTMLElement;
     private shopCoinsEl: HTMLElement;
-    private shopItemsContainerEl: HTMLElement;
+    private shopContentEl: HTMLElement;
+    private shopTabsContainerEl: HTMLElement;
+    private currentShopTabId: string = 'permanent';
     
     constructor(game: Game, ui: IUIElements) {
         this.game = game;
@@ -1437,11 +1889,25 @@ class UIManager {
         this.levelDisplayContainer = ui.levelDisplay;
         this.menuContainer = document.getElementById('menu-container')!;
         this.gameOverContainer = document.getElementById('game-over-container')!;
-        this.modeSelectContainer = document.getElementById('mode-select-container')!; // NEU
+        this.modeSelectContainer = document.getElementById('mode-select-container')!;
         this.langSelectScreen = document.getElementById('language-select-screen')!;
         this.langBackButton = document.getElementById('lang-back-button')!;
-        this.tabButtons = { spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, gegner: document.getElementById('tab-gegner')! as HTMLButtonElement, einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, };
-        this.tabPanes = { spiel: document.getElementById('spiel-view')!, arsenal: document.getElementById('arsenal-view')!, gegner: document.getElementById('gegner-view')!, einstellungen: document.getElementById('einstellungen-view')!, };
+        this.tabButtons = { 
+            spiel: document.getElementById('tab-spiel')! as HTMLButtonElement, 
+            galerie: document.getElementById('tab-galerie')! as HTMLButtonElement, 
+            arsenal: document.getElementById('tab-arsenal')! as HTMLButtonElement, 
+            gegner: document.getElementById('tab-gegner')! as HTMLButtonElement,
+            rangliste: document.getElementById('tab-rangliste')! as HTMLButtonElement,
+            einstellungen: document.getElementById('tab-einstellungen')! as HTMLButtonElement, 
+        };
+        this.tabPanes = { 
+            spiel: document.getElementById('spiel-view')!, 
+            galerie: document.getElementById('galerie-view')!, 
+            arsenal: document.getElementById('arsenal-view')!, 
+            gegner: document.getElementById('gegner-view')!,
+            rangliste: document.getElementById('rangliste-view')!,
+            einstellungen: document.getElementById('einstellungen-view')!, 
+        };
         this.mainMenuElements = { resume: document.getElementById('resume-button')!, restart: document.getElementById('restart-button')!, quit: document.getElementById('quit-button')!, header: this.menuContainer.querySelector('.menu-header h1')! };
         this.settings = this.loadSettings();
         this.localizationManager = new LocalizationManager();
@@ -1450,7 +1916,8 @@ class UIManager {
         
         this.shopContainer = document.getElementById('shop-container')!;
         this.shopCoinsEl = document.getElementById('shop-coins')!;
-        this.shopItemsContainerEl = document.getElementById('shop-items-container')!;
+        this.shopContentEl = document.getElementById('shop-content')!;
+        this.shopTabsContainerEl = document.getElementById('shop-tabs')!;
         (document.getElementById('shop-coin-icon') as HTMLImageElement).src = piCoin2ImgSrc;
         
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
@@ -1466,7 +1933,6 @@ class UIManager {
     update(): void {
         this.scoreEl.textContent = this.game.score.toString();
         this.coinsEl.textContent = this.game.coins.toString();
-        // GEÄNDERT: Zeigt das aktuelle Level auch im Endlos-Modus an
         this.levelEl.textContent = this.game.level.toString();
         if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN', 'MODE_SELECT'].includes(this.game.gameState)) {
             this.highscoreEl.textContent = this.game.highscore.toString();
@@ -1483,7 +1949,10 @@ class UIManager {
         }
         this.levelDisplayContainer.style.display = 'block';
         this.livesDisplay.innerHTML = `<img src="${powerupExtraLifeSrc}" alt="Leben" class="ui-icon" />: ${this.game.player.lives}`;
-        this.energyBarEl.style.width = `${this.game.player.energy}%`;
+        
+        const energyPercentage = (this.game.player.energy / this.game.player.maxEnergy) * 100;
+        this.energyBarEl.style.width = `${energyPercentage}%`;
+
         this.updateInventoryUI(this.specialInventoryEl, this.game.player.powerUpManager.specialInventory, 3, 1);
         this.updateInventoryUI(this.ultraInventoryEl, this.game.player.powerUpManager.ultraInventory, 2, 4);
         this.updateWeaponStatusUI();
@@ -1519,7 +1988,6 @@ class UIManager {
     
         const pm = this.game.player.powerUpManager;
     
-        // Waffen-Stufe Anzeige (bleibt unverändert)
         const tierImageSrc = powerUpImageSources['WEAPON_UP'];
         let tierHTML = `<img src="${tierImageSrc}" alt="Waffenstufe" class="ui-icon" />: ${pm.weaponTier}`;
         let tierTimer = pm.weaponTierTimer;
@@ -1530,7 +1998,6 @@ class UIManager {
         }
         this.weaponTierDisplayEl.innerHTML = tierHTML;
     
-        // Neue Logik für die Anzeige der Power-up-Timer mit Icons
         const buffsToShow = [
             'RAPID_FIRE', 'GHOST_PROTOCOL', 'ORBITAL_DRONE',
             'LASER_BEAM', 'HOMING_MISSILES', 'SCORE_BOOST', 'SIDE_SHOTS'
@@ -1606,7 +2073,6 @@ class UIManager {
         }
     }
     
-    // NEUE METHODE
     public toggleModeSelectScreen(show: boolean): void {
         this.modeSelectContainer.style.display = show ? 'flex' : 'none';
     }
@@ -1624,11 +2090,10 @@ class UIManager {
         const shopManager = this.game.shopManager;
         const piManager = this.game.piManager;
         const t = (key: string) => this.localizationManager.translate(key);
-    
+
         this.shopCoinsEl.textContent = this.game.coins.toString();
-        this.shopItemsContainerEl.innerHTML = '';
-    
-        // Update Pi-Anzeige
+        this.shopContentEl.innerHTML = '';
+
         const piUserDisplay = document.getElementById('pi-user-display')!;
         if (piManager.isAuthenticated) {
             document.getElementById('pi-username')!.textContent = piManager.username;
@@ -1636,102 +2101,181 @@ class UIManager {
         } else {
             piUserDisplay.style.display = 'none';
         }
-    
-        const categories: { [key: string]: IShopItem[] } = {
-            'PI_BUNDLE': shopManager.shopItems.filter(i => i.type === 'PI_BUNDLE'),
-            'PERMANENT': shopManager.shopItems.filter(i => i.type === 'PERMANENT'),
-            'CONSUMABLE': shopManager.shopItems.filter(i => i.type === 'CONSUMABLE')
-        };
-    
-        // Pi-Login-Button, falls nicht verbunden
-        if (!piManager.isAuthenticated) {
-            const connectButton = document.createElement('button');
-            connectButton.id = 'pi-connect-btn';
-            connectButton.className = 'pi-connect-button';
-            connectButton.textContent = "Mit Pi Wallet verbinden";
-            connectButton.onclick = () => piManager.authenticate();
-            this.shopItemsContainerEl.appendChild(connectButton);
-        }
-    
-        for (const categoryKey in categories) {
-            const items = categories[categoryKey]!;
-            if (items.length === 0) continue;
-    
-            const categoryTitle = document.createElement('h2');
-            categoryTitle.className = 'shop-category';
-            const categoryTranslationKey = categoryKey === 'PI_BUNDLE' ? 'shop_category_pi_bundles' : `shop_category_${categoryKey.toLowerCase()}`;
-            categoryTitle.textContent = t(categoryTranslationKey);
-            this.shopItemsContainerEl.appendChild(categoryTitle);
-    
+
+        const itemsByCategory = shopManager.shopItems.reduce((acc, item) => {
+            const category = item.type.toLowerCase();
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category]!.push(item);
+            return acc;
+        }, {} as { [key: string]: IShopItem[] });
+
+        for (const category of Object.keys(itemsByCategory)) {
+            const pane = document.createElement('div');
+            pane.id = `shop-pane-${category}`;
+            pane.className = 'shop-tab-pane';
+
+            const items = itemsByCategory[category as keyof typeof itemsByCategory]!;
+
+            if (category === 'pi_bundle' && !piManager.isAuthenticated) {
+                const connectButton = document.createElement('button');
+                connectButton.id = 'pi-connect-btn';
+                connectButton.className = 'pi-connect-button';
+                connectButton.textContent = "Mit Pi Wallet verbinden";
+                connectButton.onclick = () => piManager.authenticate();
+                pane.appendChild(connectButton);
+            }
+            
             items.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'shop-item';
-                if (item.type === 'PI_BUNDLE') {
-                    itemEl.classList.add('pi-bundle');
+                const itemEl = this.createShopItemElement(item);
+                pane.appendChild(itemEl);
+            });
+
+            this.shopContentEl.appendChild(pane);
+        }
+
+        this.showShopTab(this.currentShopTabId);
+    }
+
+    private createShopItemElement(item: IShopItem): HTMLElement {
+        const shopManager = this.game.shopManager;
+        const t = (key: string, replacements?: {[key:string]:string}) => this.localizationManager.translate(key, replacements);
+        const itemEl = document.createElement('div');
+        itemEl.className = 'shop-item';
+        
+        if (item.type === 'PI_BUNDLE') {
+            itemEl.classList.add('pi-bundle');
+        }
+
+        let purchaseHTML = '';
+        let detailsHTML = '';
+        
+        let descriptionText = t(item.descKey);
+        
+        if (item.id === 'special_stack_size') {
+            const stackLevels = [5, 10, 25];
+            const currentLevel = shopManager.getUpgradeLevel(item.id);
+            const currentStack = stackLevels[currentLevel] || 5;
+
+            if (currentLevel < item.maxLevel!) {
+                const nextStack = stackLevels[currentLevel + 1];
+                descriptionText = t(item.descKey, { current: currentStack.toString(), next: (nextStack || '').toString() });
+            } else {
+                descriptionText = t('shop_special_stack_desc_max', { current: currentStack.toString() });
+            }
+        }
+
+        if (item.type === 'PERMANENT' || item.type === 'ULTIMATE') {
+            descriptionText += ` <span style='color: #FF8C00;'>(${t('shop_upgrade_active_next_round')})</span>`;
+        }
+
+
+        switch (item.type) {
+            case 'PERMANENT':
+            case 'ULTIMATE':
+                const currentLevel = shopManager.getUpgradeLevel(item.id);
+                const maxLevel = item.maxLevel!;
+                const cost = shopManager.getCost(item);
+                const isMaxed = currentLevel >= maxLevel;
+                const canAfford = cost !== null && this.game.coins >= cost;
+
+                detailsHTML = `
+                    <h3 class="shop-item-title">${t(item.nameKey)}</h3>
+                    <p class="shop-item-desc">${descriptionText}</p>
+                    <div class="shop-item-level-container">
+                        ${t('level')}: ${currentLevel} / ${maxLevel}
+                        <div class="shop-item-level-progress">
+                            <div class="shop-item-level-bar" style="width: ${(currentLevel / maxLevel) * 100}%;"></div>
+                        </div>
+                    </div>`;
+                
+                if (isMaxed) {
+                    purchaseHTML = `<button class="shop-buy-button maxed" disabled>${t('btn_max_level')}</button>`;
+                } else {
+                    purchaseHTML = `<button class="shop-buy-button" id="buy-${item.id}" ${!canAfford ? 'disabled' : ''}>
+                        <div class="shop-item-cost"><span>${t('btn_upgrade')}</span><img src="${piCoin2ImgSrc}" alt="Coin"/><span>${cost}</span></div>
+                    </button>`;
                 }
-    
-                let buttonHTML = '';
-                let buttonDisabled = false;
-    
-                if (item.type === 'PI_BUNDLE') {
-                    buttonHTML = `
-                        <button class="shop-buy-button pi-purchase" id="buy-${item.id}">
-                            <div class="shop-item-cost">
-                                <span>${t('btn_buy')}</span>
-                                <span class="pi-symbol">π</span>
-                                <span>${item.pi_cost?.toFixed(2)}</span>
-                            </div>
-                        </button>`;
-                    buttonDisabled = !piManager.isAuthenticated;
-                } else if (item.type === 'PERMANENT') {
-                    const currentLevel = shopManager.getUpgradeLevel(item.id);
-                    const cost = shopManager.getCost(item);
-                    const isMaxed = currentLevel >= item.maxLevel!;
-                    const canAfford = cost !== null && this.game.coins >= cost;
-    
-                    if (isMaxed) {
-                        buttonHTML = `<button class="shop-buy-button maxed" disabled><span>${t('btn_max_level')}</span></button>`;
-                        buttonDisabled = true;
-                    } else {
-                        buttonHTML = `
-                            <button class="shop-buy-button" id="buy-${item.id}">
-                                <div class="shop-item-cost">
-                                    <span>${t('btn_buy')}</span>
-                                    <img src="${piCoin2ImgSrc}" alt="Coin"/>
-                                    <span>${cost}</span>
-                                </div>
-                            </button>`;
-                        buttonDisabled = !canAfford;
-                    }
+                break;
+
+            case 'CONSUMABLE':
+                const consumableCost = shopManager.getCost(item)!;
+                const canAffordConsumable = this.game.coins >= consumableCost;
+                detailsHTML = `<h3 class="shop-item-title">${t(item.nameKey)}</h3><p class="shop-item-desc">${descriptionText}</p>`;
+                purchaseHTML = `<button class="shop-buy-button" id="buy-${item.id}" ${!canAffordConsumable ? 'disabled' : ''}>
+                    <div class="shop-item-cost"><span>${t('btn_buy')}</span><img src="${piCoin2ImgSrc}" alt="Coin"/><span>${consumableCost}</span></div>
+                </button>`;
+                break;
+
+            case 'COSMETIC':
+                const isUnlocked = shopManager.isCosmeticUnlocked(item.id, item.cosmeticType!);
+                const cosmeticCost = shopManager.getCost(item)!;
+                const canAffordCosmetic = this.game.coins >= cosmeticCost;
+                 detailsHTML = `<h3 class="shop-item-title">${t(item.nameKey)}</h3><p class="shop-item-desc">${descriptionText}</p>`;
+                
+                if (isUnlocked) {
+                    const isEquipped = shopManager.playerCosmetics.equipped_skin === item.id 
+                                    || shopManager.playerCosmetics.equipped_projectile === item.id
+                                    || shopManager.playerCosmetics.equipped_trail === item.id;
+                    purchaseHTML = `<button class="shop-buy-button cosmetic-equip-button ${isEquipped ? 'equipped' : ''}" id="equip-${item.id}" ${isEquipped ? 'disabled' : ''}>
+                        ${isEquipped ? t('btn_equipped') : t('btn_equip')}
+                    </button>`;
+                } else {
+                    purchaseHTML = `<button class="shop-buy-button" id="buy-${item.id}" ${!canAffordCosmetic ? 'disabled' : ''}>
+                        <div class="shop-item-cost"><span>${t('btn_unlock')}</span><img src="${piCoin2ImgSrc}" alt="Coin"/><span>${cosmeticCost}</span></div>
+                    </button>`;
                 }
-    
-                itemEl.innerHTML = `
-                    <img src="${item.iconSrc}" alt="${t(item.nameKey)}" class="shop-item-icon">
-                    <div class="shop-item-details">
-                        <h3 class="shop-item-title">${t(item.nameKey)}</h3>
-                        <p class="shop-item-desc">${t(item.descKey)}</p>
-                        ${item.maxLevel ? `<div class="shop-item-level">${t('level')}: ${shopManager.getUpgradeLevel(item.id)} / ${item.maxLevel}</div>` : ''}
-                    </div>
-                    <div class="shop-item-purchase">
-                        ${buttonHTML}
-                    </div>
-                `;
-    
-                this.shopItemsContainerEl.appendChild(itemEl);
-    
-                const buyButton = document.getElementById(`buy-${item.id}`) as HTMLButtonElement;
-                if (buyButton) {
-                    buyButton.disabled = buttonDisabled;
-                    buyButton.addEventListener('click', () => {
-                        shopManager.purchaseItem(item.id);
-                        // Neu rendern, um Button-Status zu aktualisieren (z.B. nach Kauf)
-                        if (item.type === 'PERMANENT') {
-                            this.renderShop();
-                        }
-                    });
+                break;
+                
+            case 'PI_BUNDLE':
+                const canBuyPi = this.game.piManager.isAuthenticated;
+                detailsHTML = `<h3 class="shop-item-title">${t(item.nameKey)}</h3><p class="shop-item-desc">${descriptionText}</p>`;
+                purchaseHTML = `<button class="shop-buy-button pi-purchase" id="buy-${item.id}" ${!canBuyPi ? 'disabled' : ''}>
+                    <div class="shop-item-cost"><span>${t('btn_buy')}</span><span class="pi-symbol">π</span><span>${item.pi_cost?.toFixed(2)}</span></div>
+                </button>`;
+                break;
+        }
+
+        itemEl.innerHTML = `
+            <img src="${item.iconSrc}" alt="${t(item.nameKey)}" class="shop-item-icon">
+            <div class="shop-item-details">${detailsHTML}</div>
+            <div class="shop-item-purchase">${purchaseHTML}</div>`;
+            
+        const buyButton = itemEl.querySelector<HTMLButtonElement>(`#buy-${item.id}`);
+        if(buyButton) {
+            buyButton.addEventListener('click', () => {
+                if(shopManager.purchaseItem(item.id)) {
+                    this.renderShop();
                 }
             });
         }
+        
+        const equipButton = itemEl.querySelector<HTMLButtonElement>(`#equip-${item.id}`);
+        if(equipButton) {
+            equipButton.addEventListener('click', () => {
+                shopManager.equipCosmetic(item.id, item.cosmeticType!);
+                this.renderShop();
+            });
+        }
+        
+        return itemEl;
+    }
+    
+    public showShopTab(tabId: string): void {
+        this.currentShopTabId = tabId;
+        this.shopContentEl.querySelectorAll<HTMLElement>('.shop-tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        this.shopTabsContainerEl.querySelectorAll<HTMLButtonElement>('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+
+        const targetPane = this.shopContentEl.querySelector<HTMLElement>(`#shop-pane-${tabId}`);
+        const targetButton = this.shopTabsContainerEl.querySelector<HTMLButtonElement>(`[data-tab="${tabId}"]`);
+        
+        if (targetPane) targetPane.classList.add('active');
+        if (targetButton) targetButton.classList.add('active');
     }
 
     public showTab(tabName: string): void {
@@ -1762,7 +2306,6 @@ class UIManager {
             }
         };
     
-        // GEÄNDERT: "Spiel starten" führt jetzt zur Modusauswahl
         setupButton(this.mainMenuElements.restart, () => { 
             this.soundManager.initAudio(); 
             this.game.changeState('MODE_SELECT'); 
@@ -1771,23 +2314,23 @@ class UIManager {
         setupButton(this.mainMenuElements.resume, () => this.game.togglePause());
         setupButton(this.mainMenuElements.quit, () => this.game.changeState('MENU'));
 
-setupButton(document.getElementById('exit-button'), () => { 
-    if (this.game.isMobile) { 
-        const exitScreen = document.getElementById('exit-screen'); 
-        if (exitScreen) { 
-            exitScreen.style.display = 'flex'; 
-            // FIX: Anwenden der Übersetzungen auf den neu sichtbaren Bildschirm.
-            this.localizationManager.applyTranslationsToUI();
-        } 
-        this.soundManager.toggleMusic(false); 
-    } else { 
-        window.close(); 
-    } 
-});        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('MODE_SELECT'); });
+        setupButton(document.getElementById('exit-button'), () => { 
+            if (this.game.isMobile) { 
+                const exitScreen = document.getElementById('exit-screen'); 
+                if (exitScreen) { 
+                    exitScreen.style.display = 'flex'; 
+                    this.localizationManager.applyTranslationsToUI();
+                } 
+                this.soundManager.toggleMusic(false); 
+            } else { 
+                window.close(); 
+            } 
+        });        
+        
+        setupButton(document.getElementById('restart-from-gameover-button'), () => { this.game.changeState('MODE_SELECT'); });
         setupButton(document.getElementById('quit-from-gameover-button'), () => { this.game.changeState('MENU'); });
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
 
-        // NEU: Buttons für die Modusauswahl
         setupButton(document.getElementById('select-campaign-button'), () => {
             this.game.gameMode = 'CAMPAIGN';
             this.game.changeState('LEVEL_START', true);
@@ -1807,10 +2350,31 @@ setupButton(document.getElementById('exit-button'), () => {
 
         setupButton(shopBackButton, () => {
             this.toggleShopScreen(false);
-            this.toggleMainMenu(true);
+            if (this.game.isPaused) {
+                this.togglePauseMenu(true);
+            } else {
+                this.toggleMainMenu(true);
+            }
         });
 
-        for (const key in this.tabButtons) { setupButton(this.tabButtons[key], () => this.showTab(key)); }
+        this.shopTabsContainerEl.querySelectorAll<HTMLButtonElement>('.tab-button').forEach(button => {
+            setupButton(button, () => {
+                const tabId = button.dataset.tab;
+                if (tabId) {
+                    this.showShopTab(tabId);
+                }
+            });
+        });
+
+        for (const key in this.tabButtons) { 
+            setupButton(this.tabButtons[key], () => {
+                this.showTab(key);
+                if (key === 'rangliste') {
+                    this.populateLeaderboard('campaign', 'score');
+                }
+            }); 
+        }
+
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) { volSlider.addEventListener('input', (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }); volSlider.value = this.settings.masterVolume.toString(); }
         setupButton(document.getElementById('toggle-music'), () => { this.settings.music = !this.settings.music; this.applySettings(); this.saveSettings(); });
@@ -1921,9 +2485,53 @@ setupButton(document.getElementById('exit-button'), () => {
     }
     public saveSettings(): void { localStorage.setItem('galaxyFallCelestialSettings', JSON.stringify(this.settings)); }
     public loadSettings() { const saved = localStorage.getItem('galaxyFallCelestialSettings'); return saved ? JSON.parse(saved) : { masterVolume: 0.5, music: true, sfx: true, particles: 2, screenShake: false }; }
-    public populateAllTranslatedContent() { this.populateArsenal(); this.populateGegner(); this.localizationManager.applyTranslationsToUI(); this.applySettings(); }
+    public populateAllTranslatedContent() { this.populateGalerie(); this.populateArsenal(); this.populateGegner(); this.localizationManager.applyTranslationsToUI(); this.applySettings(); }
     public createEnemyIcon(enemyType: string): string { const canvas = document.createElement('canvas'); canvas.width = 60; canvas.height = 40; const ctx = canvas.getContext('2d')!; const tempGame = { width: 60, height: 40, enemySpeedMultiplier: 1, level: 1, uiManager: { settings: { particles: 0 } } } as unknown as Game; let dummyEnemy: Enemy | null = null; switch(enemyType) { case 'GRUNT': dummyEnemy = new Grunt(tempGame); break; case 'WEAVER': dummyEnemy = new Weaver(tempGame); break; case 'TANK': dummyEnemy = new Tank(tempGame); break; case 'SHOOTER': dummyEnemy = new Shooter(tempGame); break; case 'TELEPORTER': dummyEnemy = new Teleporter(tempGame); break; case 'BOSS_SENTINEL_PRIME': dummyEnemy = new BossSentinelPrime(tempGame, 1, 1); break; case 'BOSS_VOID_SERPENT': dummyEnemy = new BossVoidSerpent(tempGame, 1, 1); break; case 'BOSS_OMEGA_NEXUS': dummyEnemy = new BossOmegaNexus(tempGame, 1, 1); break; case 'BOSS_NEXUS_PRIME': dummyEnemy = new BossNexusPrime(tempGame, 1, 1); break; } if (dummyEnemy) { dummyEnemy.width = 54; dummyEnemy.height = 36; dummyEnemy.pos = new Vector2D(canvas.width / 2 - dummyEnemy.width / 2, canvas.height / 2 - dummyEnemy.height / 2); dummyEnemy.draw(ctx); } return canvas.toDataURL(); }
     public populateArsenal(): void { const pL=[{c:"arsenal_cat_weapon_upgrade",n:"powerup_wup_name",d:'powerup_wup_desc',t:'WEAPON_UP'},{c:"arsenal_cat_weapon_mod",n:"powerup_rapid_fire_name",d:'powerup_rapid_fire_desc',t:'RAPID_FIRE'},{c:"arsenal_cat_weapon_mod",n:"powerup_side_shots_name",d:'powerup_side_shots_desc',t:'SIDE_SHOTS'},{c:"arsenal_cat_ultra_weapon",n:"powerup_laser_name",d:'powerup_laser_desc',t:'LASER_BEAM'},{c:"arsenal_cat_ultra_weapon",n:"powerup_homing_missiles_name",d:'powerup_homing_missiles_desc',t:'HOMING_MISSILES'},{c:"arsenal_cat_defense",n:"powerup_shield_name",d:'powerup_shield_desc',t:'SHIELD'},{c:"arsenal_cat_defense",n:"powerup_repair_kit_name",d:'powerup_repair_kit_desc',t:'REPAIR_KIT'},{c:"arsenal_cat_defense",n:"powerup_extra_life_name",d:'powerup_extra_life_desc',t:'EXTRA_LIFE'},{c:"arsenal_cat_defense",n:"powerup_ghost_protocol_name",d:'powerup_ghost_protocol_desc',t:'GHOST_PROTOCOL'},{c:"arsenal_cat_defense",n:"powerup_orbital_drone_name",d:'powerup_orbital_drone_desc',t:'ORBITAL_DRONE'},{c:"arsenal_cat_special",n:"powerup_nuke_name",d:'powerup_nuke_desc',t:'NUKE'},{c:"arsenal_cat_special",n:"powerup_black_hole_name",d:'powerup_black_hole_desc',t:'BLACK_HOLE'},{c:"arsenal_cat_special",n:"powerup_score_boost_name",d:'powerup_score_boost_desc',t:'SCORE_BOOST'}]; const lE=document.getElementById('arsenal-list')!;lE.innerHTML='';let cC='';pL.forEach(p=>{const cN=this.localizationManager.translate(p.c);if(cN!==cC){cC=cN;lE.innerHTML+=`<h3>- ${cC} -</h3>`;} const iS=powerUpImageSources[p.t];lE.innerHTML+=`<div class="powerup-entry"><img src="${iS}" class="arsenal-icon" alt="${p.n}"/><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.n)}</div><div class="powerup-desc">${this.localizationManager.translate(p.d)}</div></div></div>`;}); }
+    
+    public populateGalerie(): void {
+        const t = (key: string) => this.localizationManager.translate(key);
+        const galleryEl = document.getElementById('galerie-list')!;
+        galleryEl.innerHTML = '';
+
+        const allSkins = [
+            { id: 'skin_default', nameKey: 'shop_skin_default_name', imageSrc: playerImgSrc1 },
+            { id: 'skin_sentinel', nameKey: 'shop_skin_sentinel_name', imageSrc: playerImgSrc2 },
+            { id: 'skin_renegade', nameKey: 'shop_skin_renegade_name', imageSrc: playerImgSrc3 },
+            { id: 'skin_avenger', nameKey: 'shop_skin_avenger_name', imageSrc: playerImgSrc4 },
+            { id: 'skin_void', nameKey: 'shop_skin_void_name', imageSrc: playerImgSrcVoid },
+            { id: 'skin_gold', nameKey: 'shop_skin_gold_name', imageSrc: playerImgSrcGold },
+        ];
+
+        const equippedSkin = this.game.shopManager.playerCosmetics.equipped_skin;
+
+        allSkins.forEach(skin => {
+            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(skin.id, 'player_skin');
+            
+            const itemEl = document.createElement('div');
+            itemEl.className = 'gallery-item';
+
+            if (isUnlocked) {
+                if (skin.id === equippedSkin) {
+                    itemEl.classList.add('selected');
+                }
+                itemEl.addEventListener('click', () => {
+                    this.game.shopManager.equipCosmetic(skin.id, 'player_skin');
+                    this.populateGalerie();
+                    this.soundManager.play('uiClick');
+                });
+            } else {
+                itemEl.classList.add('locked');
+            }
+
+            itemEl.innerHTML = `
+                <img src="${skin.imageSrc}" alt="${t(skin.nameKey)}">
+                <div class="gallery-item-name">${t(skin.nameKey)}</div>
+            `;
+            galleryEl.appendChild(itemEl);
+        });
+    }
+
     public populateGegner(): void {
         const enemyList = [
             { nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low' },
@@ -1945,6 +2553,77 @@ setupButton(document.getElementById('exit-button'), () => {
             listEl.innerHTML += `<div class="powerup-entry"> <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/> <div class="powerup-info"> <div class="powerup-title"> <span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div>`;
         });
     }
+
+    public async populateLeaderboard(mode: 'campaign' | 'endless', metric: 'score' | 'waves'): Promise<void> {
+        const t = (key: string) => this.localizationManager.translate(key);
+        const contentEl = document.getElementById('leaderboard-content')!;
+        
+        contentEl.innerHTML = `
+            <div class="leaderboard-controls">
+                <button class="menu-button ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
+                <button class="menu-button ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button>
+            </div>
+            <div class="leaderboard-controls">
+                <button class="menu-button ${metric === 'score' ? 'active' : ''}" id="lb-btn-score">${t('score')}</button>
+                <button class="menu-button ${metric === 'waves' ? 'active' : ''}" id="lb-btn-waves">${t('waves')}</button>
+            </div>
+            <p>${t('leaderboard_loading')}...</p>`;
+            
+        this.attachLeaderboardControlEvents(mode, metric);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&metric=${metric}`);
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            const data: ILeaderboardEntry[] = await response.json();
+
+            if (!data || data.length === 0) {
+                 const p = contentEl.querySelector('p');
+                 if(p) p.textContent = t('leaderboard_no_entries');
+                 return;
+            }
+
+            let tableHTML = `
+                <div class="leaderboard-table">
+                    <div class="leaderboard-header">
+                        <div class="rank">#</div>
+                        <div class="username">${t('leaderboard_player')}</div>
+                        <div class="score">${t('score')}</div>
+                        <div class="waves">${t('waves')}</div>
+                    </div>`;
+
+            data.forEach(entry => {
+                tableHTML += `
+                    <div class="leaderboard-row">
+                        <div class="rank">${entry.rank}</div>
+                        <div class="username">${entry.username}</div>
+                        <div class="score">${entry.score.toLocaleString()}</div>
+                        <div class="waves">${entry.waves}</div>
+                    </div>`;
+            });
+
+            tableHTML += '</div>';
+            const p = contentEl.querySelector('p');
+            if(p) p.remove();
+            contentEl.innerHTML += tableHTML;
+
+        } catch (error) {
+            console.error("Fehler beim Laden der Rangliste:", error);
+            const p = contentEl.querySelector('p');
+            if(p) p.innerHTML = `<span class="leaderboard-error">${t('leaderboard_error')}</span>`;
+        }
+    }
+
+    private attachLeaderboardControlEvents(currentMode: 'campaign' | 'endless', currentMetric: 'score' | 'waves'): void {
+        document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign', currentMetric));
+        document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless', currentMetric));
+        document.getElementById('lb-btn-score')?.addEventListener('click', () => this.populateLeaderboard(currentMode, 'score'));
+        document.getElementById('lb-btn-waves')?.addEventListener('click', () => this.populateLeaderboard(currentMode, 'waves'));
+    }
+
     public drawLevelMessage(): void { 
         const ctx = this.ctx; 
         const scaleFactor = this.game.width / this.game.baseWidth;
@@ -2021,8 +2700,10 @@ const LEVELS: ILevelDefinition[] = [
 
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
+    // --- NEU: Eigenschaft für Kristall-UI ---
+    public phoenixCoreUI: PhoenixCoreUI;
     
-    public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN'; // NEU: Spielmodus speichern
+    public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN';
     
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
@@ -2055,7 +2736,9 @@ class Game {
         this.shopManager = new ShopManager(this);
         this.uiManager = new UIManager(this, ui);
         this.piManager = new PiManager();
-        this.piManager.setGame(this); // Wichtig: Referenz übergeben
+        this.piManager.setGame(this);
+        // --- NEU: Instanziierung der Kristall-UI ---
+        this.phoenixCoreUI = new PhoenixCoreUI(this);
         
         this.loadGameData();
         
@@ -2086,12 +2769,11 @@ class Game {
         }
     }
     
-    // NEUE Methode zur Gutschrift gekaufter Münzen
     public awardPiCoinBundle(bundle: IShopItem) {
         if (bundle.coin_reward) {
             this.coins += bundle.coin_reward;
             this.saveGameData();
-            this.uiManager.renderShop(); // Shop-UI aktualisieren (Münzanzeige)
+            this.uiManager.renderShop();
         }
     }
 
@@ -2104,7 +2786,7 @@ class Game {
         this.container.style.top = '';
     
         this.width = screenWidth;
-        this.height = screenHeight - 50;
+        this.height = screenHeight - 90;
     
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -2139,7 +2821,7 @@ class Game {
                  this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
-                    this.changeState('MODE_SELECT'); // GEÄNDERT
+                    this.changeState('MODE_SELECT');
                  }
             }
         };
@@ -2236,7 +2918,7 @@ class Game {
                     this.changeState('MENU');
                 } else if (this.gameState === 'MENU') {
                     this.uiManager.soundManager.initAudio();
-                    this.changeState('MODE_SELECT'); // GEÄNDERT
+                    this.changeState('MODE_SELECT');
                 } else if (['WIN'].includes(this.gameState)) {
                     this.changeState('MENU');
                 }
@@ -2284,10 +2966,26 @@ class Game {
 
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
     
+    // --- NEU: Methode zum Starten der Wiederbelebungssequenz ---
+    public startReviveSequence(player: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE'): void {
+        this.changeState('REVIVING');
+        
+        // Startposition des Kristalls auf der UI berechnen
+        const level = this.shopManager.getUpgradeLevel('revive_chance');
+        let index = 0;
+        if(crystalType === 'BLUE') index = 0;
+        if(crystalType === 'YELLOW') index = level > 1 ? 1 : 0;
+        if(crystalType === 'PURPLE') index = level > 2 ? 2 : (level > 1 ? 1 : 0);
+        
+        const startX = this.width - 160 + (index * 45) + 20;
+        const startY = 10 + 20;
+
+        this.addEntity(new ReviveCrystalAnimation(this, startX, startY, player, crystalType));
+    }
+
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
 
-        // *** KORREKTUR: Sichtbarkeit des mobilen Pause-Buttons steuern ***
         const mobilePauseButton = document.getElementById('mobile-pause-button')!;
         if (this.isMobile) {
             if (newState === 'PLAYING') {
@@ -2296,7 +2994,6 @@ class Game {
                 mobilePauseButton.style.display = 'none';
             }
         }
-        // ***************************************************************
 
         this.uiManager.toggleMainMenu(false);
         this.uiManager.togglePauseMenu(false);
@@ -2331,8 +3028,7 @@ class Game {
                 this.uiManager.togglePauseMenu(true);
                 break;
             case 'PLAYING':
-                if (oldState === 'PAUSED') {
-                    // Nur die Musik wieder aufnehmen, wenn wir aus der Pause kommen
+                if (oldState === 'PAUSED' || oldState === 'REVIVING') {
                     if (this.isBossActive) {
                         this.uiManager.soundManager.setTrack('boss');
                     } else {
@@ -2341,21 +3037,17 @@ class Game {
                 }
                 break;
             case 'LEVEL_START':
-                // *** KORREKTUR: Logik für Neustart/nächstes Level komplett überarbeitet ***
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    // Dies ist ein komplett neues Spiel
                     this.level = 1;
                     this.score = 0;
-                    this.entities = []; // Liste komplett leeren
+                    this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
                     this.player = new Player(this, initialStats);
                     this.addEntity(this.player);
                 } else {
-                    // Dies ist der Übergang zum nächsten Level
                     this.level++;
-                    // Alte Gegner etc. entfernen, aber Spieler und Powerups behalten
                     this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 }
 
@@ -2381,6 +3073,7 @@ class Game {
                     this.highscore = this.score;
                 }
                 this.saveGameData();
+                this.submitScoreToServer();
                 this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.toggleGameOverScreen(true);
                 break;
@@ -2389,11 +3082,58 @@ class Game {
                     this.highscore = this.score;
                 }
                 this.saveGameData();
+                this.submitScoreToServer();
                 this.uiManager.soundManager.setTrack('menu');
                 break;
         }
     }
+
+    private async submitScoreToServer(): Promise<void> {
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) {
+            console.log("Spieler nicht via Pi authentifiziert. Score wird nicht übermittelt.");
+            return;
+        }
+
+        const scoreData = {
+            pi_uid: this.piManager.uid,
+            username: this.piManager.username,
+            score: this.score,
+            waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
+            mode: this.gameMode 
+        };
+
+        console.log("Versuche, Score an den Server zu senden:", scoreData);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/submit-score`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(scoreData)
+            });
+
+            if (response.ok) {
+                console.log("Score erfolgreich an den Server übermittelt.");
+            } else {
+                console.error("Server meldet Fehler beim Speichern des Scores:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Netzwerkfehler beim Übermitteln des Scores:", error);
+        }
+    }
+
+    // --- MODIFIZIERT: update-Methode ---
     update(deltaTime: number): void { 
+        if (this.gameState === 'REVIVING') {
+            this.updateParallaxStarfield(deltaTime);
+            this.entities.forEach(e => {
+                if(e.family === 'effect' || e instanceof Player) { // Spieler updaten damit er gezeichnet wird
+                    e.update(deltaTime);
+                }
+            });
+            this.cleanupEntities();
+            return;
+        }
+        
         if (this.isPaused) return; 
         
         if (this.gameState === 'INTRO') {
@@ -2407,6 +3147,7 @@ class Game {
         
         this.updateParallaxStarfield(deltaTime); 
         this.entities.forEach(e => e.update(deltaTime)); 
+        this.phoenixCoreUI.update(deltaTime);
         this.enemySpawnTimer += deltaTime; 
         
         if (this.isMultiFormationWaveActive) {
@@ -2457,11 +3198,12 @@ class Game {
         this.uiManager.update(); 
     }
     
+    // --- MODIFIZIERT: draw-Methode ---
     draw(): void {
         this.ctx.clearRect(0, 0,this.width, this.height);
         this.drawParallaxStarfield();
 
-        if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED') {
+        if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
             this.entities.forEach(e => {
                 if (e.family !== 'player') {
                     e.draw(this.ctx);
@@ -2473,6 +3215,7 @@ class Game {
                     e.draw(this.ctx);
                 }
             });
+            this.phoenixCoreUI.draw(this.ctx);
         }
         
         this.uiManager.drawOverlay();
