@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -9,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-BkYK-21Q.js"></script>
-  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-BM7qi4_N.css">
+  <script type="module" crossorigin src="/Galaxy-fall2/assets/index-CXq0vNWd.js"></script>
+  <link rel="stylesheet" crossorigin href="/Galaxy-fall2/assets/index-DAhuY8Ey.css">
 </head>
 <body>
 <div id="gameContainer">
@@ -79,8 +80,10 @@
         <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
         <div class="menu-tabs">
             <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
+            <button class="tab-button" id="tab-galerie" data-translate-key="tab_galerie">Galerie</button>
             <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
             <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
+            <button class="tab-button" id="tab-rangliste" data-translate-key="tab_rangliste">Rangliste</button>
             <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
         </div>
         
@@ -95,11 +98,19 @@
                     <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
                  </div>
             </div>
+            <div id="galerie-view" class="tab-pane">
+                 <div class="info-panel" id="galerie-list"></div>
+            </div>
             <div id="arsenal-view" class="tab-pane">
                  <div class="info-panel" id="arsenal-list"></div>
             </div>
             <div id="gegner-view" class="tab-pane">
                  <div class="info-panel" id="gegner-list"></div>
+            </div>
+            <div id="rangliste-view" class="tab-pane">
+                 <div class="info-panel" id="leaderboard-content">
+                    <!-- Inhalt wird per JavaScript geladen -->
+                 </div>
             </div>
             <div id="einstellungen-view" class="tab-pane">
                 <div class="info-panel">
@@ -134,7 +145,7 @@
         </div>
     </div>
 
-    <!-- NEUER CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
+    <!-- CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
     <div id="mode-select-container" style="display: none;">
         <div class="menu">
             <div class="menu-header">
@@ -161,28 +172,35 @@
         </div>
     </div>
 
-    <!-- KORREKTER SHOP-CONTAINER -->
+    <!-- ÜBERARBEITETER SHOP-CONTAINER -->
     <div id="shop-container" style="display: none;">
-        <div class="menu">
-            <!-- Header mit Titel und Münzanzeige -->
-            <div class="menu-header">
+        <div class="shop-menu">
+            <!-- Header mit Titel, Münzen und Pi-Anzeige -->
+            <div class="shop-header">
                 <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
                 <div id="shop-coin-display">
                     <img id="shop-coin-icon" src="" alt="Coins"/>
                     <span id="shop-coins">0</span>
                 </div>
-                <!-- NEU: Pi-Benutzerinfo-Anzeige -->
                 <div id="pi-user-display" style="display: none;">
                     Verbunden als: <span id="pi-username"></span>
                 </div>
             </div>
-            
-            <!-- Container für die Shop-Items -->
-            <div class="info-panel" id="shop-items-container">
-                <!-- Shop-Inhalte werden hier dynamisch per JavaScript eingefügt -->
+
+            <!-- Tab-Navigation für die Shop-Kategorien -->
+            <div id="shop-tabs" class="menu-tabs">
+                <button class="tab-button active" data-tab="permanent" data-translate-key="shop_tab_permanent">Upgrades</button>
+                <button class="tab-button" data-tab="consumable" data-translate-key="shop_tab_consumable">Verbrauch</button>
+                <button class="tab-button" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">Optik</button>
+                <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
             </div>
 
-            <!-- Der entscheidende "Zurück"-Button -->
+            <!-- Container für die Inhalte der Tabs -->
+            <div id="shop-content" class="menu-content">
+                <!-- Die Inhalte werden hier dynamisch per JavaScript eingefügt -->
+            </div>
+
+            <!-- Zurück-Button am unteren Rand -->
             <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
         </div>
     </div>
@@ -197,7 +215,7 @@
 
 </div>
 
-<!-- HINZUGEFÜGT: Pi Network SDK Integration -->
+<!-- Pi Network SDK Integration -->
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>
     // Initialisiert das Pi SDK im Sandbox-Modus für die Entwicklung.
