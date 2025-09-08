@@ -1,5 +1,4 @@
 import { translations } from './translations';
-
 import playerImgSrc1 from './assets/images/player_tier1.png';
 import playerImgSrc2 from './assets/images/player_tier2.png';
 import playerImgSrc3 from './assets/images/player_tier3.png';
@@ -240,18 +239,17 @@ class Explosion extends EntityFamily {
     draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
 }
 
-// --- NEU: Klasse für einen kleinen Aufprall-Effekt ---
 class ImpactEffect extends EntityFamily {
     private particles: IParticle[] = [];
     constructor(game: Game, x: number, y: number, color: string = '#FFF') {
         super(game, x, y, 0, 0, 'effect', 'IMPACT');
-        const count = this.game.uiManager.settings.particles > 0 ? 5 : 0; // Weniger Partikel als bei einer Explosion
+        const count = this.game.uiManager.settings.particles > 0 ? 5 : 0;
         for (let i = 0; i < count; i++) {
             this.particles.push({
                 pos: new Vector2D(x, y),
-                vel: new Vector2D(Math.random() * 120 - 60, Math.random() * 120 - 60), // Geringere Geschwindigkeit
-                size: Math.random() * 2 + 1, // Kleinere Partikel
-                life: 0.2, // Sehr kurze Lebensdauer
+                vel: new Vector2D(Math.random() * 120 - 60, Math.random() * 120 - 60),
+                size: Math.random() * 2 + 1,
+                life: 0.2,
                 color: color
             });
         }
@@ -484,15 +482,43 @@ class PowerUp extends EntityFamily {
 class Enemy extends EntityFamily {
     public baseHealth: number; public health: number; public maxHealth: number; public pointsValue: number;
     public stunTimer: number = 0; public speed: number = 90; public isBoss: boolean = false; public collisionDamage: number = 35;
+    public isBossAdd: boolean = false;
     constructor(game: Game, x: number, y: number, w: number, h: number, health: number, points: number, type: string) { super(game, x, y, w, h, 'enemy', type); this.baseHealth = health; this.health = this.baseHealth * game.enemyHealthMultiplier; this.maxHealth = this.health; this.pointsValue = points; }
     takeHit(damage: number): void { if (!this.isAlive()) return; this.health -= damage; if (this.health <= 0) { this.destroy(); let scoreToAdd = this.pointsValue * this.game.level; if (this.game.player && this.game.player.isScoreBoosted()) scoreToAdd *= 2; this.game.score += scoreToAdd; this.game.scoreEarnedThisLevel += scoreToAdd; if (this.isBoss) { this.game.isBossActive = false; setTimeout(() => this.game.changeState('LEVEL_START'), 3000); } if (this.game.uiManager.settings.particles > 0) this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); if (Math.random() < 0.2) this.game.addEntity(new Coin(this.game, this.pos.x, this.pos.y, this.pointsValue)); if (Math.random() < 0.15) this.game.addEntity(new PowerUp(this.game, this.pos.x, this.pos.y)); this.game.uiManager.soundManager.play('enemyExplosion'); } }
     update(dt: number): void { if (this.stunTimer > 0) { this.stunTimer -= dt; return; } if (this.inFormation) return; const dt_s = dt / 1000; this.pos.y += this.speed * dt_s; if (this.pos.y > this.game.height) this.destroy(); }
     stun(duration: number): void { this.stunTimer = duration; }
     drawHealthBar(ctx: CanvasRenderingContext2D): void { if (this.health < this.maxHealth && !this.isBoss) { ctx.save(); ctx.fillStyle = '#500'; ctx.fillRect(this.pos.x, this.pos.y - 10, this.width, 5); ctx.fillStyle = '#f00'; ctx.fillRect(this.pos.x, this.pos.y - 10, this.width * (this.health / this.maxHealth), 5); ctx.restore(); } }
 }
-class Grunt extends Enemy { private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 60), -54, 60, 54, 1, 10, 'GRUNT'); this.speed = 100 * game.enemySpeedMultiplier; this.collisionDamage = 35; this.image = gruntImg; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
+class Grunt extends Enemy { 
+    private image: HTMLImageElement; 
+    constructor(game: Game) { super(game, Math.random() * (game.width - 60), -54, 60, 54, 1, 10, 'GRUNT'); this.speed = 100 * game.enemySpeedMultiplier; this.collisionDamage = 35; this.image = gruntImg; } 
+    draw(ctx: CanvasRenderingContext2D): void { 
+        ctx.save(); 
+        if (this.isBossAdd) {
+            ctx.shadowColor = '#EE82EE';
+            ctx.shadowBlur = 15;
+        }
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); 
+        this.drawHealthBar(ctx); 
+        ctx.restore(); 
+    } 
+}
 class Tank extends Enemy { private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 100), -96, 100, 96, 3, 30, 'TANK'); this.speed = 60 * game.enemySpeedMultiplier; this.collisionDamage = 50; this.image = tankImg; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
-class Weaver extends Enemy { private angle: number; private hSpeed: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 55), -46, 55, 46, 1, 20, 'WEAVER'); this.speed = 80 * game.enemySpeedMultiplier; this.angle = Math.random() * Math.PI * 2; this.hSpeed = (Math.random() * 2 + 1) * 60; this.collisionDamage = 35; this.image = weaverImg; } update(dt: number): void { const dt_s = dt / 1000; super.update(dt); if (this.inFormation) return; this.angle += 3 * dt_s; this.pos.x += Math.sin(this.angle) * this.hSpeed * dt_s; if (this.pos.x < 0 || this.pos.x > this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
+class Weaver extends Enemy { 
+    private angle: number; private hSpeed: number; private image: HTMLImageElement; 
+    constructor(game: Game) { super(game, Math.random() * (game.width - 55), -46, 55, 46, 1, 20, 'WEAVER'); this.speed = 80 * game.enemySpeedMultiplier; this.angle = Math.random() * Math.PI * 2; this.hSpeed = (Math.random() * 2 + 1) * 60; this.collisionDamage = 35; this.image = weaverImg; } 
+    update(dt: number): void { const dt_s = dt / 1000; super.update(dt); if (this.inFormation) return; this.angle += 3 * dt_s; this.pos.x += Math.sin(this.angle) * this.hSpeed * dt_s; if (this.pos.x < 0 || this.pos.x > this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } 
+    draw(ctx: CanvasRenderingContext2D): void { 
+        ctx.save(); 
+        if (this.isBossAdd) {
+            ctx.shadowColor = '#EE82EE';
+            ctx.shadowBlur = 15;
+        }
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); 
+        this.drawHealthBar(ctx); 
+        ctx.restore(); 
+    } 
+}
 class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); if(this.inFormation) { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000 + Math.random() * 1500; } } else { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
 class Teleporter extends Enemy {
     private teleportCooldown: number = 4000;
@@ -578,7 +604,7 @@ class BlackHole extends Entity {
 }
 class Projectile extends EntityFamily {
     public vel: Vector2D; public damage: number = 1; protected color: string;
-    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600, color: string = '#0ff') {
+    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600, color: string = '#00FFFF') {
         super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE');
         this.vel = new Vector2D(velX, velY);
         this.color = color;
@@ -589,7 +615,14 @@ class Projectile extends EntityFamily {
     }
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 5;
+        const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x + this.width, this.pos.y);
+        const semiTransparentColor = `${this.color}80`;
+        gradient.addColorStop(0, semiTransparentColor);
+        gradient.addColorStop(0.5, '#FFFFFF');
+        gradient.addColorStop(1, semiTransparentColor);
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
         ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
         ctx.restore();
     }
@@ -608,14 +641,19 @@ class HeavyProjectile extends Projectile {
     }
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        ctx.fillStyle = '#FFD700';
+        const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x + this.width, this.pos.y);
+        const semiTransparentColor = '#FFD70080';
+        gradient.addColorStop(0, semiTransparentColor);
+        gradient.addColorStop(0.5, '#FFFFFF');
+        gradient.addColorStop(1, semiTransparentColor);
+        ctx.fillStyle = gradient;
         ctx.shadowColor = '#FFA500';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 10;
         ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
         ctx.restore();
     }
 }
-class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 10; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
+class PiercingProjectile extends Projectile { private hitEnemies: Enemy[] = []; constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -700) { super(game, x, y, velX, velY); this.pos.x = x - 3; this.width = 6; this.height = 25; this.damage = 0.8; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x + this.width, this.pos.y); const semiTransparentColor = '#9400D380'; gradient.addColorStop(0, semiTransparentColor); gradient.addColorStop(0.5, '#FFFFFF'); gradient.addColorStop(1, semiTransparentColor); ctx.fillStyle = gradient; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 12; ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); } onHit(e: Enemy): void { this.hitEnemies.push(e); } hasHit(e: Enemy): boolean { return this.hitEnemies.includes(e); } }
 class BlackHoleProjectile extends Projectile { constructor(game: Game, x: number, y: number, velX: number, velY: number) { super(game, x - 10, y - 10, velX, velY); this.width = 20; this.height = 20; this.type = 'BLACK_HOLE_PROJECTILE'; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = '#9400D3'; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(this.pos.x + this.width / 2, this.pos.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } onHit(e: Enemy): void { this.game.addEntity(new BlackHole(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.game.uiManager.soundManager.play('blackHole'); this.destroy(); } }
 class LaserBeam extends EntityFamily {
     public player: Player; public damage: number = 0.2; private phase: number = 0; private amplitude: number = 30; private frequency: number = 0.02;
@@ -723,7 +761,11 @@ class HomingMissile extends Projectile {
         ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2);
         const angle = Math.atan2(this.vel.y, this.vel.x) + Math.PI / 2;
         ctx.rotate(angle);
-        ctx.fillStyle = '#ff9900';
+        const gradient = ctx.createLinearGradient(-this.width / 2, 0, this.width / 2, 0);
+        gradient.addColorStop(0, '#ff990080');
+        gradient.addColorStop(0.5, '#FFFFFF');
+        gradient.addColorStop(1, '#ff990080');
+        ctx.fillStyle = gradient;
         ctx.shadowColor = '#ff5722';
         ctx.shadowBlur = 10;
         ctx.beginPath();
@@ -752,6 +794,19 @@ class SideProjectile extends Projectile {
         this.pos.x = x - this.width / 2;
         this.pos.y = y - this.height / 2;
     }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x, this.pos.y + this.height);
+        const semiTransparentColor = '#FFA50080';
+        gradient.addColorStop(0, semiTransparentColor);
+        gradient.addColorStop(0.5, '#FFFFFF');
+        gradient.addColorStop(1, semiTransparentColor);
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+        ctx.restore();
+    }
 }
 class EnemyProjectile extends Projectile {
     public playerDamage: number;
@@ -770,7 +825,61 @@ class EnemyProjectile extends Projectile {
         ctx.restore();
     }
 }
-class Drone extends EntityFamily {
+
+class FireballProjectile extends EnemyProjectile {
+    constructor(game: Game, x: number, y: number, vX: number, vY: number, playerDamage: number) {
+        super(game, x, y, vX, vY, playerDamage);
+        this.width = 16;
+        this.height = 16;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.width / 2);
+        gradient.addColorStop(0, 'rgba(255, 255, 150, 1)');
+        gradient.addColorStop(0.6, 'rgba(255, 165, 0, 1)');
+        gradient.addColorStop(1, 'rgba(255, 69, 0, 0.5)');
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FFA500';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, this.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// --- NEU: Klasse für rote Plasma-Projektile ---
+class PlasmaBallProjectile extends EnemyProjectile {
+    constructor(game: Game, x: number, y: number, vX: number, vY: number, playerDamage: number) {
+        super(game, x, y, vX, vY, playerDamage);
+        this.width = 12; // Etwas kleiner als Feuerbälle
+        this.height = 12;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.width / 2);
+        gradient.addColorStop(0, 'rgba(255, 180, 180, 1)'); // Helles, weiß-rotes Zentrum
+        gradient.addColorStop(0.5, 'rgba(255, 0, 0, 1)');   // Leuchtendes Rot
+        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.5)');   // Dunkelroter, transparenter Rand
+
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FF4136'; // Rotes Leuchten
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, this.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}class Drone extends EntityFamily {
     private tier: number;
     private index: number;
     private orbitRadius: number = 75;
@@ -947,7 +1056,7 @@ class PowerUpManager {
         const velY = -600;
         const angle15 = 15 * (Math.PI / 180);
 
-        let projectileColor = '#0ff';
+        let projectileColor = '#00FFFF';
         switch (this.weaponTier) {
             case 2: projectileColor = '#B10DC9'; break;
             case 3: projectileColor = '#FFFF00'; break;
@@ -1137,7 +1246,6 @@ class BossSentinelPrime extends Enemy {
 
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        // --- GEÄNDERT: Hitbox entspricht wieder der visuellen Größe ---
         super(game, game.width / 2 - 112.5, -150, 225, 150, health, 5000, 'BOSS_SENTINEL_PRIME');
         this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50;
     }
@@ -1243,13 +1351,15 @@ class BossSentinelPrime extends Enemy {
                 const attackWidth = w * 0.7;
                 const startX = x + (w * 0.15);
                 for (let i = 0; i < 7; i++) {
-                    this.game.addEntity(new EnemyProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
+                    // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+                    this.game.addEntity(new PlasmaBallProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
                 }
                 break;
             case 1: 
                 for (let i = 0; i < 12; i++) {
                     const angle = i * Math.PI / 6;
-                    this.game.addEntity(new EnemyProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
+                    // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+                    this.game.addEntity(new PlasmaBallProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
                 }
                 break;
             case 2:
@@ -1280,12 +1390,94 @@ class BossSentinelPrime extends Enemy {
 class BossVoidSerpent extends Enemy {
     private image: HTMLImageElement; private attackTimer: number = 4000; private angle: number = 0;
     private verticalTargetY: number = 80; private waveSpeed: number = 1.2; private waveAmplitude: number;
+    private isPreparingToAttack: boolean = false;
+    private attackPreparationTimer: number = 0;
+    private readonly attackPreparationDuration: number = 1000;
+
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 7500, 'BOSS_VOID_SERPENT');
+        super(game, game.width / 2 - 90, -240, 180, 240, health, 7500, 'BOSS_VOID_SERPENT');
         this.isBoss = true; this.image = bossVoidSerpentImg; this.collisionDamage = 90; this.speed = 40 * speedMultiplier; this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20;
     }
-    update(dt: number): void { const dt_s = dt / 1000; if (this.pos.y < this.verticalTargetY) { this.pos.y += this.speed * dt_s; } else { this.angle += this.waveSpeed * dt_s; this.pos.x = (this.game.width / 2 - this.width / 2) + Math.sin(this.angle) * this.waveAmplitude; this.verticalTargetY = 80 + Math.cos(this.angle * 0.5) * 40; this.pos.y += (this.verticalTargetY - this.pos.y) * 0.1; } this.attackTimer -= dt; if (this.attackTimer <= 0 && this.pos.y >= 60) { this.attackTimer = Math.max(2000, 3500 - this.game.level * 100); const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height; const attackType = Math.random() > 0.4 ? 'SPREAD' : 'WHIP'; if (attackType === 'SPREAD') { for (let i = -3; i <= 3; i++) { const angle = i * 0.25; this.game.addEntity(new EnemyProjectile(this.game, x + w / 2, y + h * 0.8, Math.sin(angle) * 350, Math.cos(angle) * 350, this.collisionDamage)); } } else { if (this.game.player) { const p = this.game.player; for (let i = 0; i < 3; i++) { setTimeout(() => { const targetX = p.pos.x + p.width/2; const targetY = p.pos.y + p.height/2; const angle = Math.atan2(targetY - (this.pos.y + h), targetX - (this.pos.x + w/2)); this.game.addEntity(new EnemyProjectile(this.game, x + w/2, y + h, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage)); }, i * 150); } } } } }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); }
+
+    update(dt: number): void {
+        if (this.isPreparingToAttack) {
+            this.attackPreparationTimer -= dt;
+            if (this.attackPreparationTimer <= 0) {
+                this.isPreparingToAttack = false;
+                this.executeAttack();
+            }
+            return;
+        }
+
+        const dt_s = dt / 1000;
+        if (this.pos.y < this.verticalTargetY) {
+            this.pos.y += this.speed * dt_s;
+        } else {
+            this.angle += this.waveSpeed * dt_s;
+            this.pos.x = (this.game.width / 2 - this.width / 2) + Math.sin(this.angle) * this.waveAmplitude;
+            this.verticalTargetY = 80 + Math.cos(this.angle * 0.5) * 40;
+            this.pos.y += (this.verticalTargetY - this.pos.y) * 0.1;
+        }
+        
+        this.attackTimer -= dt;
+        if (this.attackTimer <= 0 && this.pos.y >= 60) {
+            this.isPreparingToAttack = true;
+            this.attackPreparationTimer = this.attackPreparationDuration;
+            this.attackTimer = Math.max(2000, 3500 - this.game.level * 100);
+        }
+    }
+
+    private executeAttack(): void {
+        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
+        const attackType = Math.random() > 0.5 ? 'SPREAD' : 'WHIP';
+
+        if (attackType === 'SPREAD') {
+            const spawnX = x + w / 2;
+            const spawnY = y + h / 2;
+            const outwardSpeed = 180;
+            const tangentialSpeed = 120;
+            const numProjectiles = 4;
+            const spreadAngle = Math.PI / 2.5;
+            const startAngle = (Math.PI / 2) - (spreadAngle / 2);
+            const angleIncrement = spreadAngle / (numProjectiles - 1);
+
+            for (let i = 0; i < numProjectiles; i++) {
+                const angle = startAngle + (i * angleIncrement);
+                const velX = Math.cos(angle) * outwardSpeed - Math.sin(angle) * tangentialSpeed;
+                const velY = Math.sin(angle) * outwardSpeed + Math.cos(angle) * tangentialSpeed;
+                // --- GEÄNDERT: Boss feuert jetzt Feuerball-Projektile ---
+                this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, velX, velY, this.collisionDamage));
+            }
+        } 
+        else { 
+            if (this.game.player) {
+                const p = this.game.player;
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        if (!this.isAlive()) return; 
+                        const targetX = p.pos.x + p.width / 2;
+                        const targetY = p.pos.y + p.height / 2;
+                        const spawnX = this.pos.x + this.width / 2;
+                        const spawnY = this.pos.y + this.height;
+                        const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
+                        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+                        this.game.addEntity(new PlasmaBallProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage));
+                    }, i * 150);
+                }
+            }
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        if (this.isPreparingToAttack) {
+            const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9;
+            ctx.shadowColor = `rgba(148, 0, 211, ${glow})`;
+            ctx.shadowBlur = 20 + glow * 15;
+        }
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+        ctx.restore();
+    }
 }
 class BossOmegaNexus extends Enemy {
     private baseImage: HTMLImageElement; private ringImage: HTMLImageElement; private ringAngle: number = 0;
@@ -1301,8 +1493,14 @@ class BossOmegaNexus extends Enemy {
     update(dt: number): void { const dt_s = dt / 1000; this.ringAngle += this.ringRotationSpeed * dt_s; if (this.pos.y < 30) { this.pos.y += 25 * dt_s; } this.attackTimer -= dt; switch(this.phase) { case 1: this.updatePhase1(dt); break; case 2: this.updatePhase2(dt); break; case 3: this.updatePhase3(dt); break; } }
     private updatePhase1(dt: number): void { if (this.attackTimer <= 0) { this.attackTimer = 4000; this.fireTargetedBarrage(3, 400); } }
     private updatePhase2(dt: number): void { if (this.isChargingLaser) { this.laserChargeTimer -= dt; if (this.laserChargeTimer <= 0) { this.isChargingLaser = false; this.laserActive = true; this.laserDurationTimer = 4000; } return; } if (this.laserActive) { this.laserDurationTimer -= dt; if (this.laserDurationTimer <= 0) { this.laserActive = false; } return; } if (this.attackTimer <= 0) { this.attackTimer = 8000; this.isChargingLaser = true; this.laserChargeTimer = 3000; } }
-    private updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0 && !this.laserActive) { this.bulletHellTimer = 100; const bulletSpeed = 250; this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle) * bulletSpeed, Math.sin(this.bulletHellAngle) * bulletSpeed, 40)); this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle + Math.PI) * bulletSpeed, Math.sin(this.bulletHellAngle + Math.PI) * bulletSpeed, 40)); this.bulletHellAngle += 0.3; } }
-    private fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); this.game.addEntity(new EnemyProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 200); } }
+    private updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0 && !this.laserActive) { this.bulletHellTimer = 100; const bulletSpeed = 250; 
+        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle) * bulletSpeed, Math.sin(this.bulletHellAngle) * bulletSpeed, 40)); 
+        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle + Math.PI) * bulletSpeed, Math.sin(this.bulletHellAngle + Math.PI) * bulletSpeed, 40)); 
+        this.bulletHellAngle += 0.3; } }
+    private fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); 
+        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+        this.game.addEntity(new PlasmaBallProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 200); } }
     draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 3000); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.7})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 40 * chargeRatio, 0, Math.PI * 2); ctx.fill(); } if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(centerX - 15, centerY, 30, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(centerX - 25, centerY, 50, this.game.height); } }
 }
 class BossNexusPrime extends Enemy {
@@ -1320,15 +1518,19 @@ class BossNexusPrime extends Enemy {
     }
     takeHit(damage: number): void { super.takeHit(damage); if (!this.isAlive()) return; const healthPercentage = this.health / this.maxHealth; if (this.phase === 1 && healthPercentage <= 0.70) { this.phase = 2; this.attackTimer = 1000; this.drones.push({pos: new Vector2D(100, 150), angle: 0}); this.drones.push({pos: new Vector2D(this.game.width - 100, 150), angle: Math.PI}); } else if (this.phase === 2 && healthPercentage <= 0.35) { this.phase = 3; this.ringRotationSpeed = 1.0; } }
     update(dt: number): void { const dt_s = dt / 1000; this.ringAngle += this.ringRotationSpeed * dt_s; if (this.pos.y < 30) this.pos.y += 20 * dt_s; this.attackTimer -= dt; this.updateDrones(dt_s); switch(this.phase) { case 1: this.updatePhase1(dt); break; case 2: this.updatePhase2(dt); break; case 3: this.updatePhase3(dt); break; } }
-    updateDrones(dt_s: number): void { if (this.drones.length === 0) return; this.drones.forEach(d => { d.angle += 3 * dt_s; if (this.game.player) { const p = this.game.player; const targetAngle = Math.atan2(p.pos.y - d.pos.y, p.pos.x - d.pos.x); if (Math.random() < 0.02) { this.game.addEntity(new EnemyProjectile(this.game, d.pos.x, d.pos.y, Math.cos(targetAngle) * 300, Math.sin(targetAngle) * 300, 30)); } } }); }
+    updateDrones(dt_s: number): void { if (this.drones.length === 0) return; this.drones.forEach(d => { d.angle += 3 * dt_s; if (this.game.player) { const p = this.game.player; const targetAngle = Math.atan2(p.pos.y - d.pos.y, p.pos.x - d.pos.x); if (Math.random() < 0.02) { 
+        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+        this.game.addEntity(new PlasmaBallProjectile(this.game, d.pos.x, d.pos.y, Math.cos(targetAngle) * 300, Math.sin(targetAngle) * 300, 30)); } } }); }
     updatePhase1(dt: number): void { if (this.attackTimer <= 0) { this.attackTimer = 3500; this.fireTargetedBarrage(4, 450); } }
     updatePhase2(dt: number): void { if (this.isChargingLaser) { this.laserChargeTimer -= dt; if (this.laserChargeTimer <= 0) { this.isChargingLaser = false; this.laserActive = true; this.laserDurationTimer = 3000; this.laserX = 100; this.laserSweepSpeed = 80; } return; } if (this.laserActive) { this.laserDurationTimer -= dt; this.laserX += this.laserSweepSpeed * (dt/1000); if(this.laserX > this.game.width - 100 || this.laserX < 100) { this.laserSweepSpeed *= -1; } if (this.laserDurationTimer <= 0) this.laserActive = false; return; } if (this.attackTimer <= 0) { this.attackTimer = 7000; this.isChargingLaser = true; this.laserChargeTimer = 2500; } }
-    updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0) { this.bulletHellTimer = 80; const bulletSpeed = 300; for(let i=0; i<4; i++){ const angle = this.bulletHellAngle + (i * Math.PI / 2); this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, 40)); } this.bulletHellAngle += 0.25; } }
-    fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); this.game.addEntity(new EnemyProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 150); } }
+    updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0) { this.bulletHellTimer = 80; const bulletSpeed = 300; for(let i=0; i<4; i++){ const angle = this.bulletHellAngle + (i * Math.PI / 2); 
+        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, 40)); } this.bulletHellAngle += 0.25; } }
+    fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); 
+        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
+        this.game.addEntity(new PlasmaBallProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 150); } }
     draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.save(); ctx.shadowColor = '#FF4136'; ctx.shadowBlur = this.phase * 10; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); this.drones.forEach(d => { ctx.fillStyle = '#B10DC9'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#FF4136'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 8, 0, Math.PI * 2); ctx.fill(); }); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 2500); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.8})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 45 * chargeRatio, 0, Math.PI * 2); ctx.fill();} if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(this.laserX - 10, 0, 20, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(this.laserX - 20, 0, 40, this.game.height); } }
-}
-
-// --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
+}// --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
 
 class ShopManager {
     public game: Game;
@@ -3488,7 +3690,7 @@ class Game {
     private addEnemyToFormation(enemy: Enemy | null, x: number, y: number) {
         if(enemy) {
             enemy.pos.x = x;
-            enemy.pos.y = y;
+            enemy.pos.y
             enemy.speed = 0;
             enemy.inFormation = true;
             this.activeFormationEnemies.push(enemy);
@@ -3577,7 +3779,7 @@ class Game {
             case 'SHOOTER': return new Shooter(this);
             case 'TELEPORTER': return new Teleporter(this);
             case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 50 * (1 + this.level/5), 1 + this.level/10);
-            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 120 * (1 + this.level/5), 1.1 + this.level/10);
+            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 30 * (1 + this.level/5), 1.1 + this.level/10);
             case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 150 * (1 + this.level/5), 1.2 + this.level/10);
             case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 200 * (1 + this.level/5), 1.3 + this.level/10);
             default: return null;
@@ -3586,10 +3788,12 @@ class Game {
     
     spawnEnemy(isBossAdd: boolean = false, fixedType?: string): void {
         let type: string;
-        if(fixedType) {
+
+        if (fixedType) {
             type = fixedType;
         } else if (isBossAdd) {
-            type = 'GRUNT';
+            const addTypes = ['GRUNT', 'WEAVER'];
+            type = addTypes[Math.floor(Math.random() * addTypes.length)]!;
         } else {
             type = this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!;
         }
@@ -3597,8 +3801,9 @@ class Game {
         const enemy = this.createEnemyByType(type);
         if (enemy) {
             if (isBossAdd) {
-                enemy.health *= 0.25;
-                enemy.maxHealth *= 0.25;
+                enemy.isBossAdd = true;
+                enemy.health *= 0.5;
+                enemy.maxHealth *= 0.5;
             }
             this.addEntity(enemy);
         }
@@ -3621,9 +3826,9 @@ class Game {
         const alpha1 = Math.min(1, t / 2000);
         ctx.globalAlpha = alpha1;
         ctx.font = `${titleSize}px 'Press Start 2P'`;
-        ctx.fillStyle = '#0ff';
+        ctx.fillStyle = '#00FFFF';
         const pulse = Math.sin(t / 400) * 5 + 15;
-        ctx.shadowColor = '#0ff';
+        ctx.shadowColor = '#00FFFF';
         ctx.shadowBlur = pulse;
         ctx.fillText("GALAXY FALL", w / 2, h / 2 - (subtitleSize / 2));
         ctx.shadowBlur = 0;
