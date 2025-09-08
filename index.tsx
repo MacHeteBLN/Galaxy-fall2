@@ -1,4 +1,3 @@
-
 import { translations } from './translations';
 
 import playerImgSrc1 from './assets/images/player_tier1.png';
@@ -35,11 +34,9 @@ import iconInventorySizeSrc from './assets/images/icons/icon_inventory_size.png'
 import iconBossSlayerSrc from './assets/images/icons/icon_boss_slayer.png';
 import iconWeaponPrestigeSrc from './assets/images/icons/icon_weapon_prestige.png';
 import iconTrailRainbowSrc from './assets/images/icons/icon_trail_rainbow.png';
-// --- NEU: Bild-Importe für Phönix-Kerne ---
 import phoenixCoreBlueSrc from './assets/images/crystal_blue.png';
 import phoenixCoreYellowSrc from './assets/images/crystal_yellow.png';
 import phoenixCorePurpleSrc from './assets/images/crystal_purple.png';
-
 import orbitalDrone1ImgSrc from './assets/images/orbital_drone_1.png';
 import orbitalDrone2ImgSrc from './assets/images/orbital_drone_2.png';
 import orbitalDrone3ImgSrc from './assets/images/orbital_drone_3.png';
@@ -242,6 +239,46 @@ class Explosion extends EntityFamily {
     update(dt: number): void { const dt_s = dt / 1000; this.particles.forEach(p => { p.pos.x += p.vel.x * dt_s; p.pos.y += p.vel.y * dt_s; p.life -= dt_s; }); this.particles = this.particles.filter(p => p.life > 0); if (this.particles.length === 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
 }
+
+// --- NEU: Klasse für einen kleinen Aufprall-Effekt ---
+class ImpactEffect extends EntityFamily {
+    private particles: IParticle[] = [];
+    constructor(game: Game, x: number, y: number, color: string = '#FFF') {
+        super(game, x, y, 0, 0, 'effect', 'IMPACT');
+        const count = this.game.uiManager.settings.particles > 0 ? 5 : 0; // Weniger Partikel als bei einer Explosion
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                pos: new Vector2D(x, y),
+                vel: new Vector2D(Math.random() * 120 - 60, Math.random() * 120 - 60), // Geringere Geschwindigkeit
+                size: Math.random() * 2 + 1, // Kleinere Partikel
+                life: 0.2, // Sehr kurze Lebensdauer
+                color: color
+            });
+        }
+    }
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.particles.forEach(p => {
+            p.pos.x += p.vel.x * dt_s;
+            p.pos.y += p.vel.y * dt_s;
+            p.life -= dt_s;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+        if (this.particles.length === 0) this.destroy();
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life / 0.2;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+}
+
 class NukeEffect extends Entity {
     private radius: number = 0; private life: number = 1;
     constructor(game: Game) { super(game, game.width / 2, game.height / 2, 0, 0); this.type = 'EFFECT'; }
@@ -290,7 +327,6 @@ class TeleportEffect extends Entity {
         ctx.restore();
     }
 }
-// --- NEU: Visueller Effekt für die Wiederbelebung ---
 class ReviveEffect extends Entity {
     private radius: number = 0;
     private life: number = 0.8;
@@ -323,17 +359,16 @@ class ReviveEffect extends Entity {
     }
 }
 
-// --- NEU: Klasse für die UI-Anzeige der Kristalle ---
 class PhoenixCoreUI extends Entity {
     private pulseTimer: number = 0;
 
     constructor(game: Game) {
-        super(game, game.width - 150, 10, 140, 40); // Oben rechts positioniert
+        super(game, game.width - 150, 10, 140, 40);
     }
 
     update(dt: number): void {
         this.pulseTimer += dt / 1000;
-        this.pos.x = this.game.width - 160; // Position an Bildschirmbreite anpassen
+        this.pos.x = this.game.width - 160;
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
@@ -363,7 +398,6 @@ class PhoenixCoreUI extends Entity {
     }
 }
 
-// --- NEU: Klasse für die Wiederbelebungs-Animation ---
 class ReviveCrystalAnimation extends Entity {
     private target: Player;
     private image: HTMLImageElement;
@@ -559,7 +593,10 @@ class Projectile extends EntityFamily {
         ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
         ctx.restore();
     }
-    onHit(e: Enemy): void { this.destroy(); }
+    onHit(e: Enemy): void { 
+        this.game.addEntity(new ImpactEffect(this.game, this.pos.x + this.width / 2, this.pos.y, this.color));
+        this.destroy(); 
+    } 
 }
 class HeavyProjectile extends Projectile {
     constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) {
@@ -957,7 +994,6 @@ class Player extends EntityFamily {
     public laser: LaserBeam | null = null; public droneAngle: number = 0;
     public isChargingBlackHole: boolean = false;
     public blackHoleChargeSlot: number | null = null;
-    // --- NEU: Eigenschaft für Wiederbelebungs-Kristalle ---
     public availableReviveCrystals: ('BLUE' | 'YELLOW' | 'PURPLE')[] = [];
     
     constructor(game: Game, initialStats: { lives: number, energy: number, speed: number, maxEnergy: number }) {
@@ -970,11 +1006,9 @@ class Player extends EntityFamily {
         this.speed = initialStats.speed;
         
         this.powerUpManager = new PowerUpManager(this);
-        // --- NEU: Initialisierung der Kristalle ---
         this.initializeReviveCrystals();
     }
 
-    // --- NEU: Methode zur Initialisierung der Kristalle ---
     public initializeReviveCrystals(): void {
         this.availableReviveCrystals = [];
         const reviveLevel = this.game.shopManager.getUpgradeLevel('revive_chance');
@@ -1046,7 +1080,6 @@ class Player extends EntityFamily {
     }
     shoot(): void { this.powerUpManager.shoot(); }
 
-    // --- MODIFIZIERT: Komplette takeHit-Methode ---
     takeHit(damagePercentage: number): void {
         if (this.isGhosted()) return;
         if (this.isShielded()) {
@@ -1062,19 +1095,16 @@ class Player extends EntityFamily {
             this.lives--;
 
             if (this.lives <= 0) {
-                // Prüfe, ob Wiederbelebungs-Kristalle vorhanden sind
                 if (this.availableReviveCrystals.length > 0) {
-                    const crystalToUse = this.availableReviveCrystals.shift()!; // Nimmt den ersten verfügbaren Kristall
+                    const crystalToUse = this.availableReviveCrystals.shift()!;
                     this.game.startReviveSequence(this, crystalToUse);
-                    return; // Verhindert das "Game Over", die Animation übernimmt
+                    return;
                 }
 
-                // Kein Kristall verfügbar -> Game Over
                 this.destroy();
                 this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2));
                 this.game.uiManager.soundManager.play('playerExplosion');
             } else {
-                // Normaler Lebensverlust, kein Game Over
                 this.energy = this.maxEnergy;
                 this.pos.x = this.game.width / 2 - this.width / 2;
                 this.pos.y = this.game.height - 80;
@@ -1083,14 +1113,13 @@ class Player extends EntityFamily {
         }
     }
 
-    // --- NEU: Methode wird von der Animation aufgerufen ---
     public finalizeRevive(): void {
         this.lives = 1;
-        this.energy = this.maxEnergy * 0.5; // Stellt 50% Energie wieder her
+        this.energy = this.maxEnergy * 0.5;
         this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
         this.game.uiManager.soundManager.play('revive');
-        this.powerUpManager.activate('GHOST_PROTOCOL', 3000); // Kurze Unverwundbarkeit
-        this.game.changeState('PLAYING'); // Spiel fortsetzen
+        this.powerUpManager.activate('GHOST_PROTOCOL', 3000);
+        this.game.changeState('PLAYING');
     }
 
     isShielded(): boolean { return this.powerUpManager.isActive('SHIELD'); }
@@ -1103,9 +1132,13 @@ class BossSentinelPrime extends Enemy {
     private patrolY: number = 50;
     private isPreparingCharge: boolean = false; private chargePreparationTimer: number = 0;
     private isPreparingLineAttack: boolean = false; private lineAttackPreparationTimer: number = 0;
+    private chargeTargetPos: Vector2D | null = null;
+    private chargeOriginPos: Vector2D | null = null;
+
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 5000, 'BOSS_SENTINEL_PRIME');
+        // --- GEÄNDERT: Hitbox entspricht wieder der visuellen Größe ---
+        super(game, game.width / 2 - 112.5, -150, 225, 150, health, 5000, 'BOSS_SENTINEL_PRIME');
         this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50;
     }
 
@@ -1128,7 +1161,35 @@ class BossSentinelPrime extends Enemy {
             return;
         }
 
-        if (this.movementPattern === 'ENTER') {
+        if (this.movementPattern === 'DASH_TO_PLAYER' && this.chargeTargetPos) {
+            const chargeSpeed = 800;
+            const targetX = this.chargeTargetPos.x - (this.width / 2);
+            const targetY = this.chargeTargetPos.y - (this.height / 2);
+            const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
+            this.pos.x += Math.cos(angle) * chargeSpeed * dt_s;
+            this.pos.y += Math.sin(angle) * chargeSpeed * dt_s;
+
+            const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y);
+            if (dist < 20) {
+                this.movementPattern = 'RETURN_TO_ORIGIN';
+            }
+        } else if (this.movementPattern === 'RETURN_TO_ORIGIN' && this.chargeOriginPos) {
+            const returnSpeed = 400;
+            const targetX = this.chargeOriginPos.x;
+            const targetY = this.chargeOriginPos.y;
+            const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
+            this.pos.x += Math.cos(angle) * returnSpeed * dt_s;
+            this.pos.y += Math.sin(angle) * returnSpeed * dt_s;
+            
+            const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y);
+            if (dist < 20) {
+                this.movementPattern = 'PATROL';
+                this.chargeOriginPos = null;
+                this.chargeTargetPos = null;
+                this.pos.x = targetX;
+                this.pos.y = targetY;
+            }
+        } else if (this.movementPattern === 'ENTER') {
             this.pos.y += 100 * dt_s;
             if (this.pos.y >= this.patrolY) {
                 this.pos.y = this.patrolY;
@@ -1140,6 +1201,8 @@ class BossSentinelPrime extends Enemy {
                 this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
                 this.hSpeed *= -1;
             }
+        } else if (this.movementPattern === 'PREPARE_CHARGE') {
+            // Boss hält an, während er sich auflädt.
         }
 
         this.attackTimer -= dt;
@@ -1159,10 +1222,15 @@ class BossSentinelPrime extends Enemy {
             case 1: 
                 this.executeAttack();
                 break;
-            case 2: 
+            case 2:
                 if (this.game.player) {
                     this.isPreparingCharge = true;
                     this.chargePreparationTimer = 1500;
+                    this.chargeOriginPos = new Vector2D(this.pos.x, this.pos.y);
+                    const targetX = this.game.player.pos.x + this.game.player.width / 2;
+                    const targetY = this.game.player.pos.y + this.game.player.height / 2;
+                    this.chargeTargetPos = new Vector2D(targetX, targetY);
+                    this.movementPattern = 'PREPARE_CHARGE';
                 }
                 break;
         }
@@ -1184,18 +1252,8 @@ class BossSentinelPrime extends Enemy {
                     this.game.addEntity(new EnemyProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
                 }
                 break;
-            case 2: 
-                if (this.game.player) {
-                    const chargeSpeed = 600;
-                    const targetX = this.game.player.pos.x;
-                    const direction = targetX > this.pos.x ? 1 : -1;
-                    this.hSpeed = direction * chargeSpeed;
-                    this.movementPattern = 'CHARGE';
-                    setTimeout(() => {
-                        this.hSpeed = 100 * (Math.random() > 0.5 ? 1 : -1);
-                        this.movementPattern = 'PATROL';
-                    }, 1000);
-                }
+            case 2:
+                this.movementPattern = 'DASH_TO_PLAYER';
                 break;
         }
         this.isPreparingCharge = false;
@@ -1209,10 +1267,13 @@ class BossSentinelPrime extends Enemy {
             ctx.shadowColor = `rgba(255, 0, 0, ${glow})`;
             ctx.shadowBlur = 30;
         } else if (this.isPreparingCharge) {
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 20;
+            const pulse = 1 + Math.sin(Date.now() / 100);
+            ctx.shadowColor = `rgba(255, 215, 0, 0.8)`;
+            ctx.shadowBlur = 20 + pulse * 10;
         }
+
         ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+        
         ctx.restore();
     }
 }
@@ -1281,7 +1342,6 @@ class ShopManager {
         this.playerCosmetics = this.loadCosmetics();
 
         this.shopItems = [
-            // ========== KATEGORIE: PERMANENTE UPGRADES ==========
             {
                 id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
                 iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000]
@@ -1331,7 +1391,6 @@ class ShopManager {
                 id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc',
                 iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000]
             },
-            // ========== KATEGORIE: VERBRAUCHSGEGENSTÄNDE ==========
             {
                 id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc',
                 iconSrc: powerupShieldSrc, cost: [400], 
@@ -1392,7 +1451,6 @@ class ShopManager {
                 iconSrc: powerupOrbitalDroneSrc, cost: [2000],
                 applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); }
             },
-            // ========== KATEGORIE: KOSMETISCHE ITEMS ==========
             {
                 id: 'skin_sentinel', type: 'COSMETIC', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc',
                 iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin'
@@ -1429,7 +1487,6 @@ class ShopManager {
                 id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc',
                 iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail'
             },
-            // ========== KATEGORIE: PI MÜNZPAKETE ==========
             {
                 id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc',
                 iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000
@@ -1836,7 +1893,6 @@ class SoundManager {
             case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
             case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
             case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
-            // --- MODIFIZIERT: Neuer Soundeffekt für Wiederbelebung ---
             case 'revive': 
                 freq = 400; 
                 duration = 0.8; 
@@ -2634,7 +2690,7 @@ class UIManager {
         ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); 
         ctx.fillStyle = '#FFFF00'; 
         ctx.font = `${fontSize}px 'Press Start 2P'`;
-        ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10); 
+        ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10, this.game.width * 0.95); 
     }
     public drawGameOver(): void { 
         const ctx = this.ctx; 
@@ -2700,7 +2756,6 @@ const LEVELS: ILevelDefinition[] = [
 
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
-    // --- NEU: Eigenschaft für Kristall-UI ---
     public phoenixCoreUI: PhoenixCoreUI;
     
     public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN';
@@ -2737,7 +2792,6 @@ class Game {
         this.uiManager = new UIManager(this, ui);
         this.piManager = new PiManager();
         this.piManager.setGame(this);
-        // --- NEU: Instanziierung der Kristall-UI ---
         this.phoenixCoreUI = new PhoenixCoreUI(this);
         
         this.loadGameData();
@@ -2966,11 +3020,9 @@ class Game {
 
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
     
-    // --- NEU: Methode zum Starten der Wiederbelebungssequenz ---
     public startReviveSequence(player: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE'): void {
         this.changeState('REVIVING');
         
-        // Startposition des Kristalls auf der UI berechnen
         const level = this.shopManager.getUpgradeLevel('revive_chance');
         let index = 0;
         if(crystalType === 'BLUE') index = 0;
@@ -3040,7 +3092,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 1;
+                    this.level = 20;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
@@ -3121,12 +3173,11 @@ class Game {
         }
     }
 
-    // --- MODIFIZIERT: update-Methode ---
     update(deltaTime: number): void { 
         if (this.gameState === 'REVIVING') {
             this.updateParallaxStarfield(deltaTime);
             this.entities.forEach(e => {
-                if(e.family === 'effect' || e instanceof Player) { // Spieler updaten damit er gezeichnet wird
+                if(e.family === 'effect' || e instanceof Player) {
                     e.update(deltaTime);
                 }
             });
@@ -3198,7 +3249,6 @@ class Game {
         this.uiManager.update(); 
     }
     
-    // --- MODIFIZIERT: draw-Methode ---
     draw(): void {
         this.ctx.clearRect(0, 0,this.width, this.height);
         this.drawParallaxStarfield();
@@ -3364,7 +3414,7 @@ class Game {
 
         this.enemySpawnTypes = levelData.enemies; 
         this.enemySpawnInterval = levelData.s; 
-        this.enemySpeedMultiplier = levelData.m; 
+        this.enemySpeedMultiplier = levelData.m;
         this.enemyHealthMultiplier = levelData.h ?? 1; 
         this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) || levelData.msgKey; 
         this.levelScoreToEarn = levelData.scoreToEarn; 
@@ -3526,7 +3576,7 @@ class Game {
             case 'WEAVER': return new Weaver(this);
             case 'SHOOTER': return new Shooter(this);
             case 'TELEPORTER': return new Teleporter(this);
-            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 100 * (1 + this.level/5), 1 + this.level/10);
+            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 50 * (1 + this.level/5), 1 + this.level/10);
             case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 120 * (1 + this.level/5), 1.1 + this.level/10);
             case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 150 * (1 + this.level/5), 1.2 + this.level/10);
             case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 200 * (1 + this.level/5), 1.3 + this.level/10);
@@ -3539,14 +3589,19 @@ class Game {
         if(fixedType) {
             type = fixedType;
         } else if (isBossAdd) {
-            const addTypes = ['GRUNT', 'WEAVER', 'SHOOTER', 'TANK'];
-            type = addTypes[Math.floor(Math.random() * addTypes.length)]!;
+            type = 'GRUNT';
         } else {
             type = this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!;
         }
         
         const enemy = this.createEnemyByType(type);
-        if (enemy) this.addEntity(enemy);
+        if (enemy) {
+            if (isBossAdd) {
+                enemy.health *= 0.25;
+                enemy.maxHealth *= 0.25;
+            }
+            this.addEntity(enemy);
+        }
     }
     
     drawProfessionalIntro(): void {
