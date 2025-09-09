@@ -69,7 +69,7 @@ const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), we
 const bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
 const bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
 const bossOmegaNexusBaseImg = createImage(bossOmegaNexusBaseSrc);
-const bossOmegaNexusRingImg = createImage(bossOmegaNexusRingSrc);
+const bossNexusPrimeImg = createImage(bossOmegaNexusRingSrc);
 const orbitalDroneImages = [createImage(orbitalDrone1ImgSrc), createImage(orbitalDrone2ImgSrc), createImage(orbitalDrone3ImgSrc)];
 const piCoinImg = createImage(piCoinImgSrc);
 const powerUpImages: { [key: string]: HTMLImageElement } = { 'WEAPON_UP': createImage(powerupWeaponUpSrc), 'RAPID_FIRE': createImage(powerupRapidFireSrc), 'SIDE_SHOTS': createImage(powerupSideShotsSrc), 'LASER_BEAM': createImage(powerupLaserBeamSrc), 'HOMING_MISSILES': createImage(powerupHomingMissilesSrc), 'SHIELD': createImage(powerupShieldSrc), 'REPAIR_KIT': createImage(powerupRepairKitSrc), 'EXTRA_LIFE': createImage(powerupExtraLifeSrc), 'GHOST_PROTOCOL': createImage(powerupGhostProtocolSrc), 'ORBITAL_DRONE': createImage(powerupOrbitalDroneSrc), 'NUKE': createImage(powerupNukeSrc), 'BLACK_HOLE': createImage(powerupBlackHoleSrc), 'SCORE_BOOST': createImage(powerupScoreBoostSrc), };
@@ -1243,10 +1243,16 @@ class BossSentinelPrime extends Enemy {
     private isPreparingLineAttack: boolean = false; private lineAttackPreparationTimer: number = 0;
     private chargeTargetPos: Vector2D | null = null;
     private chargeOriginPos: Vector2D | null = null;
+    private visualOffsetY: number;
 
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 112.5, -150, 225, 150, health, 5000, 'BOSS_SENTINEL_PRIME');
+        const visualHeight = 150;
+        const hitboxHeight = 100;
+
+        super(game, game.width / 2 - 112.5, -visualHeight, 225, hitboxHeight, health, 5000, 'BOSS_SENTINEL_PRIME');
+        
+        this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
         this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50;
     }
 
@@ -1382,7 +1388,8 @@ class BossSentinelPrime extends Enemy {
             ctx.shadowBlur = 20 + pulse * 10;
         }
 
-        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+        const visualHeight = 150;
+        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, visualHeight);
         
         ctx.restore();
     }
@@ -1393,10 +1400,22 @@ class BossVoidSerpent extends Enemy {
     private isPreparingToAttack: boolean = false;
     private attackPreparationTimer: number = 0;
     private readonly attackPreparationDuration: number = 1000;
+    private visualOffsetY: number;
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 90, -240, 180, 240, health, 7500, 'BOSS_VOID_SERPENT');
-        this.isBoss = true; this.image = bossVoidSerpentImg; this.collisionDamage = 90; this.speed = 40 * speedMultiplier; this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20;
+        const hitboxHeight = 100;
+        const visualHeight = 240;
+
+        // KORREKTUR: super() wird als Allererstes aufgerufen.
+        super(game, game.width / 2 - 90, -visualHeight, 180, hitboxHeight, health * 0.7, 7500, 'BOSS_VOID_SERPENT');
+        
+        // KORREKTUR: Alle Zuweisungen zu `this` erfolgen NACH dem super()-Aufruf.
+        this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
+        this.isBoss = true; 
+        this.image = bossVoidSerpentImg; 
+        this.collisionDamage = 90; 
+        this.speed = 40 * speedMultiplier; 
+        this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20;
     }
 
     update(dt: number): void {
@@ -1423,7 +1442,8 @@ class BossVoidSerpent extends Enemy {
         if (this.attackTimer <= 0 && this.pos.y >= 60) {
             this.isPreparingToAttack = true;
             this.attackPreparationTimer = this.attackPreparationDuration;
-            this.attackTimer = Math.max(2000, 3500 - this.game.level * 100);
+            const baseCooldown = Math.max(2000, 3500 - this.game.level * 100);
+            this.attackTimer = baseCooldown * (1 + Math.random() * 0.5);
         }
     }
 
@@ -1445,7 +1465,6 @@ class BossVoidSerpent extends Enemy {
                 const angle = startAngle + (i * angleIncrement);
                 const velX = Math.cos(angle) * outwardSpeed - Math.sin(angle) * tangentialSpeed;
                 const velY = Math.sin(angle) * outwardSpeed + Math.cos(angle) * tangentialSpeed;
-                // --- GEÄNDERT: Boss feuert jetzt Feuerball-Projektile ---
                 this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, velX, velY, this.collisionDamage));
             }
         } 
@@ -1460,7 +1479,6 @@ class BossVoidSerpent extends Enemy {
                         const spawnX = this.pos.x + this.width / 2;
                         const spawnY = this.pos.y + this.height;
                         const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
-                        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
                         this.game.addEntity(new PlasmaBallProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage));
                     }, i * 150);
                 }
@@ -1470,68 +1488,872 @@ class BossVoidSerpent extends Enemy {
 
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
+        
+        const pulse = 1 + Math.sin(Date.now() / 500) * 0.1;
+        ctx.globalAlpha = 0.85;
+        ctx.shadowColor = `rgba(148, 0, 211, 0.7)`;
+        ctx.shadowBlur = 25 * pulse;
+
         if (this.isPreparingToAttack) {
             const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9;
             ctx.shadowColor = `rgba(148, 0, 211, ${glow})`;
             ctx.shadowBlur = 20 + glow * 15;
         }
-        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+        
+        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240);
+        
         ctx.restore();
     }
 }
 class BossOmegaNexus extends Enemy {
-    private baseImage: HTMLImageElement; private ringImage: HTMLImageElement; private ringAngle: number = 0;
-    private ringRotationSpeed: number = 0.3; private phase: number = 1; private attackTimer: number = 5000;
-    private isChargingLaser: boolean = false; private laserChargeTimer: number = 3000;
-    private laserActive: boolean = false; private laserDurationTimer: number = 4000; private bulletHellTimer: number = 200;
-    private bulletHellAngle: number = 0;
+    private baseImage: HTMLImageElement;
+
+    // Winkel für die neuen, prozeduralen Plasma-Effekte
+    private ringAngle1: number = 0;
+    private plasmaFlicker: number = 0;
+
+    private ringRotationSpeed: number = 0.4;
+    private phase: number = 1;
+    private attackTimer: number = 5000;
+
+    // Zustände für Bewegung
+    private movementPattern: 'ENTERING' | 'SWOOPING' | 'DRIFTING' = 'ENTERING';
+    private movementTarget: Vector2D;
+    private isInvulnerable: boolean = false;
+
+    // Visueller Offset für die faire Hitbox
+    private visualOffsetY: number;
+
+    // Zustände für Angriffe
+    private isPreparingAttack: boolean = false;
+    private preparationTimer: number = 0;
+    private currentAttack: 'CROSSFIRE' | 'LASER_FAN' | 'NEXUS_CANNON' | 'NONE' = 'NONE';
+    
+    // Eigenschaften für Angriffe
+    private laserFanActive: boolean = false;
+    private laserFanDuration: number = 3500;
+    private laserFanAngle: number = 0;
+    private laserFanSweepSpeed: number = 0.4;
+    private energyOrbs: { pos: Vector2D, fireCooldown: number, speed: number }[] = [];
+    private isChargingCannon: boolean = false;
+    private cannonChargeTimer: number = 4000;
+    private isFiringCannon: boolean = false;
+    private cannonDurationTimer: number = 3000;
+
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 10000, 'BOSS_OMEGA_NEXUS');
-        this.isBoss = true; this.baseImage = bossOmegaNexusBaseImg; this.ringImage = bossOmegaNexusRingImg; this.collisionDamage = 120;
+        const visualWidth = 240;
+        const visualHeight = 184;
+        const hitboxHeight = 110;
+        
+        // --- ÄNDERUNG: Der zusätzliche Health-Multiplikator (* 1.5) wurde entfernt ---
+        // Die Lebenspunkte skalieren jetzt wie bei den anderen Bossen.
+        super(game, game.width / 2 - visualWidth / 2, -visualHeight, visualWidth, hitboxHeight, health, 20000, 'BOSS_OMEGA_NEXUS');
+        
+        this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
+        this.isBoss = true;
+        this.baseImage = bossOmegaNexusBaseImg;
+        this.collisionDamage = 150;
+        this.movementTarget = new Vector2D(game.width / 2, 80);
     }
-    takeHit(damage: number): void { super.takeHit(damage); if (!this.isAlive()) return; const healthPercentage = this.health / this.maxHealth; if (this.phase === 1 && healthPercentage <= 0.70) { this.phase = 2; this.attackTimer = 1000; } else if (this.phase === 2 && healthPercentage <= 0.35) { this.phase = 3; } }
-    update(dt: number): void { const dt_s = dt / 1000; this.ringAngle += this.ringRotationSpeed * dt_s; if (this.pos.y < 30) { this.pos.y += 25 * dt_s; } this.attackTimer -= dt; switch(this.phase) { case 1: this.updatePhase1(dt); break; case 2: this.updatePhase2(dt); break; case 3: this.updatePhase3(dt); break; } }
-    private updatePhase1(dt: number): void { if (this.attackTimer <= 0) { this.attackTimer = 4000; this.fireTargetedBarrage(3, 400); } }
-    private updatePhase2(dt: number): void { if (this.isChargingLaser) { this.laserChargeTimer -= dt; if (this.laserChargeTimer <= 0) { this.isChargingLaser = false; this.laserActive = true; this.laserDurationTimer = 4000; } return; } if (this.laserActive) { this.laserDurationTimer -= dt; if (this.laserDurationTimer <= 0) { this.laserActive = false; } return; } if (this.attackTimer <= 0) { this.attackTimer = 8000; this.isChargingLaser = true; this.laserChargeTimer = 3000; } }
-    private updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0 && !this.laserActive) { this.bulletHellTimer = 100; const bulletSpeed = 250; 
-        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
-        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle) * bulletSpeed, Math.sin(this.bulletHellAngle) * bulletSpeed, 40)); 
-        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(this.bulletHellAngle + Math.PI) * bulletSpeed, Math.sin(this.bulletHellAngle + Math.PI) * bulletSpeed, 40)); 
-        this.bulletHellAngle += 0.3; } }
-    private fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); 
-        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
-        this.game.addEntity(new PlasmaBallProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 200); } }
-    draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 3000); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.7})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 40 * chargeRatio, 0, Math.PI * 2); ctx.fill(); } if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(centerX - 15, centerY, 30, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(centerX - 25, centerY, 50, this.game.height); } }
+
+    takeHit(damage: number): void {
+        if (this.isInvulnerable) return;
+
+        super.takeHit(damage);
+        if (!this.isAlive()) return;
+
+        const healthPercentage = this.health / this.maxHealth;
+        if (this.phase === 1 && healthPercentage <= 0.70) {
+            this.startPhaseTransition(2);
+        } else if (this.phase === 2 && healthPercentage <= 0.35) {
+            this.startPhaseTransition(3);
+        }
+    }
+
+    private startPhaseTransition(newPhase: number): void {
+        this.phase = newPhase;
+        this.isInvulnerable = true;
+        this.isPreparingAttack = false;
+        this.laserFanActive = false;
+        this.isChargingCannon = false;
+        this.isFiringCannon = false;
+        this.attackTimer = 2000;
+        
+        this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.visualOffsetY, '#FFFFFF'));
+        this.game.uiManager.soundManager.play('nuke');
+
+        this.ringRotationSpeed += 0.3;
+
+        if (newPhase === 3) {
+            this.spawnEnergyOrbs();
+        }
+
+        setTimeout(() => {
+            this.isInvulnerable = false;
+        }, 2500);
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        
+        this.ringAngle1 += (this.ringRotationSpeed * 1.0) * dt_s;
+        this.plasmaFlicker = Math.random();
+
+        this.handleMovement(dt_s);
+
+        if (this.movementPattern !== 'SWOOPING') {
+            this.attackTimer -= dt;
+        }
+
+        if (this.isPreparingAttack) {
+            this.preparationTimer -= dt;
+            if (this.preparationTimer <= 0) {
+                this.isPreparingAttack = false;
+                this.executeAttack();
+            }
+            return;
+        }
+
+        if (this.laserFanActive) {
+            this.updateLaserFan(dt_s);
+            this.laserFanDuration -= dt;
+            if (this.laserFanDuration <= 0) {
+                this.laserFanActive = false;
+                this.movementPattern = 'SWOOPING';
+                this.selectNewDriftTarget();
+            }
+        }
+        
+        if (this.isChargingCannon) {
+            this.cannonChargeTimer -= dt;
+            if(this.cannonChargeTimer <= 0) {
+                this.isChargingCannon = false;
+                this.isFiringCannon = true;
+                this.cannonDurationTimer = 3000;
+                this.game.uiManager.soundManager.playLoop('laser');
+            }
+        }
+        if (this.isFiringCannon) {
+            this.cannonDurationTimer -= dt;
+            if(this.cannonDurationTimer <= 0) {
+                this.isFiringCannon = false;
+                this.movementPattern = 'SWOOPING';
+                this.selectNewDriftTarget();
+                this.game.uiManager.soundManager.stopLoop('laser');
+            }
+        }
+
+        if (this.phase === 3) {
+            this.updateEnergyOrbs(dt_s);
+        }
+
+        if (this.attackTimer <= 0 && this.movementPattern === 'DRIFTING' && !this.isPreparingAttack && !this.laserFanActive && !this.isChargingCannon) {
+            this.prepareNextAttack();
+        }
+    }
+
+    private handleMovement(dt_s: number): void {
+        const speed = this.movementPattern === 'SWOOPING' ? 4 : 1.2;
+        this.pos.x += (this.movementTarget.x - (this.pos.x + this.width / 2)) * speed * dt_s;
+        this.pos.y += (this.movementTarget.y - this.pos.y) * speed * dt_s;
+        
+        this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
+
+        const dist = Math.hypot(this.movementTarget.x - (this.pos.x + this.width / 2), this.movementTarget.y - this.pos.y);
+
+        if (dist < 15 && this.movementPattern !== 'DRIFTING') {
+            this.movementPattern = 'DRIFTING';
+            this.selectNewDriftTarget();
+        }
+        
+        if (this.movementPattern === 'DRIFTING' && dist < 20) {
+            this.selectNewDriftTarget();
+        }
+    }
+    
+    private selectNewDriftTarget(): void {
+        const margin = this.width / 2;
+        const newX = Math.random() * (this.game.width - margin * 2) + margin;
+        this.movementTarget = new Vector2D(newX, 60 + Math.random() * 40);
+    }
+
+    prepareNextAttack(): void {
+        this.isPreparingAttack = true;
+        this.movementPattern = 'SWOOPING';
+        const margin = this.width / 2;
+
+        switch (this.phase) {
+            case 1:
+                this.currentAttack = 'CROSSFIRE';
+                this.preparationTimer = 1200;
+                this.attackTimer = 4000;
+                this.movementTarget = new Vector2D(this.game.width / 2, 80);
+                break;
+            case 2:
+                if (Math.random() > 0.4) {
+                    this.currentAttack = 'LASER_FAN';
+                    this.preparationTimer = 2000;
+                    this.attackTimer = 7000;
+                    const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin;
+                    this.movementTarget = new Vector2D(newX, 80);
+                } else {
+                    this.currentAttack = 'CROSSFIRE';
+                    this.preparationTimer = 1200;
+                    this.attackTimer = 5000;
+                    this.movementTarget = new Vector2D(this.game.width / 2, 80);
+                }
+                break;
+            case 3:
+                const roll = Math.random();
+                if (roll > 0.65) {
+                    this.currentAttack = 'NEXUS_CANNON';
+                    this.preparationTimer = 1500;
+                    this.attackTimer = 12000;
+                    this.movementTarget = new Vector2D(this.game.width / 2, 60);
+                } else if (roll > 0.3) {
+                    this.currentAttack = 'LASER_FAN';
+                    this.preparationTimer = 1800;
+                    this.attackTimer = 6000;
+                    const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin;
+                    this.movementTarget = new Vector2D(newX, 80);
+                } else {
+                     this.currentAttack = 'CROSSFIRE';
+                    this.preparationTimer = 1000;
+                    this.attackTimer = 4000;
+                    this.movementPattern = 'DRIFTING';
+                }
+                break;
+        }
+    }
+
+    executeAttack(): void {
+        switch (this.currentAttack) {
+            case 'CROSSFIRE':
+                this.fireCrossfirePulse();
+                if(this.phase < 3) this.movementPattern = 'DRIFTING';
+                break;
+            case 'LASER_FAN':
+                this.laserFanActive = true;
+                this.laserFanDuration = 3500;
+                this.laserFanAngle = 0;
+                this.laserFanSweepSpeed = (this.pos.x > this.game.width / 2 ? -1 : 1) * 0.3;
+                break;
+            case 'NEXUS_CANNON':
+                this.isChargingCannon = true;
+                this.cannonChargeTimer = 4000;
+                break;
+        }
+        this.currentAttack = 'NONE';
+    }
+
+    fireCrossfirePulse(): void {
+        const spawnPointLeft = new Vector2D(this.pos.x + 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
+        const spawnPointRight = new Vector2D(this.pos.x + this.width - 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
+        const speed = 500;
+        const projectileCount = 5;
+        const spreadAngle = Math.PI / 7;
+
+        for (let i = 0; i < projectileCount; i++) {
+            const angleLeft = (Math.PI / 4) + (i * spreadAngle) - (spreadAngle * (projectileCount - 1) / 2);
+            const angleRight = (3 * Math.PI / 4) - (i * spreadAngle) + (spreadAngle * (projectileCount - 1) / 2);
+
+            setTimeout(() => {
+                if (!this.isAlive()) return;
+                this.game.addEntity(new PlasmaBallProjectile(this.game, spawnPointLeft.x, spawnPointLeft.y, Math.cos(angleLeft) * speed, Math.sin(angleLeft) * speed, 35));
+                this.game.addEntity(new PlasmaBallProjectile(this.game, spawnPointRight.x, spawnPointRight.y, Math.cos(angleRight) * speed, Math.sin(angleRight) * speed, 35));
+            }, i * 80);
+        }
+    }
+    
+    updateLaserFan(dt_s: number): void {
+        this.laserFanAngle += this.laserFanSweepSpeed * dt_s;
+        const maxAngle = Math.PI / 4;
+        if (Math.abs(this.laserFanAngle) > maxAngle) {
+            this.laserFanSweepSpeed *= -1;
+            this.laserFanAngle = Math.sign(this.laserFanAngle) * maxAngle;
+        }
+    }
+
+    spawnEnergyOrbs(): void {
+        const orbY = this.pos.y + this.visualOffsetY;
+        this.energyOrbs.push(
+            { pos: new Vector2D(this.pos.x, orbY), fireCooldown: 1500, speed: 120 },
+            { pos: new Vector2D(this.pos.x + this.width, orbY), fireCooldown: 1500, speed: 120 }
+        );
+    }
+    
+    updateEnergyOrbs(dt_s: number): void {
+        if (!this.game.player) return;
+        const p = this.game.player;
+
+        this.energyOrbs.forEach(orb => {
+            const targetY = p.pos.y - 100;
+            const angleToTarget = Math.atan2(targetY - orb.pos.y, p.pos.x - orb.pos.x);
+            orb.pos.x += Math.cos(angleToTarget) * orb.speed * dt_s;
+            orb.pos.y += Math.sin(angleToTarget) * orb.speed * dt_s;
+
+            orb.fireCooldown -= dt_s * 1000;
+            if (orb.fireCooldown <= 0) {
+                const angleToPlayer = Math.atan2(p.pos.y + p.height/2 - orb.pos.y, p.pos.x + p.width/2 - orb.pos.x);
+                this.game.addEntity(new PlasmaBallProjectile(this.game, orb.pos.x, orb.pos.y, Math.cos(angleToPlayer) * 400, Math.sin(angleToPlayer) * 400, 30));
+                orb.fireCooldown = 1500 + Math.random() * 800;
+            }
+        });
+    }
+
+    private drawNexusRings(ctx: CanvasRenderingContext2D, centerX: number, centerY: number): void {
+        let primaryColor, glowColor;
+        switch (this.phase) {
+            case 1: primaryColor = '#00FFFF'; glowColor = '#00FFFF'; break;
+            case 2: primaryColor = '#EE82EE'; glowColor = '#FF00FF'; break;
+            case 3: primaryColor = '#FF4136'; glowColor = '#FF8C00'; break;
+        }
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        // Innerer Plasmakern
+        ctx.save();
+        const corePulse = 1 + Math.sin(Date.now() / 200) * 0.15;
+        const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40 * corePulse);
+        coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        coreGrad.addColorStop(0.6, primaryColor);
+        coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 40 * corePulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Äußere, instabile Plasma-Aura
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(this.ringAngle1);
+        ctx.lineWidth = 2 + this.plasmaFlicker * 3;
+        ctx.strokeStyle = primaryColor;
+        ctx.globalAlpha = 0.4 + this.plasmaFlicker * 0.4;
+        const numTendrils = 30;
+        for (let i = 0; i < numTendrils; i++) {
+            const angle = (i / numTendrils) * Math.PI * 2;
+            const startRadius = 80;
+            const endRadius = 100 + Math.sin(i * 5 + Date.now() / 100) * 20;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * startRadius, Math.sin(angle) * startRadius);
+            ctx.lineTo(Math.cos(angle) * endRadius, Math.sin(angle) * endRadius);
+            ctx.stroke();
+        }
+        ctx.restore();
+        
+        ctx.restore();
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        const visualX = this.pos.x;
+        const visualY = this.pos.y - this.visualOffsetY;
+        const centerX = visualX + this.width / 2;
+        const centerY = visualY + this.height / 2 + this.visualOffsetY;
+        
+        if(this.isInvulnerable) {
+             ctx.save();
+             const pulse = 1 + Math.sin(Date.now() / 100) * 0.05;
+             ctx.globalAlpha = 0.8;
+             ctx.shadowColor = '#FFFFFF';
+             ctx.shadowBlur = 40;
+             ctx.translate(centerX, centerY);
+             ctx.scale(pulse, pulse);
+             ctx.translate(-centerX, -centerY);
+        }
+
+        // Die Grafik wird in ihrer vollen Höhe gezeichnet, auch wenn die Hitbox kleiner ist
+        ctx.drawImage(this.baseImage, visualX, visualY, this.width, this.height + this.visualOffsetY * 2);
+        this.drawNexusRings(ctx, centerX, centerY);
+        
+        if(this.isInvulnerable) ctx.restore();
+
+
+        if (this.isChargingCannon) {
+            const chargeRatio = 1 - (this.cannonChargeTimer / 4000);
+            const radius = (this.width * 0.4) * chargeRatio;
+            if(Math.random() > 0.5) {
+                 this.game.addEntity(new Particle(this.game, centerX + (Math.random() - 0.5) * 800, centerY + (Math.random() - 0.5) * 800, '#FF4136', 0.3, 4));
+            }
+            ctx.save();
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${chargeRatio})`);
+            grad.addColorStop(0.8, `rgba(255, 65, 54, ${chargeRatio * 0.7})`);
+            grad.addColorStop(1, `rgba(255, 140, 0, 0)`);
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        if (this.isFiringCannon) {
+            const beamWidth = this.game.width * 1.2;
+            const beamX = centerX - beamWidth / 2;
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(Date.now() / 50) * 0.2})`;
+            ctx.fillRect(beamX, visualY, beamWidth, this.game.height);
+            const grad = ctx.createLinearGradient(centerX - 150, 0, centerX + 150, 0);
+            grad.addColorStop(0, 'rgba(255, 65, 54, 0)');
+            grad.addColorStop(0.5, 'rgba(255, 65, 54, 0.6)');
+            grad.addColorStop(1, 'rgba(255, 65, 54, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(centerX - 150, visualY, 300, this.game.height);
+            ctx.restore();
+        }
+
+        if (this.laserFanActive) {
+             const laserOriginX = this.pos.x > this.game.width / 2 ? visualX + 40 : visualX + this.width - 40;
+             const laserOriginY = centerY;
+             const numLasers = 7;
+             const fanSpread = Math.PI / 2;
+             
+             for (let i = 0; i < numLasers; i++) {
+                 const angle = this.laserFanAngle + (i - (numLasers - 1) / 2) * (fanSpread / (numLasers - 1));
+                 const endX = laserOriginX + Math.sin(angle) * this.game.height * 1.5;
+                 const endY = laserOriginY + Math.cos(angle) * this.game.height * 1.5;
+ 
+                 ctx.save();
+                 ctx.beginPath();
+                 ctx.moveTo(laserOriginX, laserOriginY);
+                 ctx.lineTo(endX, endY);
+                 ctx.strokeStyle = `rgba(255, 0, 255, 0.6)`;
+                 ctx.lineWidth = 10;
+                 ctx.shadowColor = '#EE82EE';
+                 ctx.shadowBlur = 20;
+                 ctx.stroke();
+                 ctx.strokeStyle = `rgba(255, 255, 255, 0.8)`;
+                 ctx.lineWidth = 3;
+                 ctx.stroke();
+                 ctx.restore();
+             }
+        }
+        this.energyOrbs.forEach(orb => {
+            ctx.save();
+            const pulse = Math.sin(Date.now() / 200);
+            const radius = 25 + pulse * 5;
+            const gradient = ctx.createRadialGradient(orb.pos.x, orb.pos.y, 0, orb.pos.x, orb.pos.y, radius);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.5, 'rgba(255, 100, 100, 1)');
+            gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = '#FF4136';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.arc(orb.pos.x, orb.pos.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
 }
+class NexusLanceProjectile extends EnemyProjectile {
+    constructor(game: Game, x: number, y: number, vX: number, vY: number) {
+        // Hoher Schaden, um die Gefahr zu verdeutlichen
+        super(game, x, y, vX, vY, 40); 
+        this.width = 6;
+        this.height = 30;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x, this.pos.y + this.height);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(0.5, '#FF4136');
+        gradient.addColorStop(1, '#B10DC9');
+
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FF00FF'; // Lila-rotes Leuchten
+        ctx.shadowBlur = 15;
+        
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x + this.width / 2, this.pos.y);
+        ctx.lineTo(this.pos.x, this.pos.y + this.height);
+        ctx.lineTo(this.pos.x + this.width, this.pos.y + this.height);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class NexusFragment extends Enemy {
+    private fireCooldown: number = 2000;
+    private pulse: number = 0;
+
+    constructor(game: Game, x: number, y: number) {
+        // Erbt von Enemy: hat jetzt HP, gibt Punkte und kann takeHit() empfangen
+        super(game, x, y, 40, 40, 150, 500, 'NEXUS_FRAGMENT');
+        // Entfernt die manuelle Lebensdauer - wird jetzt über HP gesteuert
+    }
+
+    // takeHit() wird von der Enemy-Klasse geerbt, daher ist keine eigene Implementierung nötig
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.pulse += dt_s * 4;
+
+        this.fireCooldown -= dt;
+        if (this.fireCooldown <= 0 && this.game.player) {
+            const p = this.game.player;
+            const pAngle = Math.atan2(p.pos.y - (this.pos.y + this.height/2), p.pos.x - (this.pos.x + this.width/2));
+            
+            // Feuert eine Salve von 3 Plasmabällen
+            for(let i=0; i<3; i++) {
+                setTimeout(() => {
+                    if (this.isAlive()) {
+                        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(pAngle) * 450, Math.sin(pAngle) * 450, 25));
+                    }
+                }, i * 120);
+            }
+            this.fireCooldown = 2800 + Math.random() * 1000; // Leicht längere Pause
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const scale = 1 + Math.sin(this.pulse) * 0.1;
+        const radius = (this.width / 2) * scale;
+        
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 180, 180, 0.9)');
+        gradient.addColorStop(0.6, 'rgba(255, 0, 0, 0.7)');
+        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.1)');
+
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FF4136';
+        ctx.shadowBlur = 25;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Zeichnet die Lebensleiste, da es jetzt ein echter Gegner ist
+        this.drawHealthBar(ctx);
+    }
+}
+
 class BossNexusPrime extends Enemy {
-    private baseImage: HTMLImageElement; private ringImage: HTMLImageElement; private ringAngle: number = 0;
-    private ringRotationSpeed: number = 0.5; private phase: number = 1; private attackTimer: number = 4000;
-    private isChargingLaser: boolean = false; private laserChargeTimer: number = 2500;
-    private laserActive: boolean = false; private laserDurationTimer: number = 3000; private laserX: number;
-    private laserSweepSpeed: number = 80; private bulletHellTimer: number = 0; private bulletHellAngle: number = 0;
-    private drones: {pos: Vector2D, angle: number}[] = [];
+    // Phasen- & Zustandsmanagement
+    private phase: number = 1;
+    private attackTimer: number = 4000;
+    private isPreparingAttack: boolean = false;
+    private preparationTimer: number = 0;
+    // GEÄNDERT: 'FRAGMENTS' wurde zu 'ORB' für Klarheit
+    private currentAttack: 'LANCE' | 'PLASMA_BURST' | 'ORB' | 'SCYTHE' | 'SWEEP' | 'HORIZON' | 'NONE' = 'NONE';
+    private phaseTransitionTimer: number = 0;
+
+    // Dynamisches Bewegungssystem OHNE Rotation
+    private movementPattern: 'ENTERING' | 'DRIFTING' | 'REPOSITIONING' = 'ENTERING';
+    private movementTarget: Vector2D;
+
+    // Visuelle und prozedurale Komponenten
+    private corePulse: number = 0;
+    // GEÄNDERT: fragments-Array entfernt
+    private scythes: { angle: number, radius: number, speed: number }[] = [];
+
+    // Angriffs-spezifische Daten
+    private plasmaSweepProgress: number = -1;
+    private eventHorizonCharge: number = 0;
 
     constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 225, -300, 450, 300, health, 25000, 'BOSS_NEXUS_PRIME');
-        this.isBoss = true; this.baseImage = bossOmegaNexusBaseImg; this.ringImage = bossOmegaNexusRingImg; this.collisionDamage = 150;
-        this.laserX = this.game.width / 2;
+        super(game, game.width / 2 - 100, -200, 200, 120, health * 2.0, 60000, 'BOSS_NEXUS_PRIME');
+        this.isBoss = true;
+        this.collisionDamage = 300;
+        this.movementTarget = new Vector2D(this.game.width / 2, 120);
     }
-    takeHit(damage: number): void { super.takeHit(damage); if (!this.isAlive()) return; const healthPercentage = this.health / this.maxHealth; if (this.phase === 1 && healthPercentage <= 0.70) { this.phase = 2; this.attackTimer = 1000; this.drones.push({pos: new Vector2D(100, 150), angle: 0}); this.drones.push({pos: new Vector2D(this.game.width - 100, 150), angle: Math.PI}); } else if (this.phase === 2 && healthPercentage <= 0.35) { this.phase = 3; this.ringRotationSpeed = 1.0; } }
-    update(dt: number): void { const dt_s = dt / 1000; this.ringAngle += this.ringRotationSpeed * dt_s; if (this.pos.y < 30) this.pos.y += 20 * dt_s; this.attackTimer -= dt; this.updateDrones(dt_s); switch(this.phase) { case 1: this.updatePhase1(dt); break; case 2: this.updatePhase2(dt); break; case 3: this.updatePhase3(dt); break; } }
-    updateDrones(dt_s: number): void { if (this.drones.length === 0) return; this.drones.forEach(d => { d.angle += 3 * dt_s; if (this.game.player) { const p = this.game.player; const targetAngle = Math.atan2(p.pos.y - d.pos.y, p.pos.x - d.pos.x); if (Math.random() < 0.02) { 
-        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
-        this.game.addEntity(new PlasmaBallProjectile(this.game, d.pos.x, d.pos.y, Math.cos(targetAngle) * 300, Math.sin(targetAngle) * 300, 30)); } } }); }
-    updatePhase1(dt: number): void { if (this.attackTimer <= 0) { this.attackTimer = 3500; this.fireTargetedBarrage(4, 450); } }
-    updatePhase2(dt: number): void { if (this.isChargingLaser) { this.laserChargeTimer -= dt; if (this.laserChargeTimer <= 0) { this.isChargingLaser = false; this.laserActive = true; this.laserDurationTimer = 3000; this.laserX = 100; this.laserSweepSpeed = 80; } return; } if (this.laserActive) { this.laserDurationTimer -= dt; this.laserX += this.laserSweepSpeed * (dt/1000); if(this.laserX > this.game.width - 100 || this.laserX < 100) { this.laserSweepSpeed *= -1; } if (this.laserDurationTimer <= 0) this.laserActive = false; return; } if (this.attackTimer <= 0) { this.attackTimer = 7000; this.isChargingLaser = true; this.laserChargeTimer = 2500; } }
-    updatePhase3(dt: number): void { this.updatePhase2(dt); this.bulletHellTimer -= dt; if (this.bulletHellTimer <= 0) { this.bulletHellTimer = 80; const bulletSpeed = 300; for(let i=0; i<4; i++){ const angle = this.bulletHellAngle + (i * Math.PI / 2); 
-        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
-        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, 40)); } this.bulletHellAngle += 0.25; } }
-    fireTargetedBarrage(count: number, speed: number): void { if (!this.game.player) return; const p = this.game.player; const selfX = this.pos.x + this.width / 2; const selfY = this.pos.y + this.height / 2; for (let i = 0; i < count; i++) { setTimeout(() => { const targetX = p.pos.x + p.width / 2; const targetY = p.pos.y + p.height / 2; const angle = Math.atan2(targetY - selfY, targetX - selfX); 
-        // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
-        this.game.addEntity(new PlasmaBallProjectile(this.game, selfX, selfY, Math.cos(angle) * speed, Math.sin(angle) * speed, this.collisionDamage)); }, i * 150); } }
-    draw(ctx: CanvasRenderingContext2D): void { const centerX = this.pos.x + this.width / 2; const centerY = this.pos.y + this.height / 2; ctx.save(); ctx.shadowColor = '#FF4136'; ctx.shadowBlur = this.phase * 10; ctx.drawImage(this.baseImage, this.pos.x, this.pos.y, this.width, this.height); ctx.restore(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle); ctx.drawImage(this.ringImage, -this.ringImage.width / 2, -this.ringImage.height / 2); ctx.restore(); this.drones.forEach(d => { ctx.fillStyle = '#B10DC9'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#FF4136'; ctx.beginPath(); ctx.arc(d.pos.x, d.pos.y, 8, 0, Math.PI * 2); ctx.fill(); }); if (this.isChargingLaser) { const chargeRatio = 1 - (this.laserChargeTimer / 2500); ctx.fillStyle = `rgba(255, 100, 100, ${chargeRatio * 0.8})`; ctx.beginPath(); ctx.arc(centerX, centerY + 100, 45 * chargeRatio, 0, Math.PI * 2); ctx.fill();} if (this.laserActive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(this.laserX - 10, 0, 20, this.game.height); ctx.fillStyle = 'rgba(255, 100, 100, 0.7)'; ctx.fillRect(this.laserX - 20, 0, 40, this.game.height); } }
-}// --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
 
+    takeHit(damage: number): void {
+        if (this.phaseTransitionTimer > 0) return;
+        super.takeHit(damage);
+        if (!this.isAlive()) return;
+
+        const healthPercentage = this.health / this.maxHealth;
+        if (this.phase === 1 && healthPercentage <= 0.66) this.transitionToPhase(2);
+        else if (this.phase === 2 && healthPercentage <= 0.33) this.transitionToPhase(3);
+    }
+
+    private transitionToPhase(newPhase: number): void {
+        this.phase = newPhase;
+        this.phaseTransitionTimer = 3000;
+        this.isPreparingAttack = false;
+        this.currentAttack = 'NONE';
+        this.attackTimer = 4000;
+        this.scythes = [];
+        this.game.entities.filter(e => e instanceof NexusFragment).forEach(e => e.destroy());
+
+        this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FF4136'));
+        this.game.uiManager.soundManager.play('nuke');
+
+        if (newPhase === 2) {
+            for (let i = 0; i < 6; i++) {
+                 this.scythes.push({ angle: (i/6) * Math.PI * 2, radius: 150, speed: (Math.random() - 0.5) * 2 });
+            }
+        }
+    }
+
+    private handleMovement(dt_s: number): void {
+        const speed = this.movementPattern === 'REPOSITIONING' ? 3.5 : 0.8;
+        this.pos.x += (this.movementTarget.x - (this.pos.x + this.width / 2)) * speed * dt_s;
+        this.pos.y += (this.movementTarget.y - (this.pos.y + this.height / 2)) * speed * dt_s;
+
+        const dist = Math.hypot(this.movementTarget.x - (this.pos.x + this.width / 2), this.movementTarget.y - (this.pos.y + this.height/2));
+
+        if (dist < 15) {
+            if (this.movementPattern === 'ENTERING' || this.movementPattern === 'REPOSITIONING') {
+                this.movementPattern = 'DRIFTING';
+                this.selectNewDriftTarget();
+            } else if (this.movementPattern === 'DRIFTING') {
+                 this.selectNewDriftTarget();
+            }
+        }
+    }
+    
+    private selectNewDriftTarget(): void {
+        const marginX = this.width / 2 + 50;
+        const marginY = 50;
+        const newX = Math.random() * (this.game.width - marginX * 2) + marginX;
+        const newY = Math.random() * (this.game.height / 3.5 - marginY) + marginY;
+        this.movementTarget = new Vector2D(newX, newY);
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.corePulse += dt_s * 5;
+        this.handleMovement(dt_s);
+
+        if (this.phaseTransitionTimer > 0) { this.phaseTransitionTimer -= dt; return; }
+        if (this.isPreparingAttack) {
+            this.preparationTimer -= dt;
+            if (this.preparationTimer <= 0) { this.isPreparingAttack = false; this.executeAttack(); }
+        } else if (this.attackTimer > 0) {
+            this.attackTimer -= dt;
+        } else if (this.plasmaSweepProgress < 0 && this.eventHorizonCharge <= 0) {
+            this.prepareNextAttack();
+        }
+        this.updateActiveMechanics(dt, dt_s);
+    }
+
+    private prepareNextAttack(): void {
+        this.isPreparingAttack = true;
+        this.movementPattern = 'REPOSITIONING';
+        
+        switch (this.phase) {
+            case 1:
+                this.currentAttack = Math.random() > 0.5 ? 'LANCE' : 'ORB';
+                this.movementTarget = new Vector2D(this.game.width/2, 100);
+                this.preparationTimer = 2000;
+                this.attackTimer = 6000;
+                break;
+            case 2:
+                // NEU: Fügt einen Plasma-Burst als möglichen Angriff hinzu
+                const attackChoices = ['SCYTHE', 'SWEEP', 'PLASMA_BURST'];
+                this.currentAttack = attackChoices[Math.floor(Math.random() * attackChoices.length)] as any;
+                
+                if (this.currentAttack === 'SWEEP') {
+                    const targetX = this.game.player && this.game.player.pos.x < this.game.width / 2 ? this.game.width - 150 : 150;
+                    this.movementTarget = new Vector2D(targetX, this.game.height / 3);
+                } else {
+                    this.movementTarget = new Vector2D(this.game.width/2, 120);
+                }
+                this.preparationTimer = 2500;
+                this.attackTimer = 7000;
+                break;
+            case 3:
+                this.currentAttack = 'HORIZON';
+                this.movementTarget = new Vector2D(this.game.width/2, this.game.height/2 - 50);
+                this.preparationTimer = 8000;
+                this.attackTimer = 15000;
+                break;
+        }
+    }
+
+    private executeAttack(): void {
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+
+        switch (this.currentAttack) {
+            case 'LANCE':
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    // GEÄNDERT: Feuert jetzt die neue, gefährliche Nexus-Lanze
+                    this.game.addEntity(new NexusLanceProjectile(this.game, centerX, centerY, Math.cos(angle) * 700, Math.sin(angle) * 700));
+                }
+                break;
+            case 'ORB':
+                // GEÄNDERT: Beschwört nur noch EINEN Orb
+                 if (this.game.entities.filter(e => e instanceof NexusFragment).length < 2) {
+                    this.game.addEntity(new NexusFragment(this.game, centerX, centerY));
+                }
+                break;
+            case 'PLASMA_BURST':
+                if (this.game.player) {
+                    const p = this.game.player;
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            if (!this.isAlive()) return;
+                            const targetX = p.pos.x + p.width / 2;
+                            const targetY = p.pos.y + p.height / 2;
+                            const angle = Math.atan2(targetY - (this.pos.y + this.height/2), targetX - (this.pos.x + this.width/2));
+                            this.game.addEntity(new PlasmaBallProjectile(this.game, centerX, centerY, Math.cos(angle) * 600, Math.sin(angle) * 600, 30));
+                        }, i * 150);
+                    }
+                }
+                break;
+            case 'SCYTHE':
+                 this.scythes.forEach(s => s.speed = (Math.random() > 0.5 ? 1 : -1) * 2.5);
+                 setTimeout(() => this.scythes.forEach(s => s.speed = (Math.random() - 0.5) * 2), 2000);
+                 break;
+            case 'SWEEP':
+                this.plasmaSweepProgress = 0;
+                this.game.uiManager.soundManager.playLoop('laser');
+                break;
+            case 'HORIZON':
+                this.eventHorizonCharge = 1;
+                break;
+        }
+    }
+    
+    private updateActiveMechanics(dt: number, dt_s: number): void {
+        this.scythes.forEach(s => s.angle += s.speed * dt_s);
+
+        if (this.plasmaSweepProgress >= 0) {
+            this.plasmaSweepProgress += dt_s / 5;
+            if (this.plasmaSweepProgress >= 1) {
+                this.plasmaSweepProgress = -1;
+                this.game.uiManager.soundManager.stopLoop('laser');
+            }
+        }
+
+        if (this.eventHorizonCharge > 0) {
+            this.eventHorizonCharge = Math.max(0, this.eventHorizonCharge - dt_s / 6);
+            if (this.game.player) {
+                const p = this.game.player;
+                const centerX = this.pos.x + this.width / 2;
+                const centerY = this.pos.y + this.height / 2;
+                const chargeRatio = 1 - (this.preparationTimer > 0 ? this.preparationTimer / 8000 : 0);
+                const safeRadius = (1 - chargeRatio) * this.game.width;
+                const dist = Math.hypot(centerX - (p.pos.x + p.width/2), centerY - (p.pos.y + p.height/2));
+                if (dist > safeRadius) {
+                    const angle = Math.atan2(centerY - p.pos.y, centerX - p.pos.x);
+                    p.pos.x += Math.cos(angle) * 350 * dt_s;
+                    p.pos.y += Math.sin(angle) * 350 * dt_s;
+                }
+            }
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        ctx.save();
+        if (this.phaseTransitionTimer > 0) {
+            const transitionProgress = 1 - this.phaseTransitionTimer / 3000;
+            this.drawTransition(ctx, centerX, centerY, transitionProgress);
+        } else {
+            this.drawCoreWithWhips(ctx, centerX, centerY);
+        }
+        this.drawAttackVisuals(ctx, centerX, centerY);
+        ctx.restore();
+    }
+
+    private drawCoreWithWhips(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const coreColor = this.phase === 1 ? '#00FFFF' : (this.phase === 2 ? '#FF851B' : '#FF4136');
+        
+        ctx.save();
+        const pulseValue = 1 + Math.sin(this.corePulse) * 0.05;
+        ctx.globalAlpha = 0.7;
+        ctx.translate(cx, cy);
+        ctx.scale(pulseValue, pulseValue);
+        const ringSize = 180 + this.phase * 20;
+        ctx.drawImage(bossNexusPrimeImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+        ctx.restore();
+        
+        const whipCount = 8;
+        for(let i=0; i < whipCount; i++) {
+            ctx.beginPath();
+            const baseAngle = (i / whipCount) * Math.PI * 2;
+            const len = 120 + this.phase * 20 + Math.sin(this.corePulse * 1.5 + i) * 40;
+            const wave = Math.sin(this.corePulse * 3 + i) * 0.6;
+            ctx.moveTo(cx, cy);
+            ctx.quadraticCurveTo(cx + Math.cos(baseAngle + wave) * len * 0.6, cy + Math.sin(baseAngle + wave) * len * 0.6, cx + Math.cos(baseAngle) * len, cy + Math.sin(baseAngle) * len);
+            ctx.strokeStyle = coreColor;
+            ctx.lineWidth = 3 + Math.sin(this.corePulse + i*2) * 2;
+            ctx.globalAlpha = 0.6 + Math.sin(this.corePulse*4 + i) * 0.2;
+            ctx.shadowColor = coreColor; ctx.shadowBlur = 15;
+            ctx.stroke();
+        }
+
+        const radius = (this.phase === 3 ? 60 : 40) + Math.sin(this.corePulse) * 10;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.7, coreColor);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.fillStyle = grad; ctx.shadowColor = coreColor; ctx.shadowBlur = 30;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    private drawAttackVisuals(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+        this.scythes.forEach(s => {
+            ctx.save();
+            const x = cx + Math.cos(s.angle) * s.radius;
+            const y = cy + Math.sin(s.angle) * s.radius;
+            ctx.translate(x, y); ctx.rotate(s.angle + Math.PI/2);
+            ctx.fillStyle = '#FF4136'; ctx.shadowColor = '#FF4136'; ctx.shadowBlur = 25;
+            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-20, 30); ctx.lineTo(20, 30); ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        });
+
+        if (this.plasmaSweepProgress >= 0) {
+            const direction = this.pos.x < this.game.width/2 ? 1 : -1;
+            const beamX = (this.game.width / 2) - (direction * this.game.width/2) + (direction * this.game.width * this.plasmaSweepProgress);
+            const grad = ctx.createLinearGradient(beamX - 60, 0, beamX + 60, 0);
+            grad.addColorStop(0, 'rgba(255, 133, 27, 0)');
+            grad.addColorStop(0.5, `rgba(255, 133, 27, ${0.9 * Math.sin(this.plasmaSweepProgress * Math.PI)})`);
+            grad.addColorStop(1, 'rgba(255, 133, 27, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(beamX - 60, 0, 120, this.game.height);
+        }
+
+        if (this.isPreparingAttack && this.currentAttack === 'HORIZON') {
+            const chargeRatio = 1 - this.preparationTimer / 8000;
+            ctx.fillStyle = `rgba(0, 0, 0, ${chargeRatio * 0.9})`;
+            ctx.fillRect(0,0, this.game.width, this.game.height);
+            const safeRadius = (1 - chargeRatio) * this.game.width;
+            
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = `rgba(255, 255, 255, ${1-chargeRatio})`;
+            ctx.lineWidth = 5; ctx.shadowColor = '#FFF'; ctx.shadowBlur = 20;
+            ctx.beginPath(); ctx.arc(cx, cy, safeRadius, 0, Math.PI*2); ctx.stroke();
+            ctx.restore();
+        } else if (this.eventHorizonCharge > 0) {
+             ctx.fillStyle = `rgba(255, 65, 54, ${this.eventHorizonCharge * 0.5})`;
+             ctx.fillRect(0,0, this.game.width, this.game.height);
+        }
+    }
+    
+    private drawTransition(ctx: CanvasRenderingContext2D, cx: number, cy: number, progress: number): void {
+        const alpha = Math.sin(progress * Math.PI);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+        ctx.fillRect(0, 0, this.game.width, this.game.height);
+        const radius = progress * this.game.width;
+        ctx.strokeStyle = `rgba(255, 133, 27, ${alpha * 0.8})`;
+        ctx.lineWidth = 15;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+}
+
+// --- SECTION 6 & 7: SYSTEM-MANAGER UND GAME KLASSE ---
 class ShopManager {
     public game: Game;
     public playerUpgrades: IPlayerUpgrades;
@@ -3294,7 +4116,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 1;
+                    this.level = 40;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
@@ -3778,10 +4600,10 @@ class Game {
             case 'WEAVER': return new Weaver(this);
             case 'SHOOTER': return new Shooter(this);
             case 'TELEPORTER': return new Teleporter(this);
-            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 50 * (1 + this.level/5), 1 + this.level/10);
-            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 30 * (1 + this.level/5), 1.1 + this.level/10);
-            case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 150 * (1 + this.level/5), 1.2 + this.level/10);
-            case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 200 * (1 + this.level/5), 1.3 + this.level/10);
+            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 5 * (1 + this.level/5), 1 + this.level/10);
+            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 6 * (1 + this.level/5), 1.1 + this.level/10);
+            case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 7 * (1 + this.level/5), 1.2 + this.level/10);
+            case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 8 * (1 + this.level/5), 1.3 + this.level/10);
             default: return null;
         }
     }
