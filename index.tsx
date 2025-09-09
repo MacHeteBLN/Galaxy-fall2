@@ -74,7 +74,6 @@ const orbitalDroneImages = [createImage(orbitalDrone1ImgSrc), createImage(orbita
 const piCoinImg = createImage(piCoinImgSrc);
 const powerUpImages: { [key: string]: HTMLImageElement } = { 'WEAPON_UP': createImage(powerupWeaponUpSrc), 'RAPID_FIRE': createImage(powerupRapidFireSrc), 'SIDE_SHOTS': createImage(powerupSideShotsSrc), 'LASER_BEAM': createImage(powerupLaserBeamSrc), 'HOMING_MISSILES': createImage(powerupHomingMissilesSrc), 'SHIELD': createImage(powerupShieldSrc), 'REPAIR_KIT': createImage(powerupRepairKitSrc), 'EXTRA_LIFE': createImage(powerupExtraLifeSrc), 'GHOST_PROTOCOL': createImage(powerupGhostProtocolSrc), 'ORBITAL_DRONE': createImage(powerupOrbitalDroneSrc), 'NUKE': createImage(powerupNukeSrc), 'BLACK_HOLE': createImage(powerupBlackHoleSrc), 'SCORE_BOOST': createImage(powerupScoreBoostSrc), };
 const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWeaponUpSrc, 'RAPID_FIRE': powerupRapidFireSrc, 'SIDE_SHOTS': powerupSideShotsSrc, 'LASER_BEAM': powerupLaserBeamSrc, 'HOMING_MISSILES': powerupHomingMissilesSrc, 'SHIELD': powerupShieldSrc, 'REPAIR_KIT': powerupRepairKitSrc, 'EXTRA_LIFE': powerupExtraLifeSrc, 'GHOST_PROTOCOL': powerupGhostProtocolSrc, 'ORBITAL_DRONE': powerupOrbitalDroneSrc, 'NUKE': powerupNukeSrc, 'BLACK_HOLE': powerupBlackHoleSrc, 'SCORE_BOOST': powerupScoreBoostSrc, };
-// --- NEU: Initialisierung der Phönix-Kern-Bilder ---
 const phoenixCoreImages: { [key: string]: HTMLImageElement } = {
     'BLUE': createImage(phoenixCoreBlueSrc),
     'YELLOW': createImage(phoenixCoreYellowSrc),
@@ -519,7 +518,32 @@ class Weaver extends Enemy {
         ctx.restore(); 
     } 
 }
-class Shooter extends Enemy { private fireCooldown: number; private image: HTMLImageElement; constructor(game: Game) { super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER'); this.speed = 70 * game.enemySpeedMultiplier; this.fireCooldown = Math.random() * 1000 + 1500; this.collisionDamage = 50; this.image = shooterImg; } update(dt: number): void { super.update(dt); if(this.inFormation) { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000 + Math.random() * 1500; } } else { this.fireCooldown -= dt; if (this.fireCooldown <= 0 && this.pos.y > 0) { this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height)); this.fireCooldown = 2000; } } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height); this.drawHealthBar(ctx); ctx.restore(); } }
+class Shooter extends Enemy {
+    private fireCooldown: number;
+    private image: HTMLImageElement;
+    constructor(game: Game) {
+        super(game, Math.random() * (game.width - 52), -52, 52, 52, 2, 50, 'SHOOTER');
+        this.speed = 70 * game.enemySpeedMultiplier;
+        this.fireCooldown = Math.random() * 1000 + 1500;
+        this.collisionDamage = 50;
+        this.image = shooterImg;
+    }
+    update(dt: number): void {
+        super.update(dt);
+        this.fireCooldown -= dt;
+        if (this.fireCooldown <= 0 && this.pos.y > 0) {
+            this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height));
+            this.game.uiManager.soundManager.play('enemyShoot');
+            this.fireCooldown = this.inFormation ? 2000 + Math.random() * 1500 : 2000;
+        }
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.drawImage(this.image, this.pos.x, this.pos.y, this.width, this.height);
+        this.drawHealthBar(ctx);
+        ctx.restore();
+    }
+}
 class Teleporter extends Enemy {
     private teleportCooldown: number = 4000;
     private isVisible: boolean = true;
@@ -536,9 +560,7 @@ class Teleporter extends Enemy {
 
     update(dt: number): void {
         if (this.inFormation) return;
-
         this.teleportCooldown -= dt;
-
         if (this.isVisible) {
             this.visibleTimer -= dt;
             if (this.visibleTimer <= 0) {
@@ -546,13 +568,11 @@ class Teleporter extends Enemy {
                 this.game.addEntity(new TeleportEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, false));
                 this.teleportCooldown = 1000;
             }
-
             this.fireCooldown -= dt;
             if (this.fireCooldown <= 0 && this.pos.y > 0 && this.game.player) {
                 this.shoot();
                 this.fireCooldown = 3000;
             }
-
         } else if (this.teleportCooldown <= 0) {
             this.teleport();
             this.isVisible = true;
@@ -562,23 +582,18 @@ class Teleporter extends Enemy {
     
     shoot(): void {
         if (!this.game.player) return;
-
         const p = this.game.player;
         const projectileSpeed = 400;
         const damage = 20;
-
         const spawnX = this.pos.x + this.width / 2;
         const spawnY = this.pos.y + this.height / 2;
-
         const targetX = p.pos.x + p.width / 2;
         const targetY = p.pos.y + p.height / 2;
-
         const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
-
         const velX = Math.cos(angle) * projectileSpeed;
         const velY = Math.sin(angle) * projectileSpeed;
-
         this.game.addEntity(new EnemyProjectile(this.game, spawnX, spawnY, velX, velY, damage));
+        this.game.uiManager.soundManager.play('enemyShoot');
     }
 
     teleport(): void {
@@ -851,11 +866,10 @@ class FireballProjectile extends EnemyProjectile {
     }
 }
 
-// --- NEU: Klasse für rote Plasma-Projektile ---
 class PlasmaBallProjectile extends EnemyProjectile {
     constructor(game: Game, x: number, y: number, vX: number, vY: number, playerDamage: number) {
         super(game, x, y, vX, vY, playerDamage);
-        this.width = 12; // Etwas kleiner als Feuerbälle
+        this.width = 12;
         this.height = 12;
     }
 
@@ -863,23 +877,20 @@ class PlasmaBallProjectile extends EnemyProjectile {
         ctx.save();
         const centerX = this.pos.x + this.width / 2;
         const centerY = this.pos.y + this.height / 2;
-
         const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.width / 2);
-        gradient.addColorStop(0, 'rgba(255, 180, 180, 1)'); // Helles, weiß-rotes Zentrum
-        gradient.addColorStop(0.5, 'rgba(255, 0, 0, 1)');   // Leuchtendes Rot
-        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.5)');   // Dunkelroter, transparenter Rand
-
+        gradient.addColorStop(0, 'rgba(255, 180, 180, 1)');
+        gradient.addColorStop(0.5, 'rgba(255, 0, 0, 1)');
+        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.5)');
         ctx.fillStyle = gradient;
-        ctx.shadowColor = '#FF4136'; // Rotes Leuchten
+        ctx.shadowColor = '#FF4136';
         ctx.shadowBlur = 10;
-
         ctx.beginPath();
         ctx.arc(centerX, centerY, this.width / 2, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.restore();
     }
-}class Drone extends EntityFamily {
+}
+class Drone extends EntityFamily {
     private tier: number;
     private index: number;
     private orbitRadius: number = 75;
@@ -1354,17 +1365,17 @@ class BossSentinelPrime extends Enemy {
         const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
         switch (this.attackPattern) {
             case 0: 
+                this.game.uiManager.soundManager.play('enemyPlasmaShoot');
                 const attackWidth = w * 0.7;
                 const startX = x + (w * 0.15);
                 for (let i = 0; i < 7; i++) {
-                    // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
                     this.game.addEntity(new PlasmaBallProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
                 }
                 break;
             case 1: 
+                this.game.uiManager.soundManager.play('enemyPlasmaShoot');
                 for (let i = 0; i < 12; i++) {
                     const angle = i * Math.PI / 6;
-                    // --- GEÄNDERT: Boss feuert jetzt Plasma-Projektile ---
                     this.game.addEntity(new PlasmaBallProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
                 }
                 break;
@@ -1405,11 +1416,7 @@ class BossVoidSerpent extends Enemy {
     constructor(game: Game, health: number, speedMultiplier: number) {
         const hitboxHeight = 100;
         const visualHeight = 240;
-
-        // KORREKTUR: super() wird als Allererstes aufgerufen.
         super(game, game.width / 2 - 90, -visualHeight, 180, hitboxHeight, health * 0.7, 7500, 'BOSS_VOID_SERPENT');
-        
-        // KORREKTUR: Alle Zuweisungen zu `this` erfolgen NACH dem super()-Aufruf.
         this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
         this.isBoss = true; 
         this.image = bossVoidSerpentImg; 
@@ -1452,6 +1459,7 @@ class BossVoidSerpent extends Enemy {
         const attackType = Math.random() > 0.5 ? 'SPREAD' : 'WHIP';
 
         if (attackType === 'SPREAD') {
+            this.game.uiManager.soundManager.play('enemyPlasmaShoot');
             const spawnX = x + w / 2;
             const spawnY = y + h / 2;
             const outwardSpeed = 180;
@@ -1480,6 +1488,7 @@ class BossVoidSerpent extends Enemy {
                         const spawnY = this.pos.y + this.height;
                         const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
                         this.game.addEntity(new PlasmaBallProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage));
+                        this.game.uiManager.soundManager.play('enemyShoot');
                     }, i * 150);
                 }
             }
@@ -1507,11 +1516,8 @@ class BossVoidSerpent extends Enemy {
 }
 class BossOmegaNexus extends Enemy {
     private baseImage: HTMLImageElement;
-
-    // Winkel für die neuen, prozeduralen Plasma-Effekte
     private ringAngle1: number = 0;
     private plasmaFlicker: number = 0;
-
     private ringRotationSpeed: number = 0.4;
     private phase: number = 1;
     private attackTimer: number = 5000;
@@ -1545,8 +1551,6 @@ class BossOmegaNexus extends Enemy {
         const visualHeight = 184;
         const hitboxHeight = 110;
         
-        // --- ÄNDERUNG: Der zusätzliche Health-Multiplikator (* 1.5) wurde entfernt ---
-        // Die Lebenspunkte skalieren jetzt wie bei den anderen Bossen.
         super(game, game.width / 2 - visualWidth / 2, -visualHeight, visualWidth, hitboxHeight, health, 20000, 'BOSS_OMEGA_NEXUS');
         
         this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
@@ -1747,6 +1751,7 @@ class BossOmegaNexus extends Enemy {
     }
 
     fireCrossfirePulse(): void {
+        this.game.uiManager.soundManager.play('enemyPlasmaShoot');
         const spawnPointLeft = new Vector2D(this.pos.x + 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
         const spawnPointRight = new Vector2D(this.pos.x + this.width - 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
         const speed = 500;
@@ -1794,6 +1799,7 @@ class BossOmegaNexus extends Enemy {
 
             orb.fireCooldown -= dt_s * 1000;
             if (orb.fireCooldown <= 0) {
+                this.game.uiManager.soundManager.play('enemyShoot');
                 const angleToPlayer = Math.atan2(p.pos.y + p.height/2 - orb.pos.y, p.pos.x + p.width/2 - orb.pos.x);
                 this.game.addEntity(new PlasmaBallProjectile(this.game, orb.pos.x, orb.pos.y, Math.cos(angleToPlayer) * 400, Math.sin(angleToPlayer) * 400, 30));
                 orb.fireCooldown = 1500 + Math.random() * 800;
@@ -1802,11 +1808,11 @@ class BossOmegaNexus extends Enemy {
     }
 
     private drawNexusRings(ctx: CanvasRenderingContext2D, centerX: number, centerY: number): void {
-        let primaryColor, glowColor;
+        let primaryColor;
         switch (this.phase) {
-            case 1: primaryColor = '#00FFFF'; glowColor = '#00FFFF'; break;
-            case 2: primaryColor = '#EE82EE'; glowColor = '#FF00FF'; break;
-            case 3: primaryColor = '#FF4136'; glowColor = '#FF8C00'; break;
+            case 1: primaryColor = '#00FFFF'; break;
+            case 2: primaryColor = '#EE82EE'; break;
+            case 3: primaryColor = '#FF4136'; break;
         }
 
         ctx.save();
@@ -1864,7 +1870,6 @@ class BossOmegaNexus extends Enemy {
              ctx.translate(-centerX, -centerY);
         }
 
-        // Die Grafik wird in ihrer vollen Höhe gezeichnet, auch wenn die Hitbox kleiner ist
         ctx.drawImage(this.baseImage, visualX, visualY, this.width, this.height + this.visualOffsetY * 2);
         this.drawNexusRings(ctx, centerX, centerY);
         
@@ -1948,9 +1953,9 @@ class BossOmegaNexus extends Enemy {
         });
     }
 }
+
 class NexusLanceProjectile extends EnemyProjectile {
     constructor(game: Game, x: number, y: number, vX: number, vY: number) {
-        // Hoher Schaden, um die Gefahr zu verdeutlichen
         super(game, x, y, vX, vY, 40); 
         this.width = 6;
         this.height = 30;
@@ -1964,7 +1969,7 @@ class NexusLanceProjectile extends EnemyProjectile {
         gradient.addColorStop(1, '#B10DC9');
 
         ctx.fillStyle = gradient;
-        ctx.shadowColor = '#FF00FF'; // Lila-rotes Leuchten
+        ctx.shadowColor = '#FF00FF';
         ctx.shadowBlur = 15;
         
         ctx.beginPath();
@@ -1983,12 +1988,8 @@ class NexusFragment extends Enemy {
     private pulse: number = 0;
 
     constructor(game: Game, x: number, y: number) {
-        // Erbt von Enemy: hat jetzt HP, gibt Punkte und kann takeHit() empfangen
         super(game, x, y, 40, 40, 150, 500, 'NEXUS_FRAGMENT');
-        // Entfernt die manuelle Lebensdauer - wird jetzt über HP gesteuert
     }
-
-    // takeHit() wird von der Enemy-Klasse geerbt, daher ist keine eigene Implementierung nötig
 
     update(dt: number): void {
         const dt_s = dt / 1000;
@@ -1999,7 +2000,7 @@ class NexusFragment extends Enemy {
             const p = this.game.player;
             const pAngle = Math.atan2(p.pos.y - (this.pos.y + this.height/2), p.pos.x - (this.pos.x + this.width/2));
             
-            // Feuert eine Salve von 3 Plasmabällen
+            this.game.uiManager.soundManager.play('enemyPlasmaShoot');
             for(let i=0; i<3; i++) {
                 setTimeout(() => {
                     if (this.isAlive()) {
@@ -2007,7 +2008,7 @@ class NexusFragment extends Enemy {
                     }
                 }, i * 120);
             }
-            this.fireCooldown = 2800 + Math.random() * 1000; // Leicht längere Pause
+            this.fireCooldown = 2800 + Math.random() * 1000;
         }
     }
 
@@ -2032,31 +2033,21 @@ class NexusFragment extends Enemy {
         ctx.fill();
         ctx.restore();
         
-        // Zeichnet die Lebensleiste, da es jetzt ein echter Gegner ist
         this.drawHealthBar(ctx);
     }
 }
 
 class BossNexusPrime extends Enemy {
-    // Phasen- & Zustandsmanagement
     private phase: number = 1;
     private attackTimer: number = 4000;
     private isPreparingAttack: boolean = false;
     private preparationTimer: number = 0;
-    // GEÄNDERT: 'FRAGMENTS' wurde zu 'ORB' für Klarheit
     private currentAttack: 'LANCE' | 'PLASMA_BURST' | 'ORB' | 'SCYTHE' | 'SWEEP' | 'HORIZON' | 'NONE' = 'NONE';
     private phaseTransitionTimer: number = 0;
-
-    // Dynamisches Bewegungssystem OHNE Rotation
     private movementPattern: 'ENTERING' | 'DRIFTING' | 'REPOSITIONING' = 'ENTERING';
     private movementTarget: Vector2D;
-
-    // Visuelle und prozedurale Komponenten
     private corePulse: number = 0;
-    // GEÄNDERT: fragments-Array entfernt
     private scythes: { angle: number, radius: number, speed: number }[] = [];
-
-    // Angriffs-spezifische Daten
     private plasmaSweepProgress: number = -1;
     private eventHorizonCharge: number = 0;
 
@@ -2150,7 +2141,6 @@ class BossNexusPrime extends Enemy {
                 this.attackTimer = 6000;
                 break;
             case 2:
-                // NEU: Fügt einen Plasma-Burst als möglichen Angriff hinzu
                 const attackChoices = ['SCYTHE', 'SWEEP', 'PLASMA_BURST'];
                 this.currentAttack = attackChoices[Math.floor(Math.random() * attackChoices.length)] as any;
                 
@@ -2178,14 +2168,13 @@ class BossNexusPrime extends Enemy {
 
         switch (this.currentAttack) {
             case 'LANCE':
+                this.game.uiManager.soundManager.play('bossLanceShoot');
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
-                    // GEÄNDERT: Feuert jetzt die neue, gefährliche Nexus-Lanze
                     this.game.addEntity(new NexusLanceProjectile(this.game, centerX, centerY, Math.cos(angle) * 700, Math.sin(angle) * 700));
                 }
                 break;
             case 'ORB':
-                // GEÄNDERT: Beschwört nur noch EINEN Orb
                  if (this.game.entities.filter(e => e instanceof NexusFragment).length < 2) {
                     this.game.addEntity(new NexusFragment(this.game, centerX, centerY));
                 }
@@ -2200,6 +2189,7 @@ class BossNexusPrime extends Enemy {
                             const targetY = p.pos.y + p.height / 2;
                             const angle = Math.atan2(targetY - (this.pos.y + this.height/2), targetX - (this.pos.x + this.width/2));
                             this.game.addEntity(new PlasmaBallProjectile(this.game, centerX, centerY, Math.cos(angle) * 600, Math.sin(angle) * 600, 30));
+                            this.game.uiManager.soundManager.play('enemyShoot');
                         }, i * 150);
                     }
                 }
@@ -2756,12 +2746,9 @@ class SoundManager {
     setTrack(trackName: 'normal' | 'boss' | 'menu') {
         if (!this.audioCtx || this.currentTrack === trackName) return;
         this.currentTrack = trackName;
-    
         this.stopProceduralMusic();
         this.stopMenuMusic();
-    
         if (!this.uiManager.settings.music) return;
-    
         if (trackName === 'menu') {
             this.playMenuMusic();
         } else {
@@ -2771,17 +2758,13 @@ class SoundManager {
 
     private playMenuMusic() {
         if (!this.audioCtx || !this.masterGain || !this.menuMusicBuffer || this.menuMusicSource) return;
-
         const menuMusicGain = this.audioCtx.createGain();
         menuMusicGain.gain.value = 0.2; 
-        
         this.menuMusicSource = this.audioCtx.createBufferSource();
         this.menuMusicSource.buffer = this.menuMusicBuffer;
         this.menuMusicSource.loop = true;
-
         this.menuMusicSource.connect(menuMusicGain);
         menuMusicGain.connect(this.masterGain);
-
         this.menuMusicSource.start();
     }
 
@@ -2880,10 +2863,10 @@ class SoundManager {
             case 'shoot':
                 if (player) {
                     switch (player.powerUpManager.weaponTier) {
-                        case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.05; break;
-                        case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.05; break;
-                        case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.04; break;
-                        case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.03; break;
+                        case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.2; break;
+                        case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.2; break;
+                        case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.18; break;
+                        case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.16; break;
                     }
                 }
                 isHandled = true;
@@ -2909,7 +2892,8 @@ class SoundManager {
             return;
         }
         if (isHandled) return;
-        let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1; 
+
+        let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; 
         switch (soundName) { 
             case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; 
             case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; 
@@ -2917,15 +2901,14 @@ class SoundManager {
             case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
             case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
             case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
+            case 'enemyShoot': freq = 800; freqEnd = 400; duration = 0.1; type = 'triangle'; vol = 0.15; break;
+            case 'enemyPlasmaShoot': freq = 400; duration = 0.2; type = 'sawtooth'; vol = 0.2; break;
+            case 'bossLanceShoot': freq = 1500; duration = 0.15; type = 'square'; vol = 0.3; break;
             case 'revive': 
-                freq = 400; 
-                duration = 0.8; 
-                type = 'triangle'; 
-                vol = 0.7; 
+                freq = 400; duration = 0.8; type = 'triangle'; vol = 0.7; 
                 const oscRevive = this.audioCtx.createOscillator();
                 const gainRevive = this.audioCtx.createGain();
-                oscRevive.connect(gainRevive);
-                gainRevive.connect(this.masterGain);
+                oscRevive.connect(gainRevive); gainRevive.connect(this.masterGain);
                 oscRevive.type = type;
                 oscRevive.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
                 oscRevive.frequency.linearRampToValueAtTime(freq * 3, this.audioCtx.currentTime + duration * 0.9);
@@ -2935,7 +2918,16 @@ class SoundManager {
                 oscRevive.stop(this.audioCtx.currentTime + duration);
                 return; 
         } 
-        const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); 
+        const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+        if (freqEnd !== freq) {
+            osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration);
+        }
+        gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
+        gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration);
+        osc.start(this.audioCtx.currentTime);
+        osc.stop(this.audioCtx.currentTime + duration); 
     }
 }
 
@@ -4116,7 +4108,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 40;
+                    this.level = 19;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
@@ -4600,10 +4592,10 @@ class Game {
             case 'WEAVER': return new Weaver(this);
             case 'SHOOTER': return new Shooter(this);
             case 'TELEPORTER': return new Teleporter(this);
-            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 5 * (1 + this.level/5), 1 + this.level/10);
-            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 6 * (1 + this.level/5), 1.1 + this.level/10);
-            case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 7 * (1 + this.level/5), 1.2 + this.level/10);
-            case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 8 * (1 + this.level/5), 1.3 + this.level/10);
+            case 'BOSS_SENTINEL_PRIME': return new BossSentinelPrime(this, 8 * (1 + this.level/5), 1 + this.level/10);
+            case 'BOSS_VOID_SERPENT': return new BossVoidSerpent(this, 9 * (1 + this.level/5), 1.1 + this.level/10);
+            case 'BOSS_OMEGA_NEXUS': return new BossOmegaNexus(this, 10 * (1 + this.level/5), 1.2 + this.level/10);
+            case 'BOSS_NEXUS_PRIME': return new BossNexusPrime(this, 12 * (1 + this.level/5), 1.3 + this.level/10);
             default: return null;
         }
     }
