@@ -3782,9 +3782,7 @@ class Game {
     
     private container: HTMLElement;
     public scale: number = 1;
-
     public audioNeedsUnlock: boolean = false;
-
     public isFormationActive: boolean = false;
     private activeFormationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
@@ -3864,7 +3862,7 @@ class Game {
         this.createParallaxStarfield();
     }
     
-        initEventListeners(): void {
+            initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
 
         // Verbesserter Handler zur Wiederherstellung des Audio-Kontexts nach Inaktivität
