@@ -3864,27 +3864,43 @@ class Game {
         this.createParallaxStarfield();
     }
     
-    initEventListeners(): void {
+        initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
 
+        // Verbesserter Handler zur Wiederherstellung des Audio-Kontexts nach Inaktivität
+        const resumeAudioContext = () => {
+            const sm = this.uiManager.soundManager;
+            if (sm.audioCtx && sm.audioCtx.state === 'suspended') {
+                sm.audioCtx.resume().then(() => {
+                    console.log("AudioContext erfolgreich reaktiviert.");
+                    this.audioNeedsUnlock = false;
+                    // Entferne die Listener, falls sie noch existieren, um sauber zu bleiben
+                    window.removeEventListener('pointerdown', resumeAudioContext);
+                    window.removeEventListener('keydown', resumeAudioContext);
+                }).catch(e => console.error("Fehler bei der Reaktivierung des AudioContext:", e));
+            }
+        };
+
+        // Überwacht, ob der Tab/die App in den Vordergrund kommt
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
+                const sm = this.uiManager.soundManager;
+                if (sm.audioCtx && sm.audioCtx.state === 'suspended') {
                     this.audioNeedsUnlock = true;
+                    console.log("App wieder sichtbar, Audio-Kontext ist angehalten. Warte auf Benutzerinteraktion.");
+                    
+                    // Fügt einen einmaligen Listener auf das ganze Fenster hinzu.
+                    // Die erste Interaktion (Klick, Tippen, Taste) wird den Ton reaktivieren.
+                    window.addEventListener('pointerdown', resumeAudioContext, { once: true });
+                    window.addEventListener('keydown', resumeAudioContext, { once: true });
                 }
             }
         });
 
-        const unlockAudioHandler = () => {
-            if (this.audioNeedsUnlock && this.uiManager.soundManager.audioCtx) {
-                this.uiManager.soundManager.audioCtx.resume().then(() => {
-                    this.audioNeedsUnlock = false;
-                });
-            }
-        };
-
+        // Handler für den allerersten Start des Spiels
         const tapToStartHandler = (e: Event) => {
-            unlockAudioHandler();
+            // Versucht, den Audio-Kontext zu reaktivieren, falls er bereits gesperrt ist
+            resumeAudioContext();
             
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
@@ -3898,7 +3914,8 @@ class Game {
 
         if (this.isMobile) {
             this.initMobileControls();
-            this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
+            // Wir verwenden 'pointerdown' für eine universellere Erfassung der ersten Interaktion
+            document.body.addEventListener('pointerdown', tapToStartHandler, { once: true });
         } else {
             this.initDesktopControls();
         }
