@@ -4108,7 +4108,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 19;
+                    this.level = 1;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
