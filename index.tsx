@@ -2633,8 +2633,6 @@ class ShopManager {
     }
 }
 
-// --- ERSETZEN SIE DIE KOMPLETTE SoundManager KLASSE HIERMIT ---
-
 class SoundManager {
     public audioCtx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
@@ -2703,7 +2701,6 @@ class SoundManager {
     }
 
     public async loadSounds() {
-        if (!this.audioCtx) return; // Sicherheitsabfrage
         this.shootTier1Buffer = await this.loadAudioFile(shootTier1Src);
         this.shootTier2Buffer = await this.loadAudioFile(shootTier2Src);
         this.shootTier3Buffer = await this.loadAudioFile(shootTier3Src);
@@ -2721,50 +2718,25 @@ class SoundManager {
         this.menuMusicBuffer = await this.loadAudioFile(menuMusicSrc);
     }
 
-    public async initAudio(): Promise<void> {
+    public initAudio(): void {
         if (this.audioCtx && this.audioCtx.state === 'running') {
             return;
         }
-    
         try {
-            if (!this.audioCtx || this.audioCtx.state === 'closed') {
-                console.log("AudioContext ist nicht vorhanden oder wurde vom Browser geschlossen. Erstelle einen komplett neuen Kontext.");
-                
-                if (this.audioCtx) {
-                    this.audioCtx.onstatechange = null;
-                    this.stopProceduralMusic();
-                    this.stopMenuMusic();
-                    await this.audioCtx.close().catch(e => console.error("Fehler beim Schließen des alten AudioContext:", e));
-                }
-    
+            if (!this.audioCtx) {
                 this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-                
-                // DER "WACHMANN": Lauscht auf Zustandsänderungen
-                this.audioCtx.onstatechange = () => {
-                    console.log(`AudioContext-Zustand hat sich geändert zu: ${this.audioCtx?.state}`);
-                    if (this.audioCtx?.state !== 'running') {
-                        this.uiManager.game.audioNeedsUnlock = true;
-                        console.log("ALARM: Audio-Wiederherstellung bei nächster Interaktion erforderlich.");
-                    }
-                };
-    
                 this.masterGain = this.audioCtx.createGain();
                 this.masterGain.connect(this.audioCtx.destination);
-    
-                await this.loadSounds(); 
-                this.continuousSounds = {};
+                
+                this.loadSounds();
             }
-    
             if (this.audioCtx.state === 'suspended') {
-                console.log("AudioContext war nur angehalten und wird jetzt fortgesetzt.");
-                await this.audioCtx.resume();
+                this.audioCtx.resume();
             }
-            
             this.setVolume(this.uiManager.settings.masterVolume);
             this.toggleMusic(this.uiManager.settings.music);
-    
         } catch (e) {
-            console.error("Web Audio API wird nicht unterstützt oder konnte nicht initialisiert werden", e);
+            console.error("Web Audio API is not supported or failed to initialize", e);
         }
     }
     
@@ -3798,8 +3770,6 @@ const LEVELS: ILevelDefinition[] = [
 ];
 
 
-// --- ERSETZEN SIE DIE KOMPLETTE Game KLASSE HIERMIT ---
-
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     public phoenixCoreUI: PhoenixCoreUI;
@@ -3896,55 +3866,44 @@ class Game {
     
     initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
-    
-        // Dieser Listener ist ein gutes Fallback, aber die primäre Erkennung
-        // findet jetzt im onstatechange-Handler des SoundManagers statt.
+
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state !== 'running') {
+                if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
                     this.audioNeedsUnlock = true;
-                    console.log("App ist wieder sichtbar und Audio läuft nicht. Flag zur Wiederherstellung gesetzt.");
                 }
             }
         });
-    
-        // Diese Funktion wird bei JEDER ersten Interaktion nach einer möglichen Störung aufgerufen.
-        const unlockAudioHandler = async () => {
-            if (this.audioNeedsUnlock && this.uiManager.soundManager) {
-                this.audioNeedsUnlock = false;
-                console.log("Benutzerinteraktion erkannt. Versuche, Audiosystem wiederherzustellen.");
-                await this.uiManager.soundManager.initAudio();
+
+        const unlockAudioHandler = () => {
+            if (this.audioNeedsUnlock && this.uiManager.soundManager.audioCtx) {
+                this.uiManager.soundManager.audioCtx.resume().then(() => {
+                    this.audioNeedsUnlock = false;
+                });
             }
         };
-    
-        // Dieser Handler kümmert sich um den allerersten Start des Spiels UND um die Wiederherstellung.
-        const primaryInteractionHandler = async (e: Event) => {
-            await unlockAudioHandler();
+
+        const tapToStartHandler = (e: Event) => {
+            unlockAudioHandler();
             
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
-                 // Nur beim allerersten Start des Spiels initialisieren
-                 if (!this.uiManager.soundManager.audioCtx) {
-                    await this.uiManager.soundManager.initAudio();
-                 }
+                 this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
                     this.changeState('MODE_SELECT');
                  }
             }
         };
-    
+
         if (this.isMobile) {
             this.initMobileControls();
-            // 'pointerdown' ist ein modernerer und oft zuverlässigerer Event als 'touchstart'
-            this.canvas.addEventListener('pointerdown', primaryInteractionHandler, { passive: false });
+            this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
         } else {
             this.initDesktopControls();
-            window.addEventListener('keydown', primaryInteractionHandler, { once: true });
-            this.canvas.addEventListener('pointerdown', primaryInteractionHandler);
         }
     }
-    
+
     initMobileControls(): void {
         const specialInventoryEl = document.getElementById('special-inventory');
         const ultraInventoryEl = document.getElementById('ultra-inventory');
@@ -3959,9 +3918,12 @@ class Game {
             return { x, y };
         };
     
-        const handleTouchStart = async (e: TouchEvent) => {
-            // Die Audio-Entsperrung wird jetzt zentral vom 'pointerdown'-Event in initEventListeners gehandhabt.
-            // Wir können die Logik hier vereinfachen, da sie nur noch für das Gameplay zuständig ist.
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (this.audioNeedsUnlock) {
+                this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
+            }
+            
+            this.uiManager.soundManager.initAudio();
 
             if (this.gameState !== 'PLAYING' || this.isPaused) {
                 return;
@@ -3986,9 +3948,7 @@ class Game {
                     this.touchY = pos.y;
                 }
             }
-        };
-
-        this.canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        }, { passive: false });
     
         this.canvas.addEventListener('touchmove', (e) => {
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
@@ -4023,9 +3983,12 @@ class Game {
             if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
-                    // Die Audio-Initialisierung wird vom zentralen Handler übernommen
-                    this.changeState(this.gameState === 'INTRO' ? 'MENU' : 'MODE_SELECT');
+                if (this.gameState === 'INTRO') {
+                    this.uiManager.soundManager.initAudio();
+                    this.changeState('MENU');
+                } else if (this.gameState === 'MENU') {
+                    this.uiManager.soundManager.initAudio();
+                    this.changeState('MODE_SELECT');
                 } else if (['WIN'].includes(this.gameState)) {
                     this.changeState('MENU');
                 }
@@ -4145,7 +4108,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 1;
+                    this.level = 19;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
