@@ -2704,6 +2704,7 @@ class SoundManager {
     private menuMusicSource: AudioBufferSourceNode | null = null;
 
     private continuousSounds: { [key: string]: { source: AudioNode, gain: GainNode, panner?: StereoPannerNode } } = {};
+    private isResetting = false; // Verhindert doppelte Resets
 
     constructor(uiManager: UIManager) {
         this.uiManager = uiManager;
@@ -2711,7 +2712,7 @@ class SoundManager {
         this.defineMusicPatterns();
         this.defineBossMusicPatterns();
     }
-    
+
     private async loadAudioFile(url: string): Promise<AudioBuffer | null> {
         if (!this.audioCtx) return null;
         try {
@@ -2743,34 +2744,105 @@ class SoundManager {
         this.menuMusicBuffer = await this.loadAudioFile(menuMusicSrc);
     }
 
-        public initAudio(): void {
+    public async initAudio(): Promise<void> {
+        // Wenn bereits ein Reset läuft, nichts tun.
+        if (this.isResetting) return;
+
         try {
-            // 1. AudioContext erstellen, falls nicht vorhanden
+            // Szenario 1: Es gibt noch gar keinen Audio-Kontext.
             if (!this.audioCtx) {
-                this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-                this.masterGain = this.audioCtx.createGain();
-                this.masterGain.connect(this.audioCtx.destination);
-                this.loadSounds(); // Sounds nur einmal laden
+                console.log("AudioContext wird zum ersten Mal erstellt.");
+                await this.resetAudioSystem();
+                return;
             }
 
-            // 2. Prüfen, ob der Context suspendiert ist und ihn reaktivieren
+            // Szenario 2: Der Kontext ist unwiderruflich geschlossen.
+            if (this.audioCtx.state === 'closed') {
+                console.error("AudioContext war geschlossen. Erzwinge kompletten Neustart des Soundsystems.");
+                await this.resetAudioSystem();
+                return;
+            }
+
+            // Szenario 3: Der Kontext ist nur unterbrochen (Standard-Verhalten).
             if (this.audioCtx.state === 'suspended') {
-                this.audioCtx.resume().then(() => {
-                    console.log("AudioContext erfolgreich reaktiviert.");
-                    this.setVolume(this.uiManager.settings.masterVolume);
-                    this.toggleMusic(this.uiManager.settings.music);
-                }).catch(e => console.error("Reaktivierung des AudioContext fehlgeschlagen:", e));
-            } else {
-                // Wenn der Context bereits läuft, nur Einstellungen anwenden
+                console.log("AudioContext ist unterbrochen, versuche Reaktivierung...");
+                await this.audioCtx.resume();
+                console.log("AudioContext erfolgreich reaktiviert.");
+                // Nach der Reaktivierung die Einstellungen erneut anwenden.
                 this.setVolume(this.uiManager.settings.masterVolume);
                 this.toggleMusic(this.uiManager.settings.music);
             }
 
         } catch (e) {
-            console.error("Web Audio API wird nicht unterstützt oder konnte nicht initialisiert werden", e);
+            console.error("Fehler bei der Initialisierung/Reaktivierung des AudioContext. Führe Fallback-Reset durch:", e);
+            // Fallback: Wenn irgendetwas schiefgeht, den Holzhammer auspacken.
+            await this.resetAudioSystem();
         }
     }
+
+    /**
+     * Die kompromisslose Reset-Methode.
+     * Zerstört den alten Audio-Kontext und baut alles von Grund auf neu auf.
+     */
+    private async resetAudioSystem(): Promise<void> {
+        this.isResetting = true;
+        console.warn("--- FÜHRE EINEN VOLLSTÄNDIGEN SOUNDSYSTEM-RESET DURCH ---");
+
+        // Alle laufenden Sounds stoppen und Referenzen löschen.
+        this.stopProceduralMusic();
+        this.stopMenuMusic();
+        Object.keys(this.continuousSounds).forEach(key => this.stopLoop(key));
+        this.continuousSounds = {};
+
+        // Alten Kontext sicher schließen, falls er existiert.
+        if (this.audioCtx && this.audioCtx.state !== 'closed') {
+            await this.audioCtx.close().catch(e => console.error("Fehler beim Schließen des alten AudioContext:", e));
+        }
+
+        // Alles zurücksetzen.
+        this.audioCtx = null;
+        this.masterGain = null;
+        
+        // Einen brandneuen Kontext erstellen.
+        this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        this.masterGain = this.audioCtx.createGain();
+        this.masterGain.connect(this.audioCtx.destination);
+        
+        console.log("Neuer AudioContext erstellt.");
+
+        // WICHTIG: Alle Sounds MÜSSEN neu geladen werden, da sie an den alten Kontext gebunden waren.
+        console.log("Lade alle Sounds neu...");
+        await this.loadSounds();
+        console.log("Alle Sounds wurden neu geladen.");
+
+        // Einstellungen anwenden
+        this.setVolume(this.uiManager.settings.masterVolume);
+        
+        this.isResetting = false;
+        console.warn("--- SOUNDSYSTEM-RESET ABGESCHLOSSEN ---");
+    }
     
+    /**
+     * Stellt den Audio-Zustand basierend auf dem Spielzustand wieder her.
+     * Wird nach einem Reset aufgerufen.
+     */
+    public restoreAudioState(): void {
+        console.log("Stelle Audio-Zustand wieder her...");
+        const game = this.uiManager.game;
+    
+        // 1. Musik wiederherstellen
+        if (game.isBossActive) {
+            this.setTrack('boss');
+            console.log("-> Boss-Musik wiederhergestellt.");
+        } else if (game.gameState === 'PLAYING' || game.gameState === 'PAUSED' || game.gameState === 'REVIVING') {
+            this.setTrack('normal');
+            console.log("-> Normale Spiel-Musik wiederhergestellt.");
+        } else {
+            this.setTrack('menu');
+            console.log("-> Menü-Musik wiederhergestellt.");
+        }
+    }
+
     defineMusicPatterns() { const N = {C2:65.41,G2:98,Ab2:103.83,Eb2:77.78,C3:130.81,D3:146.83,Eb3:155.56,F3:174.61,G3:196,Ab3:207.65,Bb3:233.08,C4:261.63,D4:293.66,Eb4:311.13,F4:349.23,G4:392,Ab4:415.3,Bb4:466.16}; const R=0; this.leadMelody=[N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.Eb4,R,N.D4,R,N.C4,R,R,R,N.G4,R,N.Eb4,R,N.G4,R,N.F4,R,N.G4,N.Ab4,N.G4,N.F4,N.Eb4,R,R,R,N.Ab4,R,N.F4,R,N.Ab4,R,N.G4,R,N.F4,R,N.Eb4,R,N.C4,R,N.Eb4,R,N.G4,N.F4,N.Eb4,R,N.D4,R,N.C4,R,N.C4,R,R,R,R,R,R,R]; this.bassLine=[...Array(16).fill(N.C2),...Array(16).fill(N.G2),...Array(16).fill(N.Ab2),...Array(16).fill(N.Eb2)]; const A_C=[N.C4,N.Eb4,N.G4,N.Eb4],A_G=[N.G3,N.Bb3,N.D4,N.Bb3],A_A=[N.Ab3,N.C4,N.Eb4,N.C4],A_E=[N.Eb3,N.G3,N.Bb3,N.G3]; this.arpeggioMelody=[...A_C,...A_C,...A_C,...A_C,...A_G,...A_G,...A_G,...A_G,...A_A,...A_A,...A_A,...A_A,...A_E,...A_E,...A_E,...A_E]; const K=true,S=true,H=true,o=false; this.kickPattern=[K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,o,o,K,o,K,o,K,o,o,o]; this.snarePattern=[o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,o,o,S,o,o,o,o,o,S,o,S,o,S,o]; this.hihatPattern=[H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,o,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,o,H,o,H,o,H,o,H,H,H,o,H,H,H,o]; }
     defineBossMusicPatterns() { const N={A2:110,E2:82.41,F2:87.31,G2:98,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,Gs4:415.3,A4:440}; const R=0; this.bossLeadMelody=[N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,N.F4,R,N.E4,R,N.D4,R,N.C4,N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,R,N.E4,R,N.D4,R,N.C4,R,N.A4,N.A4,R,N.Gs4,R,N.A4,R,N.E4,N.F4,N.F4,R,N.E4,R,N.D4,R,N.C4,N.B3,N.C4,N.D4,N.E4,N.F4,N.E4,N.D4,N.C4,N.B3,R,R,R,R,R,R,R]; this.bossBassLine=[...Array(16).fill(N.A2),...Array(16).fill(N.G2),...Array(16).fill(N.F2),...Array(16).fill(N.E2)]; const A_A=[N.A3,N.C4,N.E4,N.C4],A_G=[N.G2,N.B3,N.D4,N.B3],A_F=[N.F2,N.A3,N.C4,N.A3],A_E=[N.E2,N.Gs4,N.B3,N.Gs4]; this.bossArpeggioMelody=[...A_A,...A_A,...A_A,...A_A,...A_G,...A_G,...A_G,...A_G,...A_F,...A_F,...A_F,...A_F,...A_E,...A_E,...A_E,...A_E]; const K=true,S=true,H=true,o=false; const r=(p:boolean[],t:number)=>Array(t).fill(p).flat(); this.bossKickPattern=r([K,K,o,o,K,o,o,o,K,K,o,o,K,o,o,K],4); this.bossSnarePattern=r([o,o,o,o,S,o,o,o,o,o,o,o,S,o,S,o],4); this.bossHihatPattern=r([H,H,H,H,H,H,H,H,H,H,H,H,H,H,H,H],4); }
     
@@ -2801,8 +2873,10 @@ class SoundManager {
 
     private stopMenuMusic() {
         if (this.menuMusicSource) {
-            this.menuMusicSource.stop();
-            this.menuMusicSource.disconnect();
+            try {
+                this.menuMusicSource.stop();
+                this.menuMusicSource.disconnect();
+            } catch(e) { /* Ignore errors if already stopped */ }
             this.menuMusicSource = null;
         }
     }
@@ -2843,7 +2917,8 @@ class SoundManager {
     toggleMusic(shouldPlay: boolean): void {
         this.musicPlaying = shouldPlay;
         if (shouldPlay) {
-            this.setTrack(this.currentTrack);
+            // Die Wiederherstellung wird jetzt von der Game-Klasse gesteuert
+            this.uiManager.game.restoreAllGameAudio();
         } else {
             this.stopProceduralMusic();
             this.stopMenuMusic();
@@ -2882,7 +2957,7 @@ class SoundManager {
             const shieldLfo = this.audioCtx.createOscillator();
             shieldLfo.type = 'sine';
             shieldLfo.frequency.value = 5; // 5 Hz modulation
-            const shieldLfoGain = this.audioCtx.createGain(); // KORRIGIERT
+            const shieldLfoGain = this.audioCtx.createGain(); 
             shieldLfoGain.gain.value = 10;
             shieldLfo.connect(shieldLfoGain);
             shieldLfoGain.connect(shieldOsc.frequency);
@@ -2929,9 +3004,9 @@ class SoundManager {
              fireFilter.frequency.value = 1000;
              fireFilter.Q.value = 5;
 
-             const cannonLfo = this.audioCtx.createOscillator(); // KORRIGIERT
+             const cannonLfo = this.audioCtx.createOscillator(); 
              cannonLfo.frequency.value = 30;
-             const cannonLfoGain = this.audioCtx.createGain(); // KORRIGIERT
+             const cannonLfoGain = this.audioCtx.createGain(); 
              cannonLfoGain.gain.value = 400;
              cannonLfo.connect(cannonLfoGain);
              cannonLfoGain.connect(fireFilter.frequency);
@@ -2952,26 +3027,29 @@ class SoundManager {
 
     public stopLoop(soundName: string, options: { fade?: number } = {}) {
         const sound = this.continuousSounds[soundName];
-        if (sound && this.audioCtx) {
-            const fadeTime = this.audioCtx.currentTime + (options.fade ?? 0.1);
-            sound.gain.gain.cancelScheduledValues(this.audioCtx.currentTime);
-            sound.gain.gain.linearRampToValueAtTime(0, fadeTime);
+        if (sound && this.audioCtx && this.audioCtx.state === 'running') {
+            try {
+                const fadeTime = this.audioCtx.currentTime + (options.fade ?? 0.1);
+                sound.gain.gain.cancelScheduledValues(this.audioCtx.currentTime);
+                sound.gain.gain.linearRampToValueAtTime(0, fadeTime);
 
-            if (sound.source.constructor.name === 'AudioBufferSourceNode' || sound.source.constructor.name === 'OscillatorNode') {
-                 (sound.source as AudioScheduledSourceNode).stop(fadeTime);
+                if ('stop' in sound.source && typeof sound.source.stop === 'function') {
+                    (sound.source as AudioScheduledSourceNode).stop(fadeTime);
+                }
+                
+                setTimeout(() => {
+                    sound.source.disconnect();
+                    sound.gain.disconnect();
+                }, (options.fade ?? 0.1) * 1000 + 50);
+            } catch(e) {
+                console.warn(`Fehler beim Stoppen des Loops ${soundName}:`, e);
             }
-            
-            setTimeout(() => {
-                sound.source.disconnect();
-                sound.gain.disconnect();
-            }, (options.fade ?? 0.1) * 1000 + 50);
-
             delete this.continuousSounds[soundName];
         }
     }
     
     play(soundName: string) {
-        if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return;
+        if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx || this.audioCtx.state !== 'running') return;
         
         const time = this.audioCtx.currentTime;
         const masterVolume = this.uiManager.settings.masterVolume;
@@ -2996,9 +3074,7 @@ class SoundManager {
             osc.stop(time + duration);
         };
         
-        // --- Sound Library ---
         switch (soundName) {
-            // ### SPIELER-SOUNDS ###
             case 'shieldActivate': {
                 const osc = createOsc('sine', 440);
                 const gain = this.audioCtx.createGain();
@@ -3070,8 +3146,6 @@ class SoundManager {
                 connectAndStart(osc, gain, 1.5);
                 break;
             }
-            
-            // ### GEGNER-SOUNDS ###
             case 'teleporterOut': {
                 const osc = createOsc('sine', 1500);
                 const gain = createGain(0.4, 0.001, 0.15);
@@ -3088,8 +3162,6 @@ class SoundManager {
                 connectAndStart(osc, gain, 0.2);
                 break;
             }
-            
-            // ### BOSS-SOUNDS ###
             case 'sentinelDash': {
                  const osc = createOsc('sawtooth', 50);
                  const gain = createGain(0.8, 0.001, 0.7);
@@ -3134,8 +3206,6 @@ class SoundManager {
                  osc.stop(time + 5.0);
                  break;
             }
-            
-            // ### UI-SOUNDS ###
             case 'uiTabSwitch': {
                 const osc = createOsc('sine', 800);
                 const gain = createGain(0.3, 0.001, 0.1);
@@ -3156,8 +3226,6 @@ class SoundManager {
                 connectAndStart(osc, gain, 0.3);
                 break;
             }
-            
-            // --- Fallback to Buffer-based sounds ---
             default:
                 let bufferToPlay: AudioBuffer | null = null;
                 let volume = 1.0;
@@ -3197,7 +3265,6 @@ class SoundManager {
                 }
                 if (isHandled) return;
 
-                // --- Fallback to old procedural sounds for simple UI clicks etc. ---
                 let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; 
                 switch (soundName) { 
                     case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; 
@@ -4091,7 +4158,6 @@ class Game {
     
     private container: HTMLElement;
     public scale: number = 1;
-    public audioNeedsUnlock: boolean = false;
     public isFormationActive: boolean = false;
     private activeFormationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
@@ -4171,35 +4237,62 @@ class Game {
         this.createParallaxStarfield();
     }
     
-            initEventListeners(): void {
+    /**
+     * Stellt den gesamten Audio-Zustand des Spiels wieder her.
+     * Wird nach einem erzwungenen Sound-Reset aufgerufen.
+     */
+    public restoreAllGameAudio(): void {
+        // Stellt die Hintergrundmusik wieder her (Boss, Normal, Menü)
+        this.uiManager.soundManager.restoreAudioState();
+    
+        // Stellt alle spieler-spezifischen Dauer-Soundeffekte wieder her
+        if (this.player && this.player.isAlive()) {
+            console.log("Prüfe Spieler-Sound-Loops zur Wiederherstellung...");
+            
+            // Laserstrahl wiederherstellen
+            if (this.player.powerUpManager.isActive('LASER_BEAM')) {
+                console.log("-> Stelle Laser-Sound wieder her.");
+                this.uiManager.soundManager.playLoop('laser');
+            }
+            
+            // Schild-Sound wiederherstellen
+            if (this.player.isShielded()) {
+                console.log("-> Stelle Schild-Sound wieder her.");
+                this.uiManager.soundManager.playLoop('shieldHum', { volume: 0.08, fade: 0.1 });
+            }
+            
+            // Fügen Sie hier bei Bedarf weitere Wiederherstellungen für andere Dauergeräusche hinzu
+        }
+    }
+
+    initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
 
-        // --- PROFESSIONELLE LÖSUNG FÜR AUDIO-WIEDERHERSTELLUNG ---
-        // Dieser einzige, persistente Listener löst das Sound-Problem zuverlässig.
-        // Er wird bei JEDEM Klick oder Tippen auf der Seite ausgeführt.
-        const persistentUnlockHandler = () => {
-            // Er versucht, den AudioContext zu entsperren, falls er vom Browser suspendiert wurde.
-            this.uiManager.soundManager.initAudio(); 
+        const persistentUnlockHandler = async () => {
+            // Schritt 1: Führe den robusten Reset durch und warte, bis er fertig ist.
+            await this.uiManager.soundManager.initAudio();
+            
+            // Schritt 2: Stelle den kompletten Sound-Zustand wieder her.
+            this.restoreAllGameAudio();
         };
         
-        // 'pointerdown' deckt Klicks und Touch-Events ab. 'true' stellt sicher, dass es immer feuert.
         document.body.addEventListener('pointerdown', persistentUnlockHandler, true);
 
-        // Der visibilitychange-Listener hilft uns, den Zustand zu überwachen.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                console.log("App wieder im Vordergrund. Nächste User-Interaktion reaktiviert den Sound falls nötig.");
-                // Ein proaktiver Versuch schadet nicht, auch wenn die Interaktion entscheidend ist.
-                this.uiManager.soundManager.initAudio();
-            } else {
-                 console.log("App in den Hintergrund verschoben.");
+                console.log("App wieder im Vordergrund. Nächste User-Interaktion reaktiviert den Sound.");
+                this.uiManager.soundManager.initAudio().then(() => {
+                    this.restoreAllGameAudio();
+                });
             }
         });
 
         const tapToStartHandler = (e: Event) => {
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
-                 this.uiManager.soundManager.initAudio(); // Nutzt jetzt die zentrale Funktion
+                 this.uiManager.soundManager.initAudio().then(() => {
+                    this.restoreAllGameAudio();
+                 });
                  if(this.gameState === 'INTRO') this.changeState('MENU');
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
                     this.changeState('MODE_SELECT');
@@ -4230,12 +4323,6 @@ class Game {
         };
     
         this.canvas.addEventListener('touchstart', (e) => {
-            if (this.audioNeedsUnlock) {
-                this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
-            }
-            
-            this.uiManager.soundManager.initAudio();
-
             if (this.gameState !== 'PLAYING' || this.isPaused) {
                 return;
             }
@@ -4295,10 +4382,8 @@ class Game {
             if (e.code === 'Enter') {
                 e.preventDefault();
                 if (this.gameState === 'INTRO') {
-                    this.uiManager.soundManager.initAudio();
                     this.changeState('MENU');
                 } else if (this.gameState === 'MENU') {
-                    this.uiManager.soundManager.initAudio();
                     this.changeState('MODE_SELECT');
                 } else if (['WIN'].includes(this.gameState)) {
                     this.changeState('MENU');
@@ -4389,6 +4474,9 @@ class Game {
         const oldState = this.gameState;
         this.gameState = newState;
 
+        // Sound-Zustand immer aktualisieren
+        this.restoreAllGameAudio();
+
         switch (newState) {
             case 'INTRO':
                 this.introAnimationTimer = 0;
@@ -4397,23 +4485,15 @@ class Game {
                 this.entities = [];
                 this.player = null;
                 this.uiManager.toggleMainMenu(true);
-                this.uiManager.soundManager.setTrack('menu');
                 break;
             case 'MODE_SELECT':
                 this.uiManager.toggleModeSelectScreen(true);
                 break;
             case 'PAUSED':
-                this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.togglePauseMenu(true);
                 break;
             case 'PLAYING':
-                if (oldState === 'PAUSED' || oldState === 'REVIVING') {
-                    if (this.isBossActive) {
-                        this.uiManager.soundManager.setTrack('boss');
-                    } else {
-                        this.uiManager.soundManager.setTrack('normal');
-                    }
-                }
+                // Die Musik wird bereits durch restoreAllGameAudio() gesteuert
                 break;
             case 'LEVEL_START':
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
@@ -4453,7 +4533,6 @@ class Game {
                 }
                 this.saveGameData();
                 this.submitScoreToServer();
-                this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.toggleGameOverScreen(true);
                 break;
             case 'WIN':
@@ -4462,7 +4541,6 @@ class Game {
                 }
                 this.saveGameData();
                 this.submitScoreToServer();
-                this.uiManager.soundManager.setTrack('menu');
                 break;
         }
     }
@@ -4752,18 +4830,19 @@ class Game {
             this.isMultiFormationWaveActive = true;
             this.multiFormationStage = 1;
             this.spawnNextFormationStage();
-            if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
+            this.isBossActive = false;
         } else if (levelData.boss) { 
             this.isBossActive = true; 
             this.spawnEnemy(false, levelData.boss); 
-            this.uiManager.soundManager.setTrack('boss'); 
         } else if (levelData.formation && levelData.formation !== 'random') {
             this.isFormationActive = true;
             this.spawnFormation(levelData.formation);
-            if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
-        } else { 
-            if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
+            this.isBossActive = false;
+        } else {
+             this.isBossActive = false;
         } 
+
+        // Sound-Track wird jetzt zentral in changeState und restoreAllGameAudio gesetzt
     }
 
     private spawnNextFormationStage(): void {
