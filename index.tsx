@@ -299,6 +299,7 @@ class TeleportEffect extends Entity {
         this.family = 'effect';
         this.isOpening = isOpening;
         this.radius = isOpening ? 0 : this.maxRadius;
+        game.uiManager.soundManager.play(isOpening ? 'teleporterIn' : 'teleporterOut');
     }
 
     update(dt: number): void {
@@ -407,6 +408,7 @@ class ReviveCrystalAnimation extends Entity {
         this.family = 'effect';
         this.target = target;
         this.image = phoenixCoreImages[crystalType];
+        this.game.uiManager.soundManager.play('reviveCrystalFly');
     }
 
     update(dt: number): void {
@@ -952,10 +954,22 @@ class PowerUpManager {
     constructor(player: Player) { this.player = player; this.game = player.game; }
     update(dt: number): void { for (const key in this.timers) { this.timers[key] -= dt; if (this.timers[key] <= 0) this.deactivate(key); } if (this.weaponTierTimer > 0) { this.weaponTierTimer -= dt; if (this.weaponTierTimer <= 0) { this.weaponTier--; this.setWeaponTierTimer(); } } }
     setWeaponTierTimer(): void { if (this.weaponTier <= 1) { this.weaponTier = 1; this.weaponTierTimer = 0; return; } switch(this.weaponTier) { case 4: this.weaponTierTimer = 30000; break; case 3: this.weaponTierTimer = 60000; break; case 2: this.weaponTierTimer = 90000; break; } }
-    deactivate(key: string): void { delete this.timers[key]; if (this.ultraWeapon === key) { this.ultraWeapon = null; if (this.player.laser) { this.player.laser.destroy(); this.player.laser = null; } } else if (key === 'ORBITAL_DRONE') { this.player.drones.forEach(d => d.destroy()); this.player.drones = []; } }
+    deactivate(key: string): void {
+        if(key === 'GHOST_PROTOCOL') {
+             this.game.uiManager.soundManager.play('ghostDeactivate');
+        }
+        delete this.timers[key]; 
+        if (this.ultraWeapon === key) { this.ultraWeapon = null; if (this.player.laser) { this.player.laser.destroy(); this.player.laser = null; } } else if (key === 'ORBITAL_DRONE') { this.player.drones.forEach(d => d.destroy()); this.player.drones = []; } 
+    }
     resetTemporaryPowerUps(): void { Object.keys(this.timers).forEach(timerKey => this.deactivate(timerKey)); this.ultraWeapon = null; }
     isActive(type: string): boolean { return this.timers[type] > 0; }
-    onPlayerHit(): void { if (this.weaponTier > 1) { this.weaponTier--; this.setWeaponTierTimer(); } }
+    onPlayerHit(): void {
+        if (this.weaponTier > 1) { 
+            this.weaponTier--;
+            this.game.uiManager.soundManager.play('weaponDowngrade');
+            this.setWeaponTierTimer(); 
+        }
+    }
     collectSpecial(type: string): void { this.collectToInventory(type, this.specialInventory, 3); }
     collectUltra(type: string): void { this.collectToInventory(type, this.ultraInventory, 2); }
 
@@ -1011,7 +1025,10 @@ class PowerUpManager {
             }
             this.timers['ORBITAL_DRONE'] = 30000 * durationMultiplier;
         } else if (type === 'WEAPON_UP') {
-            if (this.weaponTier < 4) this.weaponTier++;
+            if (this.weaponTier < 4) {
+                this.weaponTier++;
+                this.game.uiManager.soundManager.play('weaponUpgrade');
+            }
             this.setWeaponTierTimer();
         } else if (Object.keys(W_TEMP_DURATIONS).includes(type)) {
             const baseDuration = duration ?? W_TEMP_DURATIONS[type]!;
@@ -1026,9 +1043,11 @@ class PowerUpManager {
                 this.player.energy = this.player.maxEnergy;
             } else if (type === 'SHIELD') {
                 this.timers[type] = Infinity;
-            } else {
+                this.game.uiManager.soundManager.play('shieldActivate');
+            } else if (type === 'GHOST_PROTOCOL') {
                 const baseGhostDuration = duration ?? 15000;
                 this.timers[type] = duration ? baseGhostDuration : baseGhostDuration * durationMultiplier;
+                this.game.uiManager.soundManager.play('ghostActivate');
             }
         } else if (SPECIAL_TYPES.includes(type)) {
             if (type === 'NUKE') {
@@ -1220,6 +1239,8 @@ class Player extends EntityFamily {
                     this.game.startReviveSequence(this, crystalToUse);
                     return;
                 }
+                
+                this.game.uiManager.soundManager.play('reviveFail');
 
                 this.destroy();
                 this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2));
@@ -1356,6 +1377,7 @@ class BossSentinelPrime extends Enemy {
                     const targetY = this.game.player.pos.y + this.game.player.height / 2;
                     this.chargeTargetPos = new Vector2D(targetX, targetY);
                     this.movementPattern = 'PREPARE_CHARGE';
+                    this.game.uiManager.soundManager.playLoop('sentinelChargeUp', {volume: 0.6});
                 }
                 break;
         }
@@ -1380,6 +1402,8 @@ class BossSentinelPrime extends Enemy {
                 }
                 break;
             case 2:
+                this.game.uiManager.soundManager.stopLoop('sentinelChargeUp', {fade: 0.05});
+                this.game.uiManager.soundManager.play('sentinelDash');
                 this.movementPattern = 'DASH_TO_PLAYER';
                 break;
         }
@@ -1584,7 +1608,7 @@ class BossOmegaNexus extends Enemy {
         this.attackTimer = 2000;
         
         this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.visualOffsetY, '#FFFFFF'));
-        this.game.uiManager.soundManager.play('nuke');
+        this.game.uiManager.soundManager.play('nexusPhaseTransition');
 
         this.ringRotationSpeed += 0.3;
 
@@ -1634,7 +1658,8 @@ class BossOmegaNexus extends Enemy {
                 this.isChargingCannon = false;
                 this.isFiringCannon = true;
                 this.cannonDurationTimer = 3000;
-                this.game.uiManager.soundManager.playLoop('laser');
+                this.game.uiManager.soundManager.stopLoop('nexusCannonCharge');
+                this.game.uiManager.soundManager.playLoop('nexusCannonFire', {volume: 0.9});
             }
         }
         if (this.isFiringCannon) {
@@ -1643,7 +1668,7 @@ class BossOmegaNexus extends Enemy {
                 this.isFiringCannon = false;
                 this.movementPattern = 'SWOOPING';
                 this.selectNewDriftTarget();
-                this.game.uiManager.soundManager.stopLoop('laser');
+                this.game.uiManager.soundManager.stopLoop('nexusCannonFire');
             }
         }
 
@@ -1745,6 +1770,7 @@ class BossOmegaNexus extends Enemy {
             case 'NEXUS_CANNON':
                 this.isChargingCannon = true;
                 this.cannonChargeTimer = 4000;
+                this.game.uiManager.soundManager.playLoop('nexusCannonCharge', {volume: 0.8});
                 break;
         }
         this.currentAttack = 'NONE';
@@ -2078,7 +2104,7 @@ class BossNexusPrime extends Enemy {
         this.game.entities.filter(e => e instanceof NexusFragment).forEach(e => e.destroy());
 
         this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FF4136'));
-        this.game.uiManager.soundManager.play('nuke');
+        this.game.uiManager.soundManager.play('nexusPhaseTransition');
 
         if (newPhase === 2) {
             for (let i = 0; i < 6; i++) {
@@ -2168,7 +2194,7 @@ class BossNexusPrime extends Enemy {
 
         switch (this.currentAttack) {
             case 'LANCE':
-                this.game.uiManager.soundManager.play('bossLanceShoot');
+                this.game.uiManager.soundManager.play('primeLanceAttack');
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
                     this.game.addEntity(new NexusLanceProjectile(this.game, centerX, centerY, Math.cos(angle) * 700, Math.sin(angle) * 700));
@@ -2200,7 +2226,7 @@ class BossNexusPrime extends Enemy {
                  break;
             case 'SWEEP':
                 this.plasmaSweepProgress = 0;
-                this.game.uiManager.soundManager.playLoop('laser');
+                this.game.uiManager.soundManager.play('primeSweepAttack');
                 break;
             case 'HORIZON':
                 this.eventHorizonCharge = 1;
@@ -2215,7 +2241,6 @@ class BossNexusPrime extends Enemy {
             this.plasmaSweepProgress += dt_s / 5;
             if (this.plasmaSweepProgress >= 1) {
                 this.plasmaSweepProgress = -1;
-                this.game.uiManager.soundManager.stopLoop('laser');
             }
         }
 
@@ -2660,6 +2685,7 @@ class SoundManager {
     private bossSnarePattern: boolean[] = [];
     private bossHihatPattern: boolean[] = [];
 
+    // Bestehende Sound-Buffer
     private shootTier1Buffer: AudioBuffer | null = null;
     private shootTier2Buffer: AudioBuffer | null = null;
     private shootTier3Buffer: AudioBuffer | null = null;
@@ -2674,11 +2700,10 @@ class SoundManager {
     private enemyExplosionBuffer: AudioBuffer | null = null;
     private nukeBuffer: AudioBuffer | null = null;
     private missileLaunchBuffer: AudioBuffer | null = null;
-    
     private menuMusicBuffer: AudioBuffer | null = null;
     private menuMusicSource: AudioBufferSourceNode | null = null;
 
-    private continuousSounds: { [key: string]: AudioBufferSourceNode } = {};
+    private continuousSounds: { [key: string]: { source: AudioNode, gain: GainNode, panner?: StereoPannerNode } } = {};
 
     constructor(uiManager: UIManager) {
         this.uiManager = uiManager;
@@ -2718,25 +2743,31 @@ class SoundManager {
         this.menuMusicBuffer = await this.loadAudioFile(menuMusicSrc);
     }
 
-    public initAudio(): void {
-        if (this.audioCtx && this.audioCtx.state === 'running') {
-            return;
-        }
+        public initAudio(): void {
         try {
+            // 1. AudioContext erstellen, falls nicht vorhanden
             if (!this.audioCtx) {
                 this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
                 this.masterGain = this.audioCtx.createGain();
                 this.masterGain.connect(this.audioCtx.destination);
-                
-                this.loadSounds();
+                this.loadSounds(); // Sounds nur einmal laden
             }
+
+            // 2. Prüfen, ob der Context suspendiert ist und ihn reaktivieren
             if (this.audioCtx.state === 'suspended') {
-                this.audioCtx.resume();
+                this.audioCtx.resume().then(() => {
+                    console.log("AudioContext erfolgreich reaktiviert.");
+                    this.setVolume(this.uiManager.settings.masterVolume);
+                    this.toggleMusic(this.uiManager.settings.music);
+                }).catch(e => console.error("Reaktivierung des AudioContext fehlgeschlagen:", e));
+            } else {
+                // Wenn der Context bereits läuft, nur Einstellungen anwenden
+                this.setVolume(this.uiManager.settings.masterVolume);
+                this.toggleMusic(this.uiManager.settings.music);
             }
-            this.setVolume(this.uiManager.settings.masterVolume);
-            this.toggleMusic(this.uiManager.settings.music);
+
         } catch (e) {
-            console.error("Web Audio API is not supported or failed to initialize", e);
+            console.error("Web Audio API wird nicht unterstützt oder konnte nicht initialisiert werden", e);
         }
     }
     
@@ -2821,115 +2852,389 @@ class SoundManager {
     
     setVolume(volume: number) { if (this.masterGain && this.audioCtx) this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime); }
     
-    public playLoop(soundName: string) {
-        if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx || this.continuousSounds[soundName]) {
-            return;
-        }
-        let buffer: AudioBuffer | null = null;
-        let volume = 1.0;
-        switch(soundName) {
-            case 'laser':
-                buffer = this.laserBuffer;
-                volume = 0.1;
-                break;
-        }
-        if (buffer) {
-            const source = this.audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.loop = true;
-            const gainNode = this.audioCtx.createGain();
-            gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
-            source.connect(gainNode);
-            gainNode.connect(this.masterGain);
-            source.start(this.audioCtx.currentTime);
-            this.continuousSounds[soundName] = source;
-        }
+    public playLoop(soundName: string, options: { volume?: number, playbackRate?: number, fade?: number } = {}) {
+    if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx || this.continuousSounds[soundName]) {
+        return;
     }
 
-    public stopLoop(soundName: string) {
-        if (this.continuousSounds[soundName]) {
-            this.continuousSounds[soundName]!.stop();
+    const vol = (options.volume ?? 1.0) * this.uiManager.settings.masterVolume;
+    const gainNode = this.audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, this.audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(vol, this.audioCtx.currentTime + (options.fade ?? 0.05));
+    gainNode.connect(this.masterGain);
+
+    let sourceNode: AudioNode;
+
+    switch (soundName) {
+        case 'laser':
+            if (!this.laserBuffer) return;
+            const laserSource = this.audioCtx.createBufferSource();
+            laserSource.buffer = this.laserBuffer;
+            laserSource.loop = true;
+            laserSource.playbackRate.value = options.playbackRate ?? 1.0;
+            laserSource.start();
+            sourceNode = laserSource;
+            break;
+        case 'shieldHum':
+            const shieldOsc = this.audioCtx.createOscillator();
+            shieldOsc.type = 'sine';
+            shieldOsc.frequency.value = 880; // A5
+            const shieldLfo = this.audioCtx.createOscillator();
+            shieldLfo.type = 'sine';
+            shieldLfo.frequency.value = 5; // 5 Hz modulation
+            const shieldLfoGain = this.audioCtx.createGain(); // KORRIGIERT
+            shieldLfoGain.gain.value = 10;
+            shieldLfo.connect(shieldLfoGain);
+            shieldLfoGain.connect(shieldOsc.frequency);
+            shieldLfo.start();
+            shieldOsc.start();
+            sourceNode = shieldOsc;
+            break;
+        case 'sentinelChargeUp':
+             const chargeOsc = this.audioCtx.createOscillator();
+             chargeOsc.type = 'sawtooth';
+             chargeOsc.frequency.setValueAtTime(80, this.audioCtx.currentTime);
+             chargeOsc.frequency.linearRampToValueAtTime(200, this.audioCtx.currentTime + 1.5);
+             chargeOsc.start();
+             sourceNode = chargeOsc;
+             break;
+        case 'nexusCannonCharge':
+             const cannonChargeNoise = this.audioCtx.createBufferSource();
+             const bufferSize = this.audioCtx.sampleRate * 2;
+             const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+             const data = buffer.getChannelData(0);
+             for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+             cannonChargeNoise.buffer = buffer;
+             cannonChargeNoise.loop = true;
+             
+             const chargeFilter = this.audioCtx.createBiquadFilter();
+             chargeFilter.type = 'lowpass';
+             chargeFilter.frequency.setValueAtTime(5000, this.audioCtx.currentTime);
+             chargeFilter.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 4);
+             cannonChargeNoise.connect(chargeFilter);
+             cannonChargeNoise.start();
+             sourceNode = chargeFilter;
+             break;
+         case 'nexusCannonFire':
+             const cannonFireNoise = this.audioCtx.createBufferSource();
+             const fireBufSize = this.audioCtx.sampleRate * 2;
+             const fireBuf = this.audioCtx.createBuffer(1, fireBufSize, this.audioCtx.sampleRate);
+             const fireData = fireBuf.getChannelData(0);
+             for (let i = 0; i < fireBufSize; i++) { fireData[i] = Math.random() * 2 - 1; }
+             cannonFireNoise.buffer = fireBuf;
+             cannonFireNoise.loop = true;
+             
+             const fireFilter = this.audioCtx.createBiquadFilter();
+             fireFilter.type = 'bandpass';
+             fireFilter.frequency.value = 1000;
+             fireFilter.Q.value = 5;
+
+             const cannonLfo = this.audioCtx.createOscillator(); // KORRIGIERT
+             cannonLfo.frequency.value = 30;
+             const cannonLfoGain = this.audioCtx.createGain(); // KORRIGIERT
+             cannonLfoGain.gain.value = 400;
+             cannonLfo.connect(cannonLfoGain);
+             cannonLfoGain.connect(fireFilter.frequency);
+             
+             cannonFireNoise.connect(fireFilter);
+             cannonLfo.start();
+             cannonFireNoise.start();
+             sourceNode = fireFilter;
+             break;
+        default:
+            console.warn(`Loop sound not found: ${soundName}`);
+            return;
+    }
+
+    sourceNode.connect(gainNode);
+    this.continuousSounds[soundName] = { source: sourceNode, gain: gainNode };
+}
+
+    public stopLoop(soundName: string, options: { fade?: number } = {}) {
+        const sound = this.continuousSounds[soundName];
+        if (sound && this.audioCtx) {
+            const fadeTime = this.audioCtx.currentTime + (options.fade ?? 0.1);
+            sound.gain.gain.cancelScheduledValues(this.audioCtx.currentTime);
+            sound.gain.gain.linearRampToValueAtTime(0, fadeTime);
+
+            if (sound.source.constructor.name === 'AudioBufferSourceNode' || sound.source.constructor.name === 'OscillatorNode') {
+                 (sound.source as AudioScheduledSourceNode).stop(fadeTime);
+            }
+            
+            setTimeout(() => {
+                sound.source.disconnect();
+                sound.gain.disconnect();
+            }, (options.fade ?? 0.1) * 1000 + 50);
+
             delete this.continuousSounds[soundName];
         }
     }
     
     play(soundName: string) {
         if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return;
-        const player = this.uiManager.game.player;
-        let bufferToPlay: AudioBuffer | null = null;
-        let volume = 1.0;
-        let isHandled = false;
-        switch (soundName) {
-            case 'shoot':
-                if (player) {
-                    switch (player.powerUpManager.weaponTier) {
-                        case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.2; break;
-                        case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.2; break;
-                        case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.18; break;
-                        case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.16; break;
-                    }
-                }
-                isHandled = true;
-                break;
-            case 'blackHole': bufferToPlay = this.blackHoleBuffer; volume = 0.6; isHandled = true; break;
-            case 'droneTier1': bufferToPlay = this.droneTier1Buffer; volume = 0.1; isHandled = true; break;
-            case 'droneTier2': bufferToPlay = this.droneTier2Buffer; volume = 0.1; isHandled = true; break;
-            case 'droneTier3': bufferToPlay = this.droneTier3Buffer; volume = 0.1; isHandled = true; break;
-            case 'coinCollect': bufferToPlay = this.coinCollectBuffer; volume = 0.1; isHandled = true; break;
-            case 'powerup': bufferToPlay = this.powerupCollectBuffer; volume = 0.1; isHandled = true; break;
-            case 'enemyExplosion': bufferToPlay = this.enemyExplosionBuffer; volume = 0.4; isHandled = true; break;
-            case 'nuke': bufferToPlay = this.nukeBuffer; volume = 0.7; isHandled = true; break;
-            case 'missileLaunch': bufferToPlay = this.missileLaunchBuffer; volume = 0.1; isHandled = true; break;
-        }
-        if (bufferToPlay) {
-            const source = this.audioCtx.createBufferSource();
-            source.buffer = bufferToPlay;
-            const gainNode = this.audioCtx.createGain();
-            gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
-            source.connect(gainNode);
-            gainNode.connect(this.masterGain);
-            source.start(this.audioCtx.currentTime);
-            return;
-        }
-        if (isHandled) return;
+        
+        const time = this.audioCtx.currentTime;
+        const masterVolume = this.uiManager.settings.masterVolume;
 
-        let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; 
-        switch (soundName) { 
-            case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; 
-            case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; 
-            case 'shieldDown': freq = 300; duration = 0.2; type = 'square'; break;
-            case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
-            case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
-            case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
-            case 'enemyShoot': freq = 800; freqEnd = 400; duration = 0.1; type = 'triangle'; vol = 0.15; break;
-            case 'enemyPlasmaShoot': freq = 400; duration = 0.2; type = 'sawtooth'; vol = 0.2; break;
-            case 'bossLanceShoot': freq = 1500; duration = 0.15; type = 'square'; vol = 0.3; break;
-            case 'revive': 
-                freq = 400; duration = 0.8; type = 'triangle'; vol = 0.7; 
-                const oscRevive = this.audioCtx.createOscillator();
-                const gainRevive = this.audioCtx.createGain();
-                oscRevive.connect(gainRevive); gainRevive.connect(this.masterGain);
-                oscRevive.type = type;
-                oscRevive.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-                oscRevive.frequency.linearRampToValueAtTime(freq * 3, this.audioCtx.currentTime + duration * 0.9);
-                gainRevive.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
-                gainRevive.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration);
-                oscRevive.start(this.audioCtx.currentTime);
-                oscRevive.stop(this.audioCtx.currentTime + duration);
-                return; 
-        } 
-        const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain);
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-        if (freqEnd !== freq) {
-            osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration);
+        const createOsc = (type: OscillatorType, freq: number, detune?: number) => {
+            const osc = this.audioCtx!.createOscillator();
+            osc.type = type;
+            osc.frequency.value = freq;
+            if(detune) osc.detune.value = detune;
+            return osc;
+        };
+        const createGain = (startVol: number, rampVol: number, duration: number, rampStartTime: number = time) => {
+            const gain = this.audioCtx!.createGain();
+            gain.gain.setValueAtTime(startVol * masterVolume, rampStartTime);
+            gain.gain.exponentialRampToValueAtTime(rampVol * masterVolume, rampStartTime + duration);
+            return gain;
+        };
+        const connectAndStart = (osc: OscillatorNode, gain: GainNode, duration: number) => {
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+            osc.start(time);
+            osc.stop(time + duration);
+        };
+        
+        // --- Sound Library ---
+        switch (soundName) {
+            // ### SPIELER-SOUNDS ###
+            case 'shieldActivate': {
+                const osc = createOsc('sine', 440);
+                const gain = this.audioCtx.createGain();
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(0.4 * masterVolume, time + 0.05);
+                gain.gain.linearRampToValueAtTime(0, time + 0.2);
+                osc.frequency.setValueAtTime(440, time);
+                osc.frequency.exponentialRampToValueAtTime(1200, time + 0.2);
+                connectAndStart(osc, gain, 0.2);
+                this.playLoop('shieldHum', { volume: 0.08, fade: 0.2 });
+                break;
+            }
+            case 'shieldDown': {
+                 this.stopLoop('shieldHum', { fade: 0.1 });
+                 const osc = createOsc('sawtooth', 800);
+                 const gain = createGain(0.4, 0.001, 0.3);
+                 osc.frequency.setValueAtTime(800, time);
+                 osc.frequency.exponentialRampToValueAtTime(100, time + 0.3);
+                 connectAndStart(osc, gain, 0.3);
+                 break;
+            }
+            case 'ghostActivate': {
+                const osc = createOsc('sawtooth', 500);
+                const gain = createGain(0.3, 0.001, 0.25);
+                osc.frequency.setValueAtTime(500, time);
+                osc.frequency.exponentialRampToValueAtTime(2000, time + 0.25);
+                connectAndStart(osc, gain, 0.25);
+                break;
+            }
+            case 'ghostDeactivate': {
+                const osc = createOsc('sawtooth', 2000);
+                const gain = createGain(0.3, 0.001, 0.25);
+                osc.frequency.setValueAtTime(2000, time);
+                osc.frequency.exponentialRampToValueAtTime(500, time + 0.25);
+                connectAndStart(osc, gain, 0.25);
+                break;
+            }
+            case 'weaponUpgrade': {
+                const osc = createOsc('square', 100);
+                const gain = createGain(0.5, 0.001, 0.15);
+                osc.frequency.setValueAtTime(100, time);
+                osc.frequency.exponentialRampToValueAtTime(300, time + 0.1);
+                connectAndStart(osc, gain, 0.15);
+                break;
+            }
+            case 'weaponDowngrade': {
+                const osc = createOsc('sawtooth', 300);
+                const gain = createGain(0.5, 0.001, 0.2);
+                osc.frequency.setValueAtTime(300, time);
+                osc.frequency.exponentialRampToValueAtTime(50, time + 0.2);
+                connectAndStart(osc, gain, 0.2);
+                break;
+            }
+            case 'reviveCrystalFly': {
+                const osc = createOsc('sine', 800);
+                const gain = createGain(0, 0.001, 1.0, time + 0.8);
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(0.5 * masterVolume, time + 0.1);
+                osc.frequency.setValueAtTime(800, time);
+                osc.frequency.exponentialRampToValueAtTime(2500, time + 1.0);
+                connectAndStart(osc, gain, 1.0);
+                break;
+            }
+            case 'reviveFail': {
+                const osc = createOsc('sawtooth', 400, 30);
+                const gain = createGain(0.6, 0.001, 1.5);
+                osc.frequency.setValueAtTime(400, time);
+                osc.frequency.exponentialRampToValueAtTime(50, time + 1.5);
+                connectAndStart(osc, gain, 1.5);
+                break;
+            }
+            
+            // ### GEGNER-SOUNDS ###
+            case 'teleporterOut': {
+                const osc = createOsc('sine', 1500);
+                const gain = createGain(0.4, 0.001, 0.15);
+                osc.frequency.setValueAtTime(1500, time);
+                osc.frequency.exponentialRampToValueAtTime(50, time + 0.15);
+                connectAndStart(osc, gain, 0.15);
+                break;
+            }
+             case 'teleporterIn': {
+                const osc = createOsc('sine', 50);
+                const gain = createGain(0.4, 0.001, 0.2);
+                osc.frequency.setValueAtTime(50, time);
+                osc.frequency.exponentialRampToValueAtTime(1500, time + 0.2);
+                connectAndStart(osc, gain, 0.2);
+                break;
+            }
+            
+            // ### BOSS-SOUNDS ###
+            case 'sentinelDash': {
+                 const osc = createOsc('sawtooth', 50);
+                 const gain = createGain(0.8, 0.001, 0.7);
+                 osc.frequency.setValueAtTime(50, time);
+                 osc.frequency.exponentialRampToValueAtTime(800, time + 0.1);
+                 osc.frequency.exponentialRampToValueAtTime(50, time + 0.7);
+                 connectAndStart(osc, gain, 0.7);
+                 break;
+            }
+            case 'nexusPhaseTransition': {
+                 const osc = createOsc('sawtooth', 200);
+                 const gain = createGain(0.9, 0.001, 1.2);
+                 osc.frequency.setValueAtTime(200, time);
+                 osc.frequency.exponentialRampToValueAtTime(30, time + 1.2);
+                 connectAndStart(osc, gain, 1.2);
+                 break;
+            }
+            case 'primeLanceAttack': {
+                 for(let i = 0; i < 8; i++) {
+                     const osc = createOsc('sawtooth', 1200, Math.random() * 200 - 100);
+                     const gain = createGain(0.3, 0.001, 0.4);
+                     connectAndStart(osc, gain, 0.4);
+                 }
+                 break;
+            }
+            case 'primeSweepAttack': {
+                 const osc = createOsc('sawtooth', 300);
+                 const gain = createGain(0.0, 0.001, 5.0, time + 4.5);
+                 gain.gain.setValueAtTime(0, time);
+                 gain.gain.linearRampToValueAtTime(0.7 * masterVolume, time + 0.5);
+                 osc.frequency.setValueAtTime(300, time);
+                 osc.frequency.linearRampToValueAtTime(500, time + 5.0);
+                 
+                 const panner = this.audioCtx.createStereoPanner();
+                 panner.pan.setValueAtTime(this.uiManager.game.player!.pos.x < this.uiManager.game.width / 2 ? -1 : 1, time);
+                 panner.pan.linearRampToValueAtTime(this.uiManager.game.player!.pos.x < this.uiManager.game.width / 2 ? 1 : -1, time + 5.0);
+                 
+                 osc.connect(gain);
+                 gain.connect(panner);
+                 panner.connect(this.masterGain);
+                 osc.start(time);
+                 osc.stop(time + 5.0);
+                 break;
+            }
+            
+            // ### UI-SOUNDS ###
+            case 'uiTabSwitch': {
+                const osc = createOsc('sine', 800);
+                const gain = createGain(0.3, 0.001, 0.1);
+                connectAndStart(osc, gain, 0.1);
+                break;
+            }
+            case 'cosmeticEquip': {
+                const osc = createOsc('square', 150);
+                const gain = createGain(0.4, 0.001, 0.1);
+                connectAndStart(osc, gain, 0.1);
+                break;
+            }
+            case 'modeSelectConfirm': {
+                const osc = createOsc('sine', 300);
+                const gain = createGain(0.5, 0.001, 0.3);
+                osc.frequency.setValueAtTime(300, time);
+                osc.frequency.exponentialRampToValueAtTime(600, time + 0.3);
+                connectAndStart(osc, gain, 0.3);
+                break;
+            }
+            
+            // --- Fallback to Buffer-based sounds ---
+            default:
+                let bufferToPlay: AudioBuffer | null = null;
+                let volume = 1.0;
+                let isHandled = false;
+                switch (soundName) {
+                    case 'shoot':
+                        const player = this.uiManager.game.player;
+                        if (player) {
+                            switch (player.powerUpManager.weaponTier) {
+                                case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.2; break;
+                                case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.2; break;
+                                case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.18; break;
+                                case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.16; break;
+                            }
+                        }
+                        isHandled = true;
+                        break;
+                    case 'blackHole': bufferToPlay = this.blackHoleBuffer; volume = 0.6; isHandled = true; break;
+                    case 'droneTier1': bufferToPlay = this.droneTier1Buffer; volume = 0.1; isHandled = true; break;
+                    case 'droneTier2': bufferToPlay = this.droneTier2Buffer; volume = 0.1; isHandled = true; break;
+                    case 'droneTier3': bufferToPlay = this.droneTier3Buffer; volume = 0.1; isHandled = true; break;
+                    case 'coinCollect': bufferToPlay = this.coinCollectBuffer; volume = 0.1; isHandled = true; break;
+                    case 'powerup': bufferToPlay = this.powerupCollectBuffer; volume = 0.1; isHandled = true; break;
+                    case 'enemyExplosion': bufferToPlay = this.enemyExplosionBuffer; volume = 0.4; isHandled = true; break;
+                    case 'nuke': bufferToPlay = this.nukeBuffer; volume = 0.7; isHandled = true; break;
+                    case 'missileLaunch': bufferToPlay = this.missileLaunchBuffer; volume = 0.1; isHandled = true; break;
+                }
+                if (bufferToPlay) {
+                    const source = this.audioCtx.createBufferSource();
+                    source.buffer = bufferToPlay;
+                    const gainNode = this.audioCtx.createGain();
+                    gainNode.gain.setValueAtTime(volume * masterVolume, time);
+                    source.connect(gainNode);
+                    gainNode.connect(this.masterGain);
+                    source.start(time);
+                    return;
+                }
+                if (isHandled) return;
+
+                // --- Fallback to old procedural sounds for simple UI clicks etc. ---
+                let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; 
+                switch (soundName) { 
+                    case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; 
+                    case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; 
+                    case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break;
+                    case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break;
+                    case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break;
+                    case 'enemyShoot': freq = 800; freqEnd = 400; duration = 0.1; type = 'triangle'; vol = 0.15; break;
+                    case 'enemyPlasmaShoot': freq = 400; duration = 0.2; type = 'sawtooth'; vol = 0.2; break;
+                    case 'bossLanceShoot': freq = 1500; duration = 0.15; type = 'square'; vol = 0.3; break;
+                    case 'revive': 
+                        const oscRevive = this.audioCtx.createOscillator();
+                        const gainRevive = this.audioCtx.createGain();
+                        oscRevive.connect(gainRevive); gainRevive.connect(this.masterGain);
+                        oscRevive.type = 'triangle';
+                        oscRevive.frequency.setValueAtTime(400, time);
+                        oscRevive.frequency.linearRampToValueAtTime(400 * 3, time + 0.8 * 0.9);
+                        gainRevive.gain.setValueAtTime(0.7 * masterVolume, time);
+                        gainRevive.gain.exponentialRampToValueAtTime(0.0001, time + 0.8);
+                        oscRevive.start(time);
+                        oscRevive.stop(time + 0.8);
+                        return; 
+                } 
+                const osc = createOsc(type, freq);
+                const gN = this.audioCtx.createGain();
+                osc.connect(gN); gN.connect(this.masterGain);
+                if (freqEnd !== freq) {
+                    osc.frequency.exponentialRampToValueAtTime(freqEnd, time + duration);
+                }
+                gN.gain.setValueAtTime(vol * masterVolume, time);
+                gN.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+                osc.start(time);
+                osc.stop(time + duration); 
         }
-        gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime);
-        gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration);
-        osc.start(this.audioCtx.currentTime);
-        osc.stop(this.audioCtx.currentTime + duration); 
     }
 }
+
 
 class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string, replacements?: {[key:string]:string}): string { let text = this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; if (replacements) { Object.keys(replacements).forEach(rKey => { text = text.replace(`{${rKey}}`, replacements[rKey]!); }); } return text; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
 
@@ -3370,7 +3675,7 @@ class UIManager {
                 const eventType = this.game.isMobile ? 'touchstart' : 'click';
                 element.addEventListener(eventType, (e) => {
                     e.preventDefault();
-                    if (this.game.isPaused || this.game.gameState === 'MENU' || this.game.gameState === 'MODE_SELECT') {
+                    if (this.game.isPaused || ['MENU', 'GAME_OVER', 'WIN', 'MODE_SELECT'].includes(this.game.gameState)) {
                         this.soundManager.play('uiClick');
                     }
                     action(e);
@@ -3379,7 +3684,8 @@ class UIManager {
         };
     
         setupButton(this.mainMenuElements.restart, () => { 
-            this.soundManager.initAudio(); 
+            this.soundManager.initAudio();
+            this.soundManager.play('modeSelectConfirm');
             this.game.changeState('MODE_SELECT'); 
         });
         
@@ -3404,10 +3710,12 @@ class UIManager {
         setupButton(document.getElementById('mobile-pause-button'), () => this.game.togglePause());
 
         setupButton(document.getElementById('select-campaign-button'), () => {
+            this.soundManager.play('modeSelectConfirm');
             this.game.gameMode = 'CAMPAIGN';
             this.game.changeState('LEVEL_START', true);
         });
         setupButton(document.getElementById('select-endless-button'), () => {
+            this.soundManager.play('modeSelectConfirm');
             this.game.gameMode = 'ENDLESS';
             this.game.changeState('LEVEL_START', true);
         });
@@ -3440,6 +3748,7 @@ class UIManager {
 
         for (const key in this.tabButtons) { 
             setupButton(this.tabButtons[key], () => {
+                this.soundManager.play('uiTabSwitch');
                 this.showTab(key);
                 if (key === 'rangliste') {
                     this.populateLeaderboard('campaign', 'score');
@@ -3589,8 +3898,8 @@ class UIManager {
                 }
                 itemEl.addEventListener('click', () => {
                     this.game.shopManager.equipCosmetic(skin.id, 'player_skin');
+                    this.soundManager.play('cosmeticEquip');
                     this.populateGalerie();
-                    this.soundManager.play('uiClick');
                 });
             } else {
                 itemEl.classList.add('locked');
@@ -3865,44 +4174,32 @@ class Game {
             initEventListeners(): void {
         window.addEventListener('resize', () => this.resizeGame());
 
-        // Verbesserter Handler zur Wiederherstellung des Audio-Kontexts nach Inaktivität
-        const resumeAudioContext = () => {
-            const sm = this.uiManager.soundManager;
-            if (sm.audioCtx && sm.audioCtx.state === 'suspended') {
-                sm.audioCtx.resume().then(() => {
-                    console.log("AudioContext erfolgreich reaktiviert.");
-                    this.audioNeedsUnlock = false;
-                    // Entferne die Listener, falls sie noch existieren, um sauber zu bleiben
-                    window.removeEventListener('pointerdown', resumeAudioContext);
-                    window.removeEventListener('keydown', resumeAudioContext);
-                }).catch(e => console.error("Fehler bei der Reaktivierung des AudioContext:", e));
-            }
+        // --- PROFESSIONELLE LÖSUNG FÜR AUDIO-WIEDERHERSTELLUNG ---
+        // Dieser einzige, persistente Listener löst das Sound-Problem zuverlässig.
+        // Er wird bei JEDEM Klick oder Tippen auf der Seite ausgeführt.
+        const persistentUnlockHandler = () => {
+            // Er versucht, den AudioContext zu entsperren, falls er vom Browser suspendiert wurde.
+            this.uiManager.soundManager.initAudio(); 
         };
+        
+        // 'pointerdown' deckt Klicks und Touch-Events ab. 'true' stellt sicher, dass es immer feuert.
+        document.body.addEventListener('pointerdown', persistentUnlockHandler, true);
 
-        // Überwacht, ob der Tab/die App in den Vordergrund kommt
+        // Der visibilitychange-Listener hilft uns, den Zustand zu überwachen.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                const sm = this.uiManager.soundManager;
-                if (sm.audioCtx && sm.audioCtx.state === 'suspended') {
-                    this.audioNeedsUnlock = true;
-                    console.log("App wieder sichtbar, Audio-Kontext ist angehalten. Warte auf Benutzerinteraktion.");
-                    
-                    // Fügt einen einmaligen Listener auf das ganze Fenster hinzu.
-                    // Die erste Interaktion (Klick, Tippen, Taste) wird den Ton reaktivieren.
-                    window.addEventListener('pointerdown', resumeAudioContext, { once: true });
-                    window.addEventListener('keydown', resumeAudioContext, { once: true });
-                }
+                console.log("App wieder im Vordergrund. Nächste User-Interaktion reaktiviert den Sound falls nötig.");
+                // Ein proaktiver Versuch schadet nicht, auch wenn die Interaktion entscheidend ist.
+                this.uiManager.soundManager.initAudio();
+            } else {
+                 console.log("App in den Hintergrund verschoben.");
             }
         });
 
-        // Handler für den allerersten Start des Spiels
         const tapToStartHandler = (e: Event) => {
-            // Versucht, den Audio-Kontext zu reaktivieren, falls er bereits gesperrt ist
-            resumeAudioContext();
-            
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
-                 this.uiManager.soundManager.initAudio();
+                 this.uiManager.soundManager.initAudio(); // Nutzt jetzt die zentrale Funktion
                  if(this.gameState === 'INTRO') this.changeState('MENU');
                  else if (this.gameState === 'MENU' && e.target === this.canvas) {
                     this.changeState('MODE_SELECT');
@@ -3912,7 +4209,6 @@ class Game {
 
         if (this.isMobile) {
             this.initMobileControls();
-            // Wir verwenden 'pointerdown' für eine universellere Erfassung der ersten Interaktion
             document.body.addEventListener('pointerdown', tapToStartHandler, { once: true });
         } else {
             this.initDesktopControls();
@@ -4123,7 +4419,7 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 19;
+                    this.level = 1;
                     this.score = 0;
                     this.entities = [];
                     const initialStats = this.shopManager.getInitialPlayerStats();
