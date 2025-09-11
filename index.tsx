@@ -5,6 +5,12 @@ import playerImgSrc3 from './assets/images/player_tier3.png';
 import playerImgSrc4 from './assets/images/player_tier4.png';
 import playerImgSrcVoid from './assets/images/player_skin_void.png';
 import playerImgSrcGold from './assets/images/player_skin_gold.png';
+import playerImgSrcMarauder from './assets/images/player_skin_marauder.png';
+import playerImgSrcPaladin from './assets/images/player_skin_paladin.png';
+import playerImgSrcSpectre from './assets/images/player_skin_spectre.png';
+import playerImgSrcGoliath from './assets/images/player_skin_goliath.png';
+import playerImgSrcJuggernaut from './assets/images/player_skin_juggernaut.png';
+import playerImgSrcLeviathan from './assets/images/player_skin_leviathan.png';
 import gruntImgSrc from './assets/images/enemy_grunt.png';
 import tankImgSrc from './assets/images/enemy_tank.png';
 import weaverImgSrc from './assets/images/enemy_weaver.png';
@@ -65,6 +71,12 @@ const createImage = (src: string): HTMLImageElement => { const img = new Image()
 const playerImg1 = createImage(playerImgSrc1), playerImg2 = createImage(playerImgSrc2), playerImg3 = createImage(playerImgSrc3), playerImg4 = createImage(playerImgSrc4);
 const playerImgVoid = createImage(playerImgSrcVoid);
 const playerImgGold = createImage(playerImgSrcGold);
+const playerImgMarauder = createImage(playerImgSrcMarauder);
+const playerImgPaladin = createImage(playerImgSrcPaladin);
+const playerImgSpectre = createImage(playerImgSrcSpectre);
+const playerImgGoliath = createImage(playerImgSrcGoliath);
+const playerImgJuggernaut = createImage(playerImgSrcJuggernaut);
+const playerImgLeviathan = createImage(playerImgSrcLeviathan);
 const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), teleporterImg = createImage(teleporterImgSrc);
 const bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
 const bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
@@ -87,6 +99,12 @@ const playerImageMap: { [key: string]: HTMLImageElement } = {
     'skin_avenger': playerImg4,
     'skin_void': playerImgVoid,
     'skin_gold': playerImgGold,
+    'skin_marauder': playerImgMarauder,
+    'skin_paladin': playerImgPaladin,
+    'skin_spectre': playerImgSpectre,
+    'skin_goliath': playerImgGoliath,
+    'skin_juggernaut': playerImgJuggernaut,
+    'skin_leviathan': playerImgLeviathan,
 };
 
 
@@ -100,7 +118,7 @@ interface IInventoryItem { type: string; count: number; }
 
 interface IShopItem {
     id: string;
-    type: 'PERMANENT' | 'CONSUMABLE' | 'COSMETIC' | 'PI_BUNDLE' | 'ULTIMATE';
+    type: 'PERMANENT' | 'CONSUMABLE' | 'COSMETIC' | 'PI_BUNDLE' | 'ULTIMATE' | 'SKIN';
     nameKey: string;
     descKey: string;
     iconSrc: string;
@@ -227,8 +245,23 @@ class EntityFamily extends Entity { constructor(game: Game, x: number, y: number
 // --- SECTION 5: SPIEL-ENTITÄTEN ---
 class Particle extends Entity {
     private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number;
-    constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2) { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'PARTICLE'; this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50); this.size = Math.random() * size + 1; this.life = Math.random() * life; this.initialLife = this.life; this.color = color; }
-    update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
+constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { 
+    super(game, x, y, 0, 0); 
+    this.family = 'effect'; 
+    this.type = 'PARTICLE'; 
+    
+    // NEUE LOGIK: Wenn eine Geschwindigkeit (vel) übergeben wird, nutze sie. Sonst, nutze die alte Zufalls-Logik.
+    if (vel) {
+        this.vel = vel;
+    } else {
+        this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+    }
+    
+    this.size = Math.random() * size + 1; 
+    this.life = Math.random() * life; 
+    this.initialLife = this.life; 
+    this.color = color; 
+}    update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
 class Explosion extends EntityFamily {
@@ -442,18 +475,92 @@ class Coin extends EntityFamily {
     private angle: number = 0;
     private rotationSpeed: number = 7;
 
-    constructor(game: Game, x: number, y: number, value: number) { 
+    // --- ANGEPASST: Eigenschaften für den Partikel-Schweif ---
+    private particleSpawnTimer: number = 0;
+    private readonly PARTICLE_SPAWN_INTERVAL: number = 25; // Erzeugt alle 25ms Partikel (etwas öfter)
+    private readonly PARTICLES_PER_SPAWN: number = 2;      // Erzeugt 2 Partikel pro Intervall für mehr Dichte
+    private readonly CONE_SPREAD_FACTOR: number = 80;      // Wie breit der Fächer/Kegel ist. Größere Zahl = breiter.
+
+    constructor(game: Game, x: number, y: number, value: number) {
         super(game, x, y, 45, 45, 'pickup', 'COIN');
         this.value = value;
         this.image = piCoinImg;
     }
-    update(dt: number): void { 
+
+    update(dt: number): void {
         const dt_s = dt / 1000;
-        this.pos.y += this.speed * dt_s; 
+        
+        const oldX = this.pos.x;
+        const oldY = this.pos.y;
+
+        // Bewegungslogik
+        const magnetLevel = this.game.shopManager.getUpgradeLevel('coin_magnet');
+        const player = this.game.player;
+        if (magnetLevel > 0 && player && player.isAlive()) {
+            const magnetSpeed = 700;
+            const targetX = player.pos.x + player.width / 2;
+            const targetY = player.pos.y + player.height / 2;
+            const angleToPlayer = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
+            this.pos.x += Math.cos(angleToPlayer) * magnetSpeed * dt_s;
+            this.pos.y += Math.sin(angleToPlayer) * magnetSpeed * dt_s;
+        } else {
+            this.pos.y += this.speed * dt_s;
+        }
+        
+        // --- VERBESSERTE LOGIK FÜR DEN PARTIKEL-SCHWEIF ---
+        this.particleSpawnTimer -= dt;
+        if (this.particleSpawnTimer <= 0) {
+            this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL;
+
+            const dx = this.pos.x - oldX;
+            const dy = this.pos.y - oldY;
+            const mag = Math.hypot(dx, dy);
+
+            if (mag > 0.1) {
+                // Normalisierter Vektor der Bewegung (zeigt, wohin die Münze fliegt)
+                const moveVecX = dx / mag;
+                const moveVecY = dy / mag;
+
+                // Perpendikularer Vektor (zeigt 90° zur Seite der Bewegung)
+                // Dieser Vektor definiert die "Breite" unseres Fächers.
+                const perpendicularX = -moveVecY;
+                const perpendicularY = moveVecX;
+
+                for (let i = 0; i < this.PARTICLES_PER_SPAWN; i++) {
+                    // Eine zufällige Zahl zwischen -1 und 1. Bestimmt, ob das Partikel nach links oder rechts im Fächer fliegt.
+                    const randomSpread = (Math.random() - 0.5) * 2; 
+
+                    // Die Basis-Geschwindigkeit ist entgegen der Bewegung.
+                    const baseVelX = -moveVecX * 40;
+                    const baseVelY = -moveVecY * 40;
+                    
+                    // Wir addieren die seitliche Streuung zur Basis-Geschwindigkeit.
+                    const finalVelX = baseVelX + perpendicularX * randomSpread * this.CONE_SPREAD_FACTOR;
+                    const finalVelY = baseVelY + perpendicularY * randomSpread * this.CONE_SPREAD_FACTOR;
+                    const trailVel = new Vector2D(finalVelX, finalVelY);
+
+                    const spawnX = this.pos.x + this.width / 2;
+                    const spawnY = this.pos.y + this.height / 2;
+                    
+                    this.game.addEntity(new Particle(
+                        this.game, 
+                        spawnX, 
+                        spawnY, 
+                        '#FFD700', 
+                        0.6, // Etwas längere Lebensdauer für einen volleren Schweif
+                        3,   // Etwas größere Partikel
+                        trailVel
+                    ));
+                }
+            }
+        }
+        // --- Ende der Partikel-Logik ---
+
         this.angle += this.rotationSpeed * dt_s;
-        if (this.pos.y > this.game.height) this.destroy(); 
+        if (this.pos.y > this.game.height) this.destroy();
     }
-    draw(ctx: CanvasRenderingContext2D): void { 
+
+    draw(ctx: CanvasRenderingContext2D): void {
         const scaleX = Math.cos(this.angle);
         ctx.save();
         ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2);
@@ -461,14 +568,15 @@ class Coin extends EntityFamily {
         ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
         ctx.restore();
     }
-    public onCollect(): void { 
-        if (this.game.player) { 
+
+    public onCollect(): void {
+        if (this.game.player) {
             this.game.uiManager.soundManager.play('coinCollect');
             const coinBonus = this.game.shopManager.getUpgradeLevel('coin_value');
             this.game.coins += (1 + coinBonus);
-            this.game.saveGameData(); 
-        } 
-        this.destroy(); 
+            this.game.saveGameData();
+        }
+        this.destroy();
     }
 }
 class PowerUp extends EntityFamily {
@@ -483,8 +591,46 @@ class Enemy extends EntityFamily {
     public stunTimer: number = 0; public speed: number = 90; public isBoss: boolean = false; public collisionDamage: number = 35;
     public isBossAdd: boolean = false;
     constructor(game: Game, x: number, y: number, w: number, h: number, health: number, points: number, type: string) { super(game, x, y, w, h, 'enemy', type); this.baseHealth = health; this.health = this.baseHealth * game.enemyHealthMultiplier; this.maxHealth = this.health; this.pointsValue = points; }
-    takeHit(damage: number): void { if (!this.isAlive()) return; this.health -= damage; if (this.health <= 0) { this.destroy(); let scoreToAdd = this.pointsValue * this.game.level; if (this.game.player && this.game.player.isScoreBoosted()) scoreToAdd *= 2; this.game.score += scoreToAdd; this.game.scoreEarnedThisLevel += scoreToAdd; if (this.isBoss) { this.game.isBossActive = false; setTimeout(() => this.game.changeState('LEVEL_START'), 3000); } if (this.game.uiManager.settings.particles > 0) this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); if (Math.random() < 0.2) this.game.addEntity(new Coin(this.game, this.pos.x, this.pos.y, this.pointsValue)); if (Math.random() < 0.15) this.game.addEntity(new PowerUp(this.game, this.pos.x, this.pos.y)); this.game.uiManager.soundManager.play('enemyExplosion'); } }
-    update(dt: number): void { if (this.stunTimer > 0) { this.stunTimer -= dt; return; } if (this.inFormation) return; const dt_s = dt / 1000; this.pos.y += this.speed * dt_s; if (this.pos.y > this.game.height) this.destroy(); }
+takeHit(damage: number): void {
+    if (!this.isAlive()) return;
+    this.health -= damage;
+    if (this.health <= 0) {
+        this.destroy();
+        let scoreToAdd = this.pointsValue * this.game.level;
+        if (this.game.player && this.game.player.isScoreBoosted()) scoreToAdd *= 2;
+        this.game.score += scoreToAdd;
+        this.game.scoreEarnedThisLevel += scoreToAdd;
+        if (this.isBoss) {
+            this.game.isBossActive = false;
+            setTimeout(() => this.game.changeState('LEVEL_START'), 3000);
+        }
+        if (this.game.uiManager.settings.particles > 0) this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
+
+        // --- START DER ANPASSUNG ---
+
+        // 1. Glücks-Upgrade-Level abrufen (0, wenn nicht gekauft)
+        const luckLevel = this.game.shopManager.getUpgradeLevel('luck_chance');
+
+        // 2. Bonus-Multiplikator berechnen (10% pro Stufe, also 0.10)
+        const luckMultiplier = 1 + (luckLevel * 0.10);
+
+        // 3. Finale Drop-Chancen berechnen
+        const finalCoinChance = 0.15 * luckMultiplier;    // Neue Basis-Chance: 15%
+        const finalPowerUpChance = 0.05 * luckMultiplier;   // Neue Basis-Chance: 5%
+
+        // 4. Prüfungen mit den neuen, dynamischen Chancen durchführen
+        if (Math.random() < finalCoinChance) {
+            this.game.addEntity(new Coin(this.game, this.pos.x, this.pos.y, this.pointsValue));
+        }
+        if (Math.random() < finalPowerUpChance) {
+            this.game.addEntity(new PowerUp(this.game, this.pos.x, this.pos.y));
+        }
+
+        // --- ENDE DER ANPASSUNG ---
+        
+        this.game.uiManager.soundManager.play('enemyExplosion');
+    }
+}    update(dt: number): void { if (this.stunTimer > 0) { this.stunTimer -= dt; return; } if (this.inFormation) return; const dt_s = dt / 1000; this.pos.y += this.speed * dt_s; if (this.pos.y > this.game.height) this.destroy(); }
     stun(duration: number): void { this.stunTimer = duration; }
     drawHealthBar(ctx: CanvasRenderingContext2D): void { if (this.health < this.maxHealth && !this.isBoss) { ctx.save(); ctx.fillStyle = '#500'; ctx.fillRect(this.pos.x, this.pos.y - 10, this.width, 5); ctx.fillStyle = '#f00'; ctx.fillRect(this.pos.x, this.pos.y - 10, this.width * (this.health / this.maxHealth), 5); ctx.restore(); } }
 }
@@ -1115,6 +1261,13 @@ class Player extends EntityFamily {
     public isChargingBlackHole: boolean = false;
     public blackHoleChargeSlot: number | null = null;
     public availableReviveCrystals: ('BLUE' | 'YELLOW' | 'PURPLE')[] = [];
+
+    private particleSpawnTimer: number = 0;
+    private readonly PARTICLE_SPAWN_INTERVAL: number = 35;
+    
+    // --- NEU: Variable zum Speichern der Steuerrichtung ---
+    // -1 für links, 0 für neutral, 1 für rechts.
+    private steeringDirection: number = 0;
     
     constructor(game: Game, initialStats: { lives: number, energy: number, speed: number, maxEnergy: number }) {
         super(game, game.width / 2 - 25, game.height - 80, 50, 40, 'player', 'PLAYER');
@@ -1140,19 +1293,31 @@ class Player extends EntityFamily {
     update(dt: number): void {
         const dt_s = dt / 1000;
         
+        const oldX = this.pos.x;
+        const oldY = this.pos.y;
+
+        // Spieler-Bewegung
         if (this.game.isMobile) {
+            let targetX = this.pos.x;
             if (this.game.touchX !== null && this.game.touchY !== null) {
-                const targetX = this.game.touchX - this.width / 2;
+                targetX = this.game.touchX - this.width / 2;
                 const targetY = this.game.touchY - this.height / 2;
                 this.pos.x += (targetX - this.pos.x) * 0.2;
                 this.pos.y += (targetY - this.pos.y) * 0.2;
             }
+             // --- NEU: Steuerrichtung für Mobile berechnen ---
+            const steerDelta = targetX - this.pos.x;
+            this.steeringDirection = Math.max(-1, Math.min(1, steerDelta / 20)); // Normalisiert die Bewegung
         } else {
             const move = new Vector2D(0, 0);
             if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
             if (this.game.keys['ArrowRight'] || this.game.keys['KeyD']) move.x = 1;
             if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1;
             if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1;
+
+            // --- NEU: Steuerrichtung für Desktop speichern ---
+            this.steeringDirection = move.x;
+
             const mag = Math.hypot(move.x, move.y);
             if (mag > 0) {
                 this.pos.x += (move.x / mag) * this.speed * dt_s;
@@ -1162,21 +1327,45 @@ class Player extends EntityFamily {
         
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
-        if (this.fireCooldown <= 0 && !this.isChargingBlackHole) {
-            this.shoot();
+        
+        // Partikel-Schweif Logik (unverändert)
+        this.particleSpawnTimer -= dt;
+        if (this.particleSpawnTimer <= 0) {
+            this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL;
+            const dx = this.pos.x - oldX;
+            const dy = this.pos.y - oldY;
+            const mag = Math.hypot(dx, dy);
+
+            if (mag > 1) { 
+                const PARTICLE_SPEED = 80;
+                const SPREAD = 20;
+                const baseVelX = -(dx / mag) * PARTICLE_SPEED;
+                const baseVelY = -(dy / mag) * PARTICLE_SPEED;
+                const spawnLeftX = this.pos.x + this.width * 0.1;
+                const spawnRightX = this.pos.x + this.width * 0.9;
+                const engineBaseY = this.pos.y + this.height * 0.9;
+                const spawnY = engineBaseY + 20; 
+                const velLeft = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
+                this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, '#00FFFF', 0.3, 3, velLeft));
+                const velRight = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
+                this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, '#00FFFF', 0.3, 3, velRight));
+            }
         }
+
+        // Restliche Update-Logik
+        if (this.fireCooldown <= 0 && !this.isChargingBlackHole) this.shoot();
         if (this.fireCooldown > 0) this.fireCooldown -= dt;
         this.droneAngle += 3 * dt_s;
         this.powerUpManager.update(dt);
         this.drones.forEach(d => d.update(dt));
     }
+    
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
         ctx.globalAlpha = this.isGhosted() ? 0.5 : 1;
         
         const equippedSkinId = this.game.shopManager.playerCosmetics.equipped_skin;
         const currentImage = playerImageMap[equippedSkinId] || playerImageMap['skin_default'];
-        
         const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2);
         const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2);
 
@@ -1184,7 +1373,6 @@ class Player extends EntityFamily {
             const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
             const glowSize = 10 + pulse * 15;
             const glowAlpha = 0.7 + pulse * 0.3;
-
             ctx.shadowColor = `rgba(11, 255, 255, ${glowAlpha})`;
             ctx.shadowBlur = glowSize;
         }
@@ -1193,55 +1381,69 @@ class Player extends EntityFamily {
 
         ctx.shadowBlur = 0;
         ctx.shadowColor = 'transparent';
-        
+
+        const engineLeftX = this.pos.x + this.width * 0.1;
+        const engineRightX = this.pos.x + this.width * 0.9;
+        const engineY = this.pos.y + this.height * 0.9;
+
+        const drawFlame = (x: number, y: number) => {
+            ctx.save();
+            
+            const baseLength = 25, baseWidth = 9, swayAmount = 8;
+            // --- NEU: Wie stark die Flamme auf die Steuerung reagiert ---
+            const STEERING_FLAME_OFFSET = 15;
+
+            for (let i = 0; i < 3; i++) {
+                const currentLength = baseLength + Math.random() * 10;
+                const currentWidth = baseWidth + Math.random() * 4;
+                const tipSway = (Math.random() - 0.5) * swayAmount;
+
+                const nozzleX = x, nozzleY = y;
+                
+                // --- NEU: Die Position der Flammenspitze wird durch die Steuerrichtung beeinflusst ---
+                // Wenn man nach rechts steuert (dir=1), biegt sich die Flamme nach links (negativ)
+                const steeringOffset = -this.steeringDirection * STEERING_FLAME_OFFSET;
+                const tipX = x + tipSway + steeringOffset;
+                const tipY = y + currentLength;
+                
+                // Auch die Kontrollpunkte werden leicht beeinflusst, um eine schöne Kurve zu erzeugen
+                const controlX1 = x - currentWidth + steeringOffset * 0.5;
+                const controlY1 = y + currentLength * 0.5;
+                const controlX2 = x + currentWidth + steeringOffset * 0.5;
+                const controlY2 = y + currentLength * 0.5;
+
+                const gradient = ctx.createLinearGradient(nozzleX, nozzleY, nozzleX, tipY);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.7)');
+                gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.globalAlpha = 0.5;
+
+                ctx.beginPath();
+                ctx.moveTo(nozzleX, nozzleY);
+                ctx.quadraticCurveTo(controlX1, controlY1, tipX, tipY);
+                ctx.quadraticCurveTo(controlX2, controlY2, nozzleX, nozzleY);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+        };
+
+        ctx.shadowColor = '#00FFFF';
+        ctx.shadowBlur = 20;
+        drawFlame(engineLeftX, engineY);
+        drawFlame(engineRightX, engineY);
+        ctx.shadowBlur = 0;
+
         this.drones.forEach(d => d.draw(ctx));
-        
         ctx.restore();
     }
+    
+    // Die restlichen Methoden bleiben unverändert
     shoot(): void { this.powerUpManager.shoot(); }
-
-    takeHit(damagePercentage: number): void {
-        if (this.isGhosted()) return;
-        if (this.isShielded()) {
-            this.powerUpManager.deactivate('SHIELD');
-            this.game.uiManager.soundManager.play('shieldDown');
-            return;
-        }
-        this.powerUpManager.onPlayerHit();
-        this.energy -= damagePercentage;
-        this.game.uiManager.soundManager.play('playerHit');
-
-        if (this.energy <= 0) {
-            this.lives--;
-
-            if (this.lives <= 0) {
-                if (this.availableReviveCrystals.length > 0) {
-                    const crystalToUse = this.availableReviveCrystals.shift()!;
-                    this.game.startReviveSequence(this, crystalToUse);
-                    return;
-                }
-
-                this.destroy();
-                this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2));
-                this.game.uiManager.soundManager.play('playerExplosion');
-            } else {
-                this.energy = this.maxEnergy;
-                this.pos.x = this.game.width / 2 - this.width / 2;
-                this.pos.y = this.game.height - 80;
-                this.powerUpManager.activate('GHOST_PROTOCOL', 5000);
-            }
-        }
-    }
-
-    public finalizeRevive(): void {
-        this.lives = 1;
-        this.energy = this.maxEnergy * 0.5;
-        this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
-        this.game.uiManager.soundManager.play('revive');
-        this.powerUpManager.activate('GHOST_PROTOCOL', 3000);
-        this.game.changeState('PLAYING');
-    }
-
+    takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { if (this.availableReviveCrystals.length > 0) { const crystalToUse = this.availableReviveCrystals.shift()!; this.game.startReviveSequence(this, crystalToUse); return; } this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = this.maxEnergy; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
+    public finalizeRevive(): void { this.lives = 1; this.energy = this.maxEnergy * 0.5; this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.game.uiManager.soundManager.play('revive'); this.powerUpManager.activate('GHOST_PROTOCOL', 3000); this.game.changeState('PLAYING'); }
     isShielded(): boolean { return this.powerUpManager.isActive('SHIELD'); }
     isGhosted(): boolean { return this.powerUpManager.isActive('GHOST_PROTOCOL'); }
     isScoreBoosted(): boolean { return this.powerUpManager.isActive('SCORE_BOOST'); }
@@ -2378,11 +2580,11 @@ class ShopManager {
             },
              {
                 id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc',
-                iconSrc: powerupNukeSrc, maxLevel: 1, cost: [25000]
+                iconSrc: powerupNukeSrc, maxLevel: 3, cost: [25000, 50000, 75000]
             },
             {
                 id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc',
-                iconSrc: iconCoinMagnetSrc, maxLevel: 5, cost: [5000, 10000, 20000, 35000, 50000]
+                iconSrc: iconCoinMagnetSrc, maxLevel: 1, cost: [10000]
             },
             {
                 id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc',
@@ -2466,24 +2668,48 @@ class ShopManager {
                 applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); }
             },
             {
-                id: 'skin_sentinel', type: 'COSMETIC', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc',
+                id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc',
                 iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin'
             },
             {
-                id: 'skin_renegade', type: 'COSMETIC', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc',
+                id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc',
                 iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin'
             },
              {
-                id: 'skin_avenger', type: 'COSMETIC', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc',
+                id: 'skin_avenger', type: 'SKIN', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc',
                 iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin'
             },
             {
-                id: 'skin_void', type: 'COSMETIC', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc',
+                id: 'skin_void', type: 'SKIN', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc',
                 iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin'
             },
             {
-                id: 'skin_gold', type: 'COSMETIC', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc',
+                id: 'skin_gold', type: 'SKIN', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc',
                 iconSrc: playerImgSrcGold, cost: [80000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_marauder', type: 'SKIN', nameKey: 'shop_skin_marauder_name', descKey: 'shop_skin_marauder_desc',
+                iconSrc: playerImgSrcMarauder, cost: [30000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_paladin', type: 'SKIN', nameKey: 'shop_skin_paladin_name', descKey: 'shop_skin_paladin_desc',
+                iconSrc: playerImgSrcPaladin, cost: [35000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_spectre', type: 'SKIN', nameKey: 'shop_skin_spectre_name', descKey: 'shop_skin_spectre_desc',
+                iconSrc: playerImgSrcSpectre, cost: [40000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_goliath', type: 'SKIN', nameKey: 'shop_skin_goliath_name', descKey: 'shop_skin_goliath_desc',
+                iconSrc: playerImgSrcGoliath, cost: [50000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_juggernaut', type: 'SKIN', nameKey: 'shop_skin_juggernaut_name', descKey: 'shop_skin_juggernaut_desc',
+                iconSrc: playerImgSrcJuggernaut, cost: [60000], cosmeticType: 'player_skin'
+            },
+            {
+                id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc',
+                iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin'
             },
             {
                 id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc',
@@ -2547,7 +2773,7 @@ class ShopManager {
              if (currentLevel >= item.maxLevel) return null;
              return item.cost[currentLevel]!;
         }
-        if (item.type === 'CONSUMABLE' || item.type === 'COSMETIC') {
+        if (item.type === 'CONSUMABLE' || item.type === 'COSMETIC' || item.type === 'SKIN') {
             return item.cost[0]!;
         }
         return null;
@@ -2575,7 +2801,7 @@ class ShopManager {
             this.saveUpgrades();
         } else if (item.type === 'CONSUMABLE' && item.applyEffect) {
             item.applyEffect(this.game);
-        } else if (item.type === 'COSMETIC' && item.cosmeticType) {
+        } else if ((item.type === 'COSMETIC' || item.type === 'SKIN') && item.cosmeticType) {
             if (item.cosmeticType === 'player_skin') {
                 this.playerCosmetics.unlocked_skins.push(item.id);
             } else if (item.cosmeticType === 'projectile_style') {
@@ -3280,6 +3506,7 @@ class UIManager {
                 </button>`;
                 break;
 
+            case 'SKIN':
             case 'COSMETIC':
                 const isUnlocked = shopManager.isCosmeticUnlocked(item.id, item.cosmeticType!);
                 const cosmeticCost = shopManager.getCost(item)!;
@@ -3573,6 +3800,12 @@ class UIManager {
             { id: 'skin_avenger', nameKey: 'shop_skin_avenger_name', imageSrc: playerImgSrc4 },
             { id: 'skin_void', nameKey: 'shop_skin_void_name', imageSrc: playerImgSrcVoid },
             { id: 'skin_gold', nameKey: 'shop_skin_gold_name', imageSrc: playerImgSrcGold },
+            { id: 'skin_marauder', nameKey: 'shop_skin_marauder_name', imageSrc: playerImgSrcMarauder },
+            { id: 'skin_paladin', nameKey: 'shop_skin_paladin_name', imageSrc: playerImgSrcPaladin },
+            { id: 'skin_spectre', nameKey: 'shop_skin_spectre_name', imageSrc: playerImgSrcSpectre },
+            { id: 'skin_goliath', nameKey: 'shop_skin_goliath_name', imageSrc: playerImgSrcGoliath },
+            { id: 'skin_juggernaut', nameKey: 'shop_skin_juggernaut_name', imageSrc: playerImgSrcJuggernaut },
+            { id: 'skin_leviathan', nameKey: 'shop_skin_leviathan_name', imageSrc: playerImgSrcLeviathan },
         ];
 
         const equippedSkin = this.game.shopManager.playerCosmetics.equipped_skin;
@@ -4108,16 +4341,42 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-                    this.level = 1;
-                    this.score = 0;
-                    this.entities = [];
-                    const initialStats = this.shopManager.getInitialPlayerStats();
-                    this.player = new Player(this, initialStats);
-                    this.addEntity(this.player);
-                } else {
-                    this.level++;
-                    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
-                }
+    this.level = 1;
+    this.score = 0;
+    this.entities = [];
+    const initialStats = this.shopManager.getInitialPlayerStats();
+    this.player = new Player(this, initialStats);
+    this.addEntity(this.player);
+
+    // --- START DER KORRIGIERTEN LOGIK ---
+    const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge');
+
+    if (specialChargeLevel > 0) {
+        // 1. Erstelle eine veränderbare Kopie des Power-up-Pools.
+        const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
+
+        // 2. Führe die Schleife für jede Stufe des Upgrades aus.
+        for (let i = 0; i < specialChargeLevel; i++) {
+            // Stelle sicher, dass noch Power-ups im Pool sind.
+            if (availablePowerUps.length === 0) break;
+
+            // 3. Wähle einen zufälligen Index aus dem verbleibenden Pool.
+            const randomIndex = Math.floor(Math.random() * availablePowerUps.length);
+            const chosenPowerUp = availablePowerUps[randomIndex];
+
+            // 4. Gib dem Spieler das ausgewählte Power-up.
+            this.player.powerUpManager.collectSpecial(chosenPowerUp!);
+
+            // 5. Entferne das Power-up aus dem Pool, um Duplikate zu verhindern.
+            availablePowerUps.splice(randomIndex, 1);
+        }
+    }
+    // --- ENDE DER KORRIGIERTEN LOGIK ---
+
+} else {
+    this.level++;
+    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
+}
 
                 if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
                     this.changeState('WIN');
@@ -4265,43 +4524,72 @@ class Game {
         this.uiManager.update(); 
     }
     
-    draw(): void {
-        this.ctx.clearRect(0, 0,this.width, this.height);
-        this.drawParallaxStarfield();
+    // --- In der Klasse "Game" ---
 
-        if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
-            this.entities.forEach(e => {
-                if (e.family !== 'player') {
-                    e.draw(this.ctx);
-                }
-            });
+// ERSETZEN SIE NUR DIESE METHODE:
+draw(): void {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.drawParallaxStarfield();
 
-            this.entities.forEach(e => {
-                if (e.family === 'player') {
-                    e.draw(this.ctx);
-                }
-            });
-            this.phoenixCoreUI.draw(this.ctx);
-        }
+    if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
         
-        this.uiManager.drawOverlay();
+        // --- FINALE, KORREKTE ZEICHENREIHENFOLGE ---
 
-        switch (this.gameState) {
-            case 'INTRO':
-            case 'MENU':
-                this.drawProfessionalIntro();
-                break;
-            case 'PLAYING_TRANSITION':
-                this.uiManager.drawLevelMessage();
-                break;
-            case 'GAME_OVER':
-                this.uiManager.drawGameOver();
-                break;
-            case 'WIN':
-                this.uiManager.drawWinScreen();
-                break;
-        }
+        // 1. Zeichne alle Projektile. Sie sind jetzt auf der untersten Ebene.
+        this.entities.forEach(e => {
+            if (e.family === 'projectile') {
+                e.draw(this.ctx);
+            }
+        });
+
+        // 2. Zeichne alles, was weder Spieler, noch Effekt, noch Projektil ist (also Gegner, Münzen etc.).
+        this.entities.forEach(e => {
+            if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') {
+                e.draw(this.ctx);
+            }
+        });
+            
+        // 3. Zeichne den Spieler. Er liegt jetzt über seinen Schüssen und den Gegnern.
+        this.entities.forEach(e => {
+            if (e.family === 'player') {
+                e.draw(this.ctx);
+            }
+        });
+
+        // 4. Zeichne alle Effekte mit Leuchtmodus darüber.
+        // Der Triebwerks-Schweif wird hier gezeichnet und liegt somit über dem Spieler.
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'lighter';
+        this.entities.forEach(e => {
+            if (e.family === 'effect') {
+                e.draw(this.ctx);
+            }
+        });
+        this.ctx.restore();
+
+        // 5. Zeichne UI-Elemente
+        this.phoenixCoreUI.draw(this.ctx);
     }
+    
+    // UI-Overlays und Menüs (unverändert)
+    this.uiManager.drawOverlay();
+
+    switch (this.gameState) {
+        case 'INTRO':
+        case 'MENU':
+            this.drawProfessionalIntro();
+            break;
+        case 'PLAYING_TRANSITION':
+            this.uiManager.drawLevelMessage();
+            break;
+        case 'GAME_OVER':
+            this.uiManager.drawGameOver();
+            break;
+        case 'WIN':
+            this.uiManager.drawWinScreen();
+            break;
+    }
+}
 
     private generateEndlessWave(waveNumber: number): ILevelDefinition {
         const t = (key: string) => this.uiManager.localizationManager.translate(key);
