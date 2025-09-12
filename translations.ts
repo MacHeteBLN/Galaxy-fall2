@@ -19,6 +19,12 @@ const en = {
   btn_equipped: 'Equipped',
   btn_max_level: 'Max Level',
   
+  gallery_skins_header: 'Player Skins',
+  gallery_projectiles_header: 'Projectile Styles',
+  gallery_trails_header: 'Engine Trails',
+  proj_default_name: 'Default Projectile',
+  trail_default_name: 'Standard Trail',
+
   mode_select_title: 'Choose Mode',
   btn_campaign: 'Campaign',
   btn_endless: 'Endless',
@@ -261,6 +267,12 @@ const de = {
   btn_equip: 'Ausrüsten',
   btn_equipped: 'Ausgerüstet',
   btn_max_level: "Max. Stufe",
+
+  gallery_skins_header: 'Spieler-Skins',
+  gallery_projectiles_header: 'Projektilstile',
+  gallery_trails_header: 'Antriebsspuren',
+  proj_default_name: 'Standard-Projektil',
+  trail_default_name: 'Standard-Spur',
 
   mode_select_title: 'Modus wählen',
   btn_campaign: 'Kampagne',
@@ -505,6 +517,12 @@ const es = {
   btn_equipped: 'Equipado',
   btn_max_level: "Nivel Máx.",
 
+  gallery_skins_header: 'Diseños de Nave',
+  gallery_projectiles_header: 'Estilos de Proyectil',
+  gallery_trails_header: 'Estelas de Motor',
+  proj_default_name: 'Proyectil Estándar',
+  trail_default_name: 'Estela Estándar',
+
   mode_select_title: 'Elige Modo',
   btn_campaign: 'Campaña',
   btn_endless: 'Infinito',
@@ -747,6 +765,12 @@ const zh = {
     btn_equip: '装备',
     btn_equipped: '已装备',
     btn_max_level: "已满级",
+
+    gallery_skins_header: '玩家皮肤',
+    gallery_projectiles_header: '投射物样式',
+    gallery_trails_header: '引擎尾迹',
+    proj_default_name: '默认投射物',
+    trail_default_name: '标准尾迹',
 
     mode_select_title: '选择模式',
     btn_campaign: '战役',
@@ -991,6 +1015,12 @@ const ja = {
   btn_equipped: '装備中',
   btn_max_level: "最大レベル",
 
+  gallery_skins_header: 'プレイヤースキン',
+  gallery_projectiles_header: '弾のスタイル',
+  gallery_trails_header: 'エンジン軌跡',
+  proj_default_name: 'デフォルトの弾',
+  trail_default_name: '標準の軌跡',
+
   mode_select_title: 'モード選択',
   btn_campaign: 'キャンペーン',
   btn_endless: 'エンドレス',
@@ -1233,6 +1263,12 @@ const it = {
   btn_equip: 'Equipaggia',
   btn_equipped: 'Equipaggiato',
   btn_max_level: "Liv. Max",
+
+  gallery_skins_header: 'Skin Navicella',
+  gallery_projectiles_header: 'Stili Proiettile',
+  gallery_trails_header: 'Scie Motore',
+  proj_default_name: 'Proiettile Standard',
+  trail_default_name: 'Scia Standard',
 
   mode_select_title: 'Scegli Modalità',
   btn_campaign: 'Campagna',

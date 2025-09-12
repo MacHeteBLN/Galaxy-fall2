@@ -250,7 +250,6 @@ constructor(game: Game, x: number, y: number, color: string, life: number = 0.5,
     this.family = 'effect'; 
     this.type = 'PARTICLE'; 
     
-    // NEUE LOGIK: Wenn eine Geschwindigkeit (vel) übergeben wird, nutze sie. Sonst, nutze die alte Zufalls-Logik.
     if (vel) {
         this.vel = vel;
     } else {
@@ -296,11 +295,44 @@ class ImpactEffect extends EntityFamily {
         this.particles = this.particles.filter(p => p.life > 0);
         if (this.particles.length === 0) this.destroy();
     }
+}
+
+// --- HINZUFÜGEN: Neue Klasse für den grünen Einschlag-Effekt ---
+class GreenSizzleEffect extends EntityFamily {
+    private particles: IParticle[] = [];
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0, 'effect', 'GREEN_SIZZLE');
+        // Erzeugt mehr Partikel als der Standard-Impact für einen befriedigenderen Effekt
+        const count = this.game.uiManager.settings.particles > 0 ? 12 : 0;
+        for (let i = 0; i < count; i++) {
+            const life = 0.2 + Math.random() * 0.2; // Etwas längere Lebensdauer für den "Sizzle"
+            this.particles.push({
+                pos: new Vector2D(x, y),
+                vel: new Vector2D(Math.random() * 180 - 90, Math.random() * 180 - 90),
+                size: Math.random() * 2.5 + 1,
+                life: life,
+                // Eine Mischung aus hellgrünen und fast weißen Partikeln
+                color: Math.random() > 0.3 ? '#39FF14' : '#E8FFED'
+            });
+        }
+    }
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.particles.forEach(p => {
+            p.pos.x += p.vel.x * dt_s;
+            p.pos.y += p.vel.y * dt_s;
+            p.life -= dt_s;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+        if (this.particles.length === 0) this.destroy();
+    }
     draw(ctx: CanvasRenderingContext2D): void {
         this.particles.forEach(p => {
             ctx.save();
-            ctx.globalAlpha = p.life / 0.2;
+            ctx.globalAlpha = p.life / 0.4;
             ctx.fillStyle = p.color;
+            ctx.shadowColor = '#39FF14'; // Grüner Schein
+            ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
             ctx.fill();
@@ -309,6 +341,145 @@ class ImpactEffect extends EntityFamily {
     }
 }
 
+// --- HINZUFÜGEN: Neue Klasse für das grüne Mündungsfeuer ---
+class GreenMuzzleFlash extends Entity {
+    private life: number = 0.1; // Sehr kurze Lebensdauer
+    private initialLife: number = 0.1;
+    private player: Player;
+
+    constructor(game: Game, player: Player) {
+        super(game, player.pos.x, player.pos.y, 0, 0);
+        this.family = 'effect';
+        this.player = player;
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.life -= dt_s;
+        if (this.life <= 0) this.destroy();
+        // Position an den Spieler anheften
+        this.pos.x = this.player.pos.x;
+        this.pos.y = this.player.pos.y;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.globalAlpha = (this.life / this.initialLife) * 0.8;
+        
+        const tier = this.player.powerUpManager.weaponTier;
+        const radius = 10 + tier * 5 + Math.random() * 5;
+        const flashX = this.pos.x + this.player.width / 2;
+        const flashY = this.pos.y + this.player.height * 0.2;
+
+        const gradient = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.4, 'rgba(57, 255, 20, 0.8)');
+        gradient.addColorStop(1, 'rgba(57, 255, 20, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(flashX, flashY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class RainbowImpactEffect extends EntityFamily {
+    private particles: IParticle[] = [];
+    private colors: string[] = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#EE82EE'];
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0, 'effect', 'RAINBOW_IMPACT');
+        const count = this.game.uiManager.settings.particles > 0 ? 15 : 0;
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                pos: new Vector2D(x, y),
+                vel: new Vector2D(Math.random() * 200 - 100, Math.random() * 200 - 100),
+                size: Math.random() * 2.5 + 1,
+                life: 0.3 + Math.random() * 0.2,
+                color: this.colors[Math.floor(Math.random() * this.colors.length)]!
+            });
+        }
+    }
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.particles.forEach(p => {
+            p.pos.x += p.vel.x * dt_s;
+            p.pos.y += p.vel.y * dt_s;
+            p.life -= dt_s;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+        if (this.particles.length === 0) this.destroy();
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life / 0.5;
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+}
+
+class VoidImpactEffect extends EntityFamily {
+    private particles: IParticle[] = [];
+    private life: number = 0.4;
+    private initialLife: number = 0.4;
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0, 'effect', 'VOID_IMPACT');
+        const count = this.game.uiManager.settings.particles > 0 ? 18 : 0;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 50 + Math.random() * 50;
+            this.particles.push({
+                pos: new Vector2D(x, y),
+                // Partikel bewegen sich erst nach außen
+                vel: new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed),
+                size: Math.random() * 2 + 1,
+                life: this.initialLife,
+                color: Math.random() > 0.3 ? '#9400D3' : '#2C003E'
+            });
+        }
+    }
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.life -= dt_s;
+
+        // Implosions-Effekt: In der zweiten Hälfte ihres Lebens ziehen sich die Partikel zusammen
+        const pullFactor = Math.max(0, (this.initialLife / 2) - this.life) * 800;
+
+        this.particles.forEach(p => {
+            const angleToCenter = Math.atan2(this.pos.y - p.pos.y, this.pos.x - p.pos.x);
+            p.vel.x += Math.cos(angleToCenter) * pullFactor * dt_s;
+            p.vel.y += Math.sin(angleToCenter) * pullFactor * dt_s;
+
+            p.pos.x += p.vel.x * dt_s;
+            p.pos.y += p.vel.y * dt_s;
+            p.life -= dt_s;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+        if (this.life <= 0) this.destroy();
+    }
+    draw(ctx: CanvasRenderingContext2D): void {
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life / this.initialLife;
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = '#EE82EE';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+}
 class NukeEffect extends Entity {
     private radius: number = 0; private life: number = 1;
     constructor(game: Game) { super(game, game.width / 2, game.height / 2, 0, 0); this.type = 'EFFECT'; }
@@ -475,11 +646,10 @@ class Coin extends EntityFamily {
     private angle: number = 0;
     private rotationSpeed: number = 7;
 
-    // --- ANGEPASST: Eigenschaften für den Partikel-Schweif ---
     private particleSpawnTimer: number = 0;
-    private readonly PARTICLE_SPAWN_INTERVAL: number = 25; // Erzeugt alle 25ms Partikel (etwas öfter)
-    private readonly PARTICLES_PER_SPAWN: number = 2;      // Erzeugt 2 Partikel pro Intervall für mehr Dichte
-    private readonly CONE_SPREAD_FACTOR: number = 80;      // Wie breit der Fächer/Kegel ist. Größere Zahl = breiter.
+    private readonly PARTICLE_SPAWN_INTERVAL: number = 25;
+    private readonly PARTICLES_PER_SPAWN: number = 2;
+    private readonly CONE_SPREAD_FACTOR: number = 80;
 
     constructor(game: Game, x: number, y: number, value: number) {
         super(game, x, y, 45, 45, 'pickup', 'COIN');
@@ -493,7 +663,6 @@ class Coin extends EntityFamily {
         const oldX = this.pos.x;
         const oldY = this.pos.y;
 
-        // Bewegungslogik
         const magnetLevel = this.game.shopManager.getUpgradeLevel('coin_magnet');
         const player = this.game.player;
         if (magnetLevel > 0 && player && player.isAlive()) {
@@ -507,7 +676,6 @@ class Coin extends EntityFamily {
             this.pos.y += this.speed * dt_s;
         }
         
-        // --- VERBESSERTE LOGIK FÜR DEN PARTIKEL-SCHWEIF ---
         this.particleSpawnTimer -= dt;
         if (this.particleSpawnTimer <= 0) {
             this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL;
@@ -517,45 +685,25 @@ class Coin extends EntityFamily {
             const mag = Math.hypot(dx, dy);
 
             if (mag > 0.1) {
-                // Normalisierter Vektor der Bewegung (zeigt, wohin die Münze fliegt)
                 const moveVecX = dx / mag;
                 const moveVecY = dy / mag;
-
-                // Perpendikularer Vektor (zeigt 90° zur Seite der Bewegung)
-                // Dieser Vektor definiert die "Breite" unseres Fächers.
                 const perpendicularX = -moveVecY;
                 const perpendicularY = moveVecX;
 
                 for (let i = 0; i < this.PARTICLES_PER_SPAWN; i++) {
-                    // Eine zufällige Zahl zwischen -1 und 1. Bestimmt, ob das Partikel nach links oder rechts im Fächer fliegt.
                     const randomSpread = (Math.random() - 0.5) * 2; 
-
-                    // Die Basis-Geschwindigkeit ist entgegen der Bewegung.
                     const baseVelX = -moveVecX * 40;
                     const baseVelY = -moveVecY * 40;
-                    
-                    // Wir addieren die seitliche Streuung zur Basis-Geschwindigkeit.
                     const finalVelX = baseVelX + perpendicularX * randomSpread * this.CONE_SPREAD_FACTOR;
                     const finalVelY = baseVelY + perpendicularY * randomSpread * this.CONE_SPREAD_FACTOR;
                     const trailVel = new Vector2D(finalVelX, finalVelY);
-
-                    // --- ÄNDERUNG: Partikel an der alten Position der Münze erzeugen, um einen echten Schweif zu bilden ---
                     const spawnX = oldX + this.width / 2;
                     const spawnY = oldY + this.height / 2;
                     
-                    this.game.addEntity(new Particle(
-                        this.game, 
-                        spawnX, 
-                        spawnY, 
-                        '#FFD700', 
-                        0.6, // Etwas längere Lebensdauer für einen volleren Schweif
-                        3,   // Etwas größere Partikel
-                        trailVel
-                    ));
+                    this.game.addEntity(new Particle(this.game, spawnX, spawnY, '#FFD700', 0.6, 3, trailVel));
                 }
             }
         }
-        // --- Ende der Partikel-Logik ---
 
         this.angle += this.rotationSpeed * dt_s;
         if (this.pos.y > this.game.height) this.destroy();
@@ -607,27 +755,17 @@ takeHit(damage: number): void {
         }
         if (this.game.uiManager.settings.particles > 0) this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
 
-        // --- START DER ANPASSUNG ---
-
-        // 1. Glücks-Upgrade-Level abrufen (0, wenn nicht gekauft)
         const luckLevel = this.game.shopManager.getUpgradeLevel('luck_chance');
-
-        // 2. Bonus-Multiplikator berechnen (10% pro Stufe, also 0.10)
         const luckMultiplier = 1 + (luckLevel * 0.10);
+        const finalCoinChance = 0.15 * luckMultiplier;
+        const finalPowerUpChance = 0.05 * luckMultiplier;
 
-        // 3. Finale Drop-Chancen berechnen
-        const finalCoinChance = 0.15 * luckMultiplier;    // Neue Basis-Chance: 15%
-        const finalPowerUpChance = 0.05 * luckMultiplier;   // Neue Basis-Chance: 5%
-
-        // 4. Prüfungen mit den neuen, dynamischen Chancen durchführen
         if (Math.random() < finalCoinChance) {
             this.game.addEntity(new Coin(this.game, this.pos.x, this.pos.y, this.pointsValue));
         }
         if (Math.random() < finalPowerUpChance) {
             this.game.addEntity(new PowerUp(this.game, this.pos.x, this.pos.y));
         }
-
-        // --- ENDE DER ANPASSUNG ---
         
         this.game.uiManager.soundManager.play('enemyExplosion');
     }
@@ -679,7 +817,7 @@ class Shooter extends Enemy {
         super.update(dt);
         this.fireCooldown -= dt;
         if (this.fireCooldown <= 0 && this.pos.y > 0) {
-            this.game.addEntity(new EnemyProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height));
+            this.game.addEntity(new WaveProjectile(this.game, this.pos.x + this.width / 2, this.pos.y + this.height, 0, 380));
             this.game.uiManager.soundManager.play('enemyShoot');
             this.fireCooldown = this.inFormation ? 2000 + Math.random() * 1500 : 2000;
         }
@@ -729,17 +867,16 @@ class Teleporter extends Enemy {
     
     shoot(): void {
         if (!this.game.player) return;
-        const p = this.game.player;
+        const player = this.game.player;
         const projectileSpeed = 400;
-        const damage = 20;
         const spawnX = this.pos.x + this.width / 2;
         const spawnY = this.pos.y + this.height / 2;
-        const targetX = p.pos.x + p.width / 2;
-        const targetY = p.pos.y + p.height / 2;
+        const targetX = player.pos.x + player.width / 2;
+        const targetY = player.pos.y + player.height / 2;
         const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
         const velX = Math.cos(angle) * projectileSpeed;
         const velY = Math.sin(angle) * projectileSpeed;
-        this.game.addEntity(new EnemyProjectile(this.game, spawnX, spawnY, velX, velY, damage));
+        this.game.addEntity(new TeleporterProjectile(this.game, spawnX, spawnY, velX, velY));
         this.game.uiManager.soundManager.play('enemyShoot');
     }
 
@@ -766,32 +903,191 @@ class BlackHole extends Entity {
 }
 class Projectile extends EntityFamily {
     public vel: Vector2D; public damage: number = 1; protected color: string;
-    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600, color: string = '#00FFFF') {
+    private particleSpawnTimer: number = 0;
+    public isDroneTier1Projectile: boolean;
+
+    constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600, color: string = '#00FFFF', isDroneTier1: boolean = false) {
         super(game, x - 2.5, y, 5, 20, 'projectile', 'PROJECTILE');
         this.vel = new Vector2D(velX, velY);
         this.color = color;
+        this.isDroneTier1Projectile = isDroneTier1;
+
+        // Anpassen der Hitbox für Feuerball-Projektile
+        if (this.game.shopManager.playerCosmetics.equipped_projectile === 'proj_fireball' && !this.isDroneTier1Projectile) {
+            this.width = 12;
+            this.height = 12;
+            this.pos.x = x - this.width / 2;
+            this.pos.y = y - this.height / 2;
+        }
     }
+
     update(dt: number): void {
-        const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s;
+        const dt_s = dt / 1000;
+        this.pos.x += this.vel.x * dt_s;
+        this.pos.y += this.vel.y * dt_s;
+
+        this.particleSpawnTimer -= dt;
+        if (this.particleSpawnTimer <= 0) {
+            const equipped = this.game.shopManager.playerCosmetics.equipped_projectile;
+            
+            // Der Schweif wird nur erzeugt, wenn es sich NICHT um ein Tier-1-Drohnen-Projektil handelt.
+            if (!this.isDroneTier1Projectile && equipped === 'proj_green' && this.type === 'PROJECTILE') {
+                this.particleSpawnTimer = 40;
+                const trailVel = new Vector2D((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10 + 20);
+                this.game.addEntity(new Particle(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#39FF14', 0.25, 1.5, trailVel));
+            } else if (!this.isDroneTier1Projectile && equipped === 'proj_rainbow' && this.type === 'PROJECTILE') {
+                this.particleSpawnTimer = 30;
+                const colors = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#EE82EE'];
+                const trailColor = colors[Math.floor(Math.random() * colors.length)]!;
+                const trailVel = new Vector2D((Math.random() - 0.5) * 15, 20 + (Math.random() - 0.5) * 15);
+                this.game.addEntity(new Particle(this.game, this.pos.x + this.width / 2, this.pos.y + this.height, trailColor, 0.2, 1.2, trailVel));
+            } else if (!this.isDroneTier1Projectile && equipped === 'proj_fireball' && this.type === 'PROJECTILE') {
+                this.particleSpawnTimer = 35;
+                const fireColors = ['#FFA500', '#FF4500', '#FFD700'];
+                const trailColor = fireColors[Math.floor(Math.random() * fireColors.length)]!;
+                const trailVel = new Vector2D((Math.random() - 0.5) * 10, 15 + (Math.random() - 0.5) * 10);
+                this.game.addEntity(new Particle(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, trailColor, 0.25, 1.8, trailVel));
+            } else if (!this.isDroneTier1Projectile && equipped === 'proj_purple' && this.type === 'PROJECTILE') {
+                this.particleSpawnTimer = 40;
+                const trailColor = Math.random() > 0.3 ? '#9400D3' : '#2C003E';
+                const trailVel = new Vector2D((Math.random() - 0.5) * 12, 18 + (Math.random() - 0.5) * 12);
+                this.game.addEntity(new Particle(this.game, this.pos.x + this.width / 2, this.pos.y + this.height, trailColor, 0.3, 1.5, trailVel));
+            }
+        }
+
         if (this.pos.y < -this.height || this.pos.y > this.game.height || this.pos.x < -this.width || this.pos.x > this.game.width) this.destroy();
     }
+
     draw(ctx: CanvasRenderingContext2D): void {
-        ctx.save();
-        const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x + this.width, this.pos.y);
-        const semiTransparentColor = `${this.color}80`;
-        gradient.addColorStop(0, semiTransparentColor);
-        gradient.addColorStop(0.5, '#FFFFFF');
-        gradient.addColorStop(1, semiTransparentColor);
-        ctx.fillStyle = gradient;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 8;
-        ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
-        ctx.restore();
+        const cosmetics = this.game.shopManager.playerCosmetics;
+        if (!this.isDroneTier1Projectile && this.game.player && cosmetics.equipped_projectile === 'proj_green') {
+            const tier = this.game.player.powerUpManager.weaponTier;
+            ctx.save();
+            
+            switch (tier) {
+                case 1:
+                    ctx.fillStyle = '#39FF14';
+                    ctx.shadowColor = '#39FF14';
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+                    break;
+                case 2:
+                    ctx.fillStyle = '#AAFFAA';
+                    ctx.shadowColor = '#39FF14';
+                    ctx.shadowBlur = 15;
+                    ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(this.pos.x + this.width * 0.25, this.pos.y, this.width * 0.5, this.height);
+                    break;
+                case 3:
+                    ctx.fillStyle = '#39FF14';
+                    ctx.shadowColor = '#39FF14';
+                    ctx.shadowBlur = 20;
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillRect(this.pos.x - 2, this.pos.y, this.width + 4, this.height);
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(this.pos.x + this.width * 0.1, this.pos.y, this.width * 0.8, this.height);
+                    break;
+                case 4:
+                    const coreX = this.pos.x + this.width / 2;
+                    const coreY = this.pos.y + this.height / 2;
+                    const auraRadius = this.width * 1.5 + Math.random() * 4;
+                    
+                    const gradientAura = ctx.createRadialGradient(coreX, coreY, this.width * 0.5, coreX, coreY, auraRadius);
+                    gradientAura.addColorStop(0, 'rgba(57, 255, 20, 0.6)');
+                    gradientAura.addColorStop(1, 'rgba(57, 255, 20, 0)');
+                    ctx.fillStyle = gradientAura;
+                    ctx.fillRect(coreX - auraRadius, coreY - this.height/2 - 10, auraRadius * 2, this.height + 20);
+
+                    ctx.fillStyle = 'white';
+                    ctx.shadowColor = '#39FF14';
+                    ctx.shadowBlur = 25;
+                    ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+                    break;
+            }
+            
+            ctx.restore();
+        } else if (!this.isDroneTier1Projectile && this.game.player && cosmetics.equipped_projectile === 'proj_rainbow') {
+            ctx.save();
+            const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x, this.pos.y + this.height);
+            gradient.addColorStop(0, '#FF0000');
+            gradient.addColorStop(0.2, '#FFFF00');
+            gradient.addColorStop(0.4, '#00FF00');
+            gradient.addColorStop(0.6, '#00FFFF');
+            gradient.addColorStop(0.8, '#0000FF');
+            gradient.addColorStop(1, '#FF00FF');
+
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = 'white';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+            ctx.restore();
+        } else if (!this.isDroneTier1Projectile && this.game.player && cosmetics.equipped_projectile === 'proj_fireball') {
+            ctx.save();
+            const centerX = this.pos.x + this.width / 2;
+            const centerY = this.pos.y + this.height / 2;
+            const radius = this.width * 0.8;
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            gradient.addColorStop(0, 'rgba(255, 255, 200, 1)');
+            gradient.addColorStop(0.5, 'rgba(255, 165, 0, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        } else if (!this.isDroneTier1Projectile && this.game.player && cosmetics.equipped_projectile === 'proj_purple') {
+            ctx.save();
+            const centerX = this.pos.x + this.width / 2;
+            const centerY = this.pos.y + this.height / 2;
+            const auraRadius = this.width * 2 + Math.random() * 3;
+            
+            const gradientAura = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, auraRadius);
+            gradientAura.addColorStop(0, 'rgba(238, 130, 238, 0.6)');
+            gradientAura.addColorStop(1, 'rgba(148, 0, 211, 0)');
+            ctx.fillStyle = gradientAura;
+            ctx.fillRect(centerX - auraRadius, this.pos.y - 10, auraRadius * 2, this.height + 20);
+
+            ctx.fillStyle = '#1A001A';
+            ctx.shadowColor = '#EE82EE';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+            ctx.restore();
+        }
+        
+        else {
+            ctx.save();
+            const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x + this.width, this.pos.y);
+            const semiTransparentColor = `${this.color}80`;
+            gradient.addColorStop(0, semiTransparentColor);
+            gradient.addColorStop(0.5, '#FFFFFF');
+            gradient.addColorStop(1, semiTransparentColor);
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 8;
+            ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
+            ctx.restore();
+        }
     }
-    onHit(e: Enemy): void { 
-        this.game.addEntity(new ImpactEffect(this.game, this.pos.x + this.width / 2, this.pos.y, this.color));
-        this.destroy(); 
-    } 
+
+    onHit(e: Enemy): void {
+        const equipped = this.game.shopManager.playerCosmetics.equipped_projectile;
+        if (!this.isDroneTier1Projectile && equipped === 'proj_green') {
+            this.game.addEntity(new GreenSizzleEffect(this.game, this.pos.x + this.width / 2, this.pos.y));
+        } else if (!this.isDroneTier1Projectile && equipped === 'proj_rainbow') {
+            this.game.addEntity(new RainbowImpactEffect(this.game, this.pos.x + this.width / 2, this.pos.y));
+        } else if (!this.isDroneTier1Projectile && equipped === 'proj_fireball') {
+            this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFA500', 0.8));
+        } else if (!this.isDroneTier1Projectile && equipped === 'proj_purple') {
+            this.game.addEntity(new VoidImpactEffect(this.game, this.pos.x + this.width / 2, this.pos.y));
+        }
+        else {
+            this.game.addEntity(new ImpactEffect(this.game, this.pos.x + this.width / 2, this.pos.y, this.color));
+        }
+        this.destroy();
+    }
 }
 class HeavyProjectile extends Projectile {
     constructor(game: Game, x: number, y: number, velX: number = 0, velY: number = -600) {
@@ -1037,6 +1333,86 @@ class PlasmaBallProjectile extends EnemyProjectile {
         ctx.restore();
     }
 }
+
+class TeleporterProjectile extends EnemyProjectile {
+    constructor(game: Game, x: number, y: number, vX: number, vY: number) {
+        super(game, x, y, vX, vY, 20);
+        this.width = 22;
+        this.height = 22;
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+
+        const pulse = 1 + Math.sin(Date.now() / 100) * 0.15;
+        const radius = (this.width / 2) * pulse;
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        gradient.addColorStop(0.5, 'rgba(238, 130, 238, 0.7)');
+        gradient.addColorStop(1, 'rgba(148, 0, 211, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#EE82EE';
+        ctx.shadowBlur = 15;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class WaveProjectile extends EnemyProjectile {
+    private originX: number;
+    private waveAngle: number = 0;
+    private waveFrequency: number = 5; 
+    private waveAmplitude: number = 30; 
+
+    constructor(game: Game, x: number, y: number, vX: number, vY: number) {
+        super(game, x, y, vX, vY, 25);
+        this.width = 14;
+        this.height = 14;
+        this.originX = x - this.width / 2;
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        
+        // Vertikale Bewegung ist konstant
+        this.pos.y += this.vel.y * dt_s;
+        
+        // Horizontale Bewegung wird durch die Sinuswelle bestimmt
+        this.waveAngle += this.waveFrequency * dt_s;
+        this.pos.x = this.originX + Math.sin(this.waveAngle) * this.waveAmplitude;
+
+        if (this.pos.y > this.game.height) this.destroy();
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const radius = this.width / 2;
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 220, 1)');
+        gradient.addColorStop(0.6, 'rgba(255, 165, 0, 0.8)');
+        gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FFA500';
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
 class Drone extends EntityFamily {
     private tier: number;
     private index: number;
@@ -1070,7 +1446,9 @@ class Drone extends EntityFamily {
     shoot(): void {
         switch (this.tier) {
             case 1:
-                this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y));
+                // HINZGEFÜGTE ÄNDERUNG: Erstellt ein Projektil mit dem Flag 'isDroneTier1Projectile = true',
+                // damit es immer sein Standard-Aussehen behält, unabhängig vom ausgewählten Skin.
+                this.game.addEntity(new Projectile(this.game, this.pos.x, this.pos.y, 0, -600, '#00FFFF', true));
                 this.fireCooldown = 600;
                 this.game.uiManager.soundManager.play('droneTier1');
                 break;
@@ -1188,6 +1566,7 @@ class PowerUpManager {
         }
         this.game.uiManager.soundManager.play('powerup');
     }
+
     shoot(): void {
         const p = this.player;
         p.fireCooldown = this.isActive('RAPID_FIRE') ? 75 : 150;
@@ -1215,10 +1594,14 @@ class PowerUpManager {
         const angle15 = 15 * (Math.PI / 180);
 
         let projectileColor = '#00FFFF';
-        switch (this.weaponTier) {
-            case 2: projectileColor = '#B10DC9'; break;
-            case 3: projectileColor = '#FFFF00'; break;
-            case 4: projectileColor = '#FF4136'; break;
+        if (this.game.shopManager.playerCosmetics.equipped_projectile === 'proj_green') {
+            projectileColor = '#39FF14';
+        } else {
+             switch (this.weaponTier) {
+                case 2: projectileColor = '#B10DC9'; break;
+                case 3: projectileColor = '#FFFF00'; break;
+                case 4: projectileColor = '#FF4136'; break;
+            }
         }
 
         switch (this.weaponTier) {
@@ -1248,6 +1631,10 @@ class PowerUpManager {
         }
 
         this.game.uiManager.soundManager.play('shoot');
+
+        if (this.game.shopManager.playerCosmetics.equipped_projectile === 'proj_green') {
+            this.game.addEntity(new GreenMuzzleFlash(this.game, p));
+        }
     }
 }
 class Player extends EntityFamily {
@@ -1266,8 +1653,6 @@ class Player extends EntityFamily {
     private particleSpawnTimer: number = 0;
     private readonly PARTICLE_SPAWN_INTERVAL: number = 35;
     
-    // --- NEU: Variable zum Speichern der Steuerrichtung ---
-    // -1 für links, 0 für neutral, 1 für rechts.
     private steeringDirection: number = 0;
     
     constructor(game: Game, initialStats: { lives: number, energy: number, speed: number, maxEnergy: number }) {
@@ -1297,7 +1682,6 @@ class Player extends EntityFamily {
         const oldX = this.pos.x;
         const oldY = this.pos.y;
 
-        // Spieler-Bewegung
         if (this.game.isMobile) {
             let targetX = this.pos.x;
             if (this.game.touchX !== null && this.game.touchY !== null) {
@@ -1306,9 +1690,8 @@ class Player extends EntityFamily {
                 this.pos.x += (targetX - this.pos.x) * 0.2;
                 this.pos.y += (targetY - this.pos.y) * 0.2;
             }
-             // --- NEU: Steuerrichtung für Mobile berechnen ---
             const steerDelta = targetX - this.pos.x;
-            this.steeringDirection = Math.max(-1, Math.min(1, steerDelta / 20)); // Normalisiert die Bewegung
+            this.steeringDirection = Math.max(-1, Math.min(1, steerDelta / 20));
         } else {
             const move = new Vector2D(0, 0);
             if (this.game.keys['ArrowLeft'] || this.game.keys['KeyA']) move.x = -1;
@@ -1316,7 +1699,6 @@ class Player extends EntityFamily {
             if (this.game.keys['ArrowUp'] || this.game.keys['KeyW']) move.y = -1;
             if (this.game.keys['ArrowDown'] || this.game.keys['KeyS']) move.y = 1;
 
-            // --- NEU: Steuerrichtung für Desktop speichern ---
             this.steeringDirection = move.x;
 
             const mag = Math.hypot(move.x, move.y);
@@ -1329,7 +1711,6 @@ class Player extends EntityFamily {
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height));
         
-        // Partikel-Schweif Logik (unverändert)
         this.particleSpawnTimer -= dt;
         if (this.particleSpawnTimer <= 0) {
             this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL;
@@ -1347,13 +1728,22 @@ class Player extends EntityFamily {
                 const engineBaseY = this.pos.y + this.height * 0.9;
                 const spawnY = engineBaseY + 20; 
                 const velLeft = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
-                this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, '#00FFFF', 0.3, 3, velLeft));
                 const velRight = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
-                this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, '#00FFFF', 0.3, 3, velRight));
+                
+                const equippedTrail = this.game.shopManager.playerCosmetics.equipped_trail;
+                if (equippedTrail === 'trail_rainbow') {
+                    const colors = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#EE82EE'];
+                    const colorLeft = colors[Math.floor(Math.random() * colors.length)]!;
+                    const colorRight = colors[Math.floor(Math.random() * colors.length)]!;
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, colorLeft, 0.4, 3.5, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, colorRight, 0.4, 3.5, velRight));
+                } else {
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, '#00FFFF', 0.3, 3, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, '#00FFFF', 0.3, 3, velRight));
+                }
             }
         }
 
-        // Restliche Update-Logik
         if (this.fireCooldown <= 0 && !this.isChargingBlackHole) this.shoot();
         if (this.fireCooldown > 0) this.fireCooldown -= dt;
         this.droneAngle += 3 * dt_s;
@@ -1391,7 +1781,6 @@ class Player extends EntityFamily {
             ctx.save();
             
             const baseLength = 25, baseWidth = 9, swayAmount = 8;
-            // --- NEU: Wie stark die Flamme auf die Steuerung reagiert ---
             const STEERING_FLAME_OFFSET = 15;
 
             for (let i = 0; i < 3; i++) {
@@ -1401,13 +1790,10 @@ class Player extends EntityFamily {
 
                 const nozzleX = x, nozzleY = y;
                 
-                // --- NEU: Die Position der Flammenspitze wird durch die Steuerrichtung beeinflusst ---
-                // Wenn man nach rechts steuert (dir=1), biegt sich die Flamme nach links (negativ)
                 const steeringOffset = -this.steeringDirection * STEERING_FLAME_OFFSET;
                 const tipX = x + tipSway + steeringOffset;
                 const tipY = y + currentLength;
                 
-                // Auch die Kontrollpunkte werden leicht beeinflusst, um eine schöne Kurve zu erzeugen
                 const controlX1 = x - currentWidth + steeringOffset * 0.5;
                 const controlY1 = y + currentLength * 0.5;
                 const controlX2 = x + currentWidth + steeringOffset * 0.5;
@@ -1441,7 +1827,6 @@ class Player extends EntityFamily {
         ctx.restore();
     }
     
-    // Die restlichen Methoden bleiben unverändert
     shoot(): void { this.powerUpManager.shoot(); }
     takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { if (this.availableReviveCrystals.length > 0) { const crystalToUse = this.availableReviveCrystals.shift()!; this.game.startReviveSequence(this, crystalToUse); return; } this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = this.maxEnergy; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
     public finalizeRevive(): void { this.lives = 1; this.energy = this.maxEnergy * 0.5; this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.game.uiManager.soundManager.play('revive'); this.powerUpManager.activate('GHOST_PROTOCOL', 3000); this.game.changeState('PLAYING'); }
@@ -1725,20 +2110,16 @@ class BossOmegaNexus extends Enemy {
     private phase: number = 1;
     private attackTimer: number = 5000;
 
-    // Zustände für Bewegung
     private movementPattern: 'ENTERING' | 'SWOOPING' | 'DRIFTING' = 'ENTERING';
     private movementTarget: Vector2D;
     private isInvulnerable: boolean = false;
 
-    // Visueller Offset für die faire Hitbox
     private visualOffsetY: number;
 
-    // Zustände für Angriffe
     private isPreparingAttack: boolean = false;
     private preparationTimer: number = 0;
     private currentAttack: 'CROSSFIRE' | 'LASER_FAN' | 'NEXUS_CANNON' | 'NONE' = 'NONE';
     
-    // Eigenschaften für Angriffe
     private laserFanActive: boolean = false;
     private laserFanDuration: number = 3500;
     private laserFanAngle: number = 0;
@@ -2021,7 +2402,6 @@ class BossOmegaNexus extends Enemy {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
 
-        // Innerer Plasmakern
         ctx.save();
         const corePulse = 1 + Math.sin(Date.now() / 200) * 0.15;
         const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40 * corePulse);
@@ -2034,7 +2414,6 @@ class BossOmegaNexus extends Enemy {
         ctx.fill();
         ctx.restore();
 
-        // Äußere, instabile Plasma-Aura
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(this.ringAngle1);
@@ -2559,195 +2938,50 @@ class ShopManager {
         this.playerCosmetics = this.loadCosmetics();
 
         this.shopItems = [
-            {
-                id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc',
-                iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000]
-            },
-            {
-                id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc',
-                iconSrc: powerupRepairKitSrc, maxLevel: 10, cost: [100, 200, 400, 800, 1600, 3200, 5000, 7500, 10000, 15000]
-            },
-            {
-                id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc',
-                iconSrc: piCoin2ImgSrc, maxLevel: 10, cost: [250, 500, 1250, 3000, 7500, 15000, 25000, 40000, 60000, 90000]
-            },
-            {
-                id: 'powerup_duration', type: 'PERMANENT', nameKey: 'shop_powerup_duration_name', descKey: 'shop_powerup_duration_desc',
-                iconSrc: powerupScoreBoostSrc, maxLevel: 10, cost: [500, 1000, 2000, 4000, 8000, 12000, 18000, 25000, 35000, 50000]
-            },
-            {
-                id: 'luck_chance', type: 'PERMANENT', nameKey: 'shop_luck_chance_name', descKey: 'shop_luck_chance_desc',
-                iconSrc: powerupSideShotsSrc, maxLevel: 5, cost: [1000, 2500, 5000, 10000, 20000]
-            },
-             {
-                id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc',
-                iconSrc: powerupNukeSrc, maxLevel: 3, cost: [25000, 50000, 75000]
-            },
-            {
-                id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc',
-                iconSrc: iconCoinMagnetSrc, maxLevel: 1, cost: [10000]
-            },
-            {
-                id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc',
-                iconSrc: iconReviveChanceSrc, maxLevel: 3, cost: [15000, 30000, 75000]
-            },
-            {
-                id: 'special_stack_size', 
-                type: 'PERMANENT', 
-                nameKey: 'shop_special_stack_name',
-                descKey: 'shop_special_stack_desc',
-                iconSrc: iconInventorySizeSrc, 
-                maxLevel: 2, 
-                cost: [20000, 50000]
-            },
-            {
-                id: 'ultimate_drone_mastery', type: 'ULTIMATE', nameKey: 'shop_ultimate_drone_mastery_name', descKey: 'shop_ultimate_drone_mastery_desc',
-                iconSrc: orbitalDrone1ImgSrc, maxLevel: 1, cost: [75000]
-            },
-            {
-                id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc',
-                iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000]
-            },
-            {
-                id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc',
-                iconSrc: powerupShieldSrc, cost: [400], 
-                applyEffect: (game) => { game.player?.powerUpManager.activate('SHIELD'); }
-            },
-            {
-                id: 'consume_nuke', type: 'CONSUMABLE', nameKey: 'shop_consume_nuke_name', descKey: 'shop_consume_nuke_desc',
-                iconSrc: powerupNukeSrc, cost: [1000],
-                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('NUKE'); }
-            },
-            {
-                id: 'consume_extralife', type: 'CONSUMABLE', nameKey: 'shop_consume_extralife_name', descKey: 'shop_consume_extralife_desc',
-                iconSrc: powerupExtraLifeSrc, cost: [2500],
-                applyEffect: (game) => { if(game.player && game.player.lives < game.player.maxLives) game.player.lives++; }
-            },
-            {
-                id: 'consume_ghost', type: 'CONSUMABLE', nameKey: 'shop_consume_ghost_name', descKey: 'shop_consume_ghost_desc',
-                iconSrc: powerupGhostProtocolSrc, cost: [1500],
-                applyEffect: (game) => { game.player?.powerUpManager.activate('GHOST_PROTOCOL', 30000); }
-            },
-            {
-                id: 'consume_boss_slayer', type: 'CONSUMABLE', nameKey: 'shop_consume_boss_slayer_name', descKey: 'shop_consume_boss_slayer_desc',
-                iconSrc: iconBossSlayerSrc, cost: [5000],
-                applyEffect: (game) => { /* TODO */ }
-            },
-            {
-                id: 'consume_black_hole', type: 'CONSUMABLE', nameKey: 'shop_consume_black_hole_name', descKey: 'shop_consume_black_hole_desc',
-                iconSrc: powerupBlackHoleSrc, cost: [1200],
-                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('BLACK_HOLE'); }
-            },
-            {
-                id: 'consume_score_boost', type: 'CONSUMABLE', nameKey: 'shop_consume_score_boost_name', descKey: 'shop_consume_score_boost_desc',
-                iconSrc: powerupScoreBoostSrc, cost: [800],
-                applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('SCORE_BOOST'); }
-            },
-            {
-                id: 'consume_laser_beam', type: 'CONSUMABLE', nameKey: 'shop_consume_laser_beam_name', descKey: 'shop_consume_laser_beam_desc',
-                iconSrc: powerupLaserBeamSrc, cost: [1750],
-                applyEffect: (game) => { game.player?.powerUpManager.collectUltra('LASER_BEAM'); }
-            },
-            {
-                id: 'consume_homing_missiles', type: 'CONSUMABLE', nameKey: 'shop_consume_homing_missiles_name', descKey: 'shop_consume_homing_missiles_desc',
-                iconSrc: powerupHomingMissilesSrc, cost: [1750],
-                applyEffect: (game) => { game.player?.powerUpManager.collectUltra('HOMING_MISSILES'); }
-            },
-            {
-                id: 'consume_rapid_fire', type: 'CONSUMABLE', nameKey: 'shop_consume_rapid_fire_name', descKey: 'shop_consume_rapid_fire_desc',
-                iconSrc: powerupRapidFireSrc, cost: [1000],
-                applyEffect: (game) => { game.player?.powerUpManager.activate('RAPID_FIRE'); }
-            },
-            {
-                id: 'consume_side_shots', type: 'CONSUMABLE', nameKey: 'shop_consume_side_shots_name', descKey: 'shop_consume_side_shots_desc',
-                iconSrc: powerupSideShotsSrc, cost: [1000],
-                applyEffect: (game) => { game.player?.powerUpManager.activate('SIDE_SHOTS'); }
-            },
-             {
-                id: 'consume_orbital_drone', type: 'CONSUMABLE', nameKey: 'shop_consume_orbital_drone_name', descKey: 'shop_consume_orbital_drone_desc',
-                iconSrc: powerupOrbitalDroneSrc, cost: [2000],
-                applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); }
-            },
-            {
-                id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc',
-                iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc',
-                iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin'
-            },
-             {
-                id: 'skin_avenger', type: 'SKIN', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc',
-                iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_void', type: 'SKIN', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc',
-                iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_gold', type: 'SKIN', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc',
-                iconSrc: playerImgSrcGold, cost: [80000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_marauder', type: 'SKIN', nameKey: 'shop_skin_marauder_name', descKey: 'shop_skin_marauder_desc',
-                iconSrc: playerImgSrcMarauder, cost: [30000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_paladin', type: 'SKIN', nameKey: 'shop_skin_paladin_name', descKey: 'shop_skin_paladin_desc',
-                iconSrc: playerImgSrcPaladin, cost: [35000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_spectre', type: 'SKIN', nameKey: 'shop_skin_spectre_name', descKey: 'shop_skin_spectre_desc',
-                iconSrc: playerImgSrcSpectre, cost: [40000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_goliath', type: 'SKIN', nameKey: 'shop_skin_goliath_name', descKey: 'shop_skin_goliath_desc',
-                iconSrc: playerImgSrcGoliath, cost: [50000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_juggernaut', type: 'SKIN', nameKey: 'shop_skin_juggernaut_name', descKey: 'shop_skin_juggernaut_desc',
-                iconSrc: playerImgSrcJuggernaut, cost: [60000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc',
-                iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin'
-            },
-            {
-                id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc',
-                iconSrc: powerUpImageSources['WEAPON_UP'], cost: [5000], cosmeticType: 'projectile_style'
-            },
-             {
-                id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc',
-                iconSrc: powerupRapidFireSrc, cost: [7500], cosmeticType: 'projectile_style'
-            },
-            {
-                id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc',
-                iconSrc: powerupBlackHoleSrc, cost: [7500], cosmeticType: 'projectile_style'
-            },
-            {
-                id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc',
-                iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail'
-            },
-            {
-                id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc',
-                iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000
-            },
-            {
-                id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc',
-                iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500
-            },
-            {
-                id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc',
-                iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000
-            },
-            {
-                id: 'pi_bundle_4', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_4_name', descKey: 'shop_pi_bundle_4_desc',
-                iconSrc: piCoin2ImgSrc, pi_cost: 5.0, coin_reward: 65000
-            },
-             {
-                id: 'pi_bundle_5', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_5_name', descKey: 'shop_pi_bundle_5_desc',
-                iconSrc: piCoin2ImgSrc, pi_cost: 10.0, coin_reward: 150000
-            },
+            { id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc', iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000] },
+            { id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc', iconSrc: powerupRepairKitSrc, maxLevel: 10, cost: [100, 200, 400, 800, 1600, 3200, 5000, 7500, 10000, 15000] },
+            { id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc', iconSrc: piCoin2ImgSrc, maxLevel: 10, cost: [250, 500, 1250, 3000, 7500, 15000, 25000, 40000, 60000, 90000] },
+            { id: 'powerup_duration', type: 'PERMANENT', nameKey: 'shop_powerup_duration_name', descKey: 'shop_powerup_duration_desc', iconSrc: powerupScoreBoostSrc, maxLevel: 10, cost: [500, 1000, 2000, 4000, 8000, 12000, 18000, 25000, 35000, 50000] },
+            { id: 'luck_chance', type: 'PERMANENT', nameKey: 'shop_luck_chance_name', descKey: 'shop_luck_chance_desc', iconSrc: powerupSideShotsSrc, maxLevel: 5, cost: [1000, 2500, 5000, 10000, 20000] },
+            { id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc', iconSrc: powerupNukeSrc, maxLevel: 3, cost: [25000, 50000, 75000] },
+            { id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc', iconSrc: iconCoinMagnetSrc, maxLevel: 1, cost: [10000] },
+            { id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc', iconSrc: iconReviveChanceSrc, maxLevel: 3, cost: [15000, 30000, 75000] },
+            { id: 'special_stack_size', type: 'PERMANENT', nameKey: 'shop_special_stack_name', descKey: 'shop_special_stack_desc', iconSrc: iconInventorySizeSrc, maxLevel: 2, cost: [20000, 50000] },
+            { id: 'ultimate_drone_mastery', type: 'ULTIMATE', nameKey: 'shop_ultimate_drone_mastery_name', descKey: 'shop_ultimate_drone_mastery_desc', iconSrc: orbitalDrone1ImgSrc, maxLevel: 1, cost: [75000] },
+            { id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc', iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000] },
+            { id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc', iconSrc: powerupShieldSrc, cost: [400], applyEffect: (game) => { game.player?.powerUpManager.activate('SHIELD'); } },
+            { id: 'consume_nuke', type: 'CONSUMABLE', nameKey: 'shop_consume_nuke_name', descKey: 'shop_consume_nuke_desc', iconSrc: powerupNukeSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('NUKE'); } },
+            { id: 'consume_extralife', type: 'CONSUMABLE', nameKey: 'shop_consume_extralife_name', descKey: 'shop_consume_extralife_desc', iconSrc: powerupExtraLifeSrc, cost: [2500], applyEffect: (game) => { if(game.player && game.player.lives < game.player.maxLives) game.player.lives++; } },
+            { id: 'consume_ghost', type: 'CONSUMABLE', nameKey: 'shop_consume_ghost_name', descKey: 'shop_consume_ghost_desc', iconSrc: powerupGhostProtocolSrc, cost: [1500], applyEffect: (game) => { game.player?.powerUpManager.activate('GHOST_PROTOCOL', 30000); } },
+            { id: 'consume_boss_slayer', type: 'CONSUMABLE', nameKey: 'shop_consume_boss_slayer_name', descKey: 'shop_consume_boss_slayer_desc', iconSrc: iconBossSlayerSrc, cost: [5000], applyEffect: (game) => { game.isBossSlayerActive = true; } },
+            { id: 'consume_black_hole', type: 'CONSUMABLE', nameKey: 'shop_consume_black_hole_name', descKey: 'shop_consume_black_hole_desc', iconSrc: powerupBlackHoleSrc, cost: [1200], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('BLACK_HOLE'); } },
+            { id: 'consume_score_boost', type: 'CONSUMABLE', nameKey: 'shop_consume_score_boost_name', descKey: 'shop_consume_score_boost_desc', iconSrc: powerupScoreBoostSrc, cost: [800], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('SCORE_BOOST'); } },
+            { id: 'consume_laser_beam', type: 'CONSUMABLE', nameKey: 'shop_consume_laser_beam_name', descKey: 'shop_consume_laser_beam_desc', iconSrc: powerupLaserBeamSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('LASER_BEAM'); } },
+            { id: 'consume_homing_missiles', type: 'CONSUMABLE', nameKey: 'shop_consume_homing_missiles_name', descKey: 'shop_consume_homing_missiles_desc', iconSrc: powerupHomingMissilesSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('HOMING_MISSILES'); } },
+            { id: 'consume_rapid_fire', type: 'CONSUMABLE', nameKey: 'shop_consume_rapid_fire_name', descKey: 'shop_consume_rapid_fire_desc', iconSrc: powerupRapidFireSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('RAPID_FIRE'); } },
+            { id: 'consume_side_shots', type: 'CONSUMABLE', nameKey: 'shop_consume_side_shots_name', descKey: 'shop_consume_side_shots_desc', iconSrc: powerupSideShotsSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('SIDE_SHOTS'); } },
+            { id: 'consume_orbital_drone', type: 'CONSUMABLE', nameKey: 'shop_consume_orbital_drone_name', descKey: 'shop_consume_orbital_drone_desc', iconSrc: powerupOrbitalDroneSrc, cost: [2000], applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); } },
+            { id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc', iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin' },
+            { id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc', iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin' },
+            { id: 'skin_avenger', type: 'SKIN', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc', iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin' },
+            { id: 'skin_void', type: 'SKIN', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc', iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin' },
+            { id: 'skin_gold', type: 'SKIN', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc', iconSrc: playerImgSrcGold, cost: [80000], cosmeticType: 'player_skin' },
+            { id: 'skin_marauder', type: 'SKIN', nameKey: 'shop_skin_marauder_name', descKey: 'shop_skin_marauder_desc', iconSrc: playerImgSrcMarauder, cost: [30000], cosmeticType: 'player_skin' },
+            { id: 'skin_paladin', type: 'SKIN', nameKey: 'shop_skin_paladin_name', descKey: 'shop_skin_paladin_desc', iconSrc: playerImgSrcPaladin, cost: [35000], cosmeticType: 'player_skin' },
+            { id: 'skin_spectre', type: 'SKIN', nameKey: 'shop_skin_spectre_name', descKey: 'shop_skin_spectre_desc', iconSrc: playerImgSrcSpectre, cost: [40000], cosmeticType: 'player_skin' },
+            { id: 'skin_goliath', type: 'SKIN', nameKey: 'shop_skin_goliath_name', descKey: 'shop_skin_goliath_desc', iconSrc: playerImgSrcGoliath, cost: [50000], cosmeticType: 'player_skin' },
+            { id: 'skin_juggernaut', type: 'SKIN', nameKey: 'shop_skin_juggernaut_name', descKey: 'shop_skin_juggernaut_desc', iconSrc: playerImgSrcJuggernaut, cost: [60000], cosmeticType: 'player_skin' },
+            { id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc', iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin' },
+            { id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc', iconSrc: powerUpImageSources['WEAPON_UP'], cost: [5000], cosmeticType: 'projectile_style' },
+            { id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc', iconSrc: powerupRapidFireSrc, cost: [7500], cosmeticType: 'projectile_style' },
+            { id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc', iconSrc: powerupBlackHoleSrc, cost: [7500], cosmeticType: 'projectile_style' },
+            { id: 'proj_rainbow', type: 'COSMETIC', nameKey: 'shop_proj_rainbow_name', descKey: 'shop_proj_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [15000], cosmeticType: 'projectile_style' },
+            { id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail' },
+            { id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000 },
+            { id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500 },
+            { id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc', iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000 },
+            { id: 'pi_bundle_4', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_4_name', descKey: 'shop_pi_bundle_4_desc', iconSrc: piCoin2ImgSrc, pi_cost: 5.0, coin_reward: 65000 },
+            { id: 'pi_bundle_5', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_5_name', descKey: 'shop_pi_bundle_5_desc', iconSrc: piCoin2ImgSrc, pi_cost: 10.0, coin_reward: 150000 },
         ];
     }
 
@@ -3789,10 +4023,15 @@ class UIManager {
     public createEnemyIcon(enemyType: string): string { const canvas = document.createElement('canvas'); canvas.width = 60; canvas.height = 40; const ctx = canvas.getContext('2d')!; const tempGame = { width: 60, height: 40, enemySpeedMultiplier: 1, level: 1, uiManager: { settings: { particles: 0 } } } as unknown as Game; let dummyEnemy: Enemy | null = null; switch(enemyType) { case 'GRUNT': dummyEnemy = new Grunt(tempGame); break; case 'WEAVER': dummyEnemy = new Weaver(tempGame); break; case 'TANK': dummyEnemy = new Tank(tempGame); break; case 'SHOOTER': dummyEnemy = new Shooter(tempGame); break; case 'TELEPORTER': dummyEnemy = new Teleporter(tempGame); break; case 'BOSS_SENTINEL_PRIME': dummyEnemy = new BossSentinelPrime(tempGame, 1, 1); break; case 'BOSS_VOID_SERPENT': dummyEnemy = new BossVoidSerpent(tempGame, 1, 1); break; case 'BOSS_OMEGA_NEXUS': dummyEnemy = new BossOmegaNexus(tempGame, 1, 1); break; case 'BOSS_NEXUS_PRIME': dummyEnemy = new BossNexusPrime(tempGame, 1, 1); break; } if (dummyEnemy) { dummyEnemy.width = 54; dummyEnemy.height = 36; dummyEnemy.pos = new Vector2D(canvas.width / 2 - dummyEnemy.width / 2, canvas.height / 2 - dummyEnemy.height / 2); dummyEnemy.draw(ctx); } return canvas.toDataURL(); }
     public populateArsenal(): void { const pL=[{c:"arsenal_cat_weapon_upgrade",n:"powerup_wup_name",d:'powerup_wup_desc',t:'WEAPON_UP'},{c:"arsenal_cat_weapon_mod",n:"powerup_rapid_fire_name",d:'powerup_rapid_fire_desc',t:'RAPID_FIRE'},{c:"arsenal_cat_weapon_mod",n:"powerup_side_shots_name",d:'powerup_side_shots_desc',t:'SIDE_SHOTS'},{c:"arsenal_cat_ultra_weapon",n:"powerup_laser_name",d:'powerup_laser_desc',t:'LASER_BEAM'},{c:"arsenal_cat_ultra_weapon",n:"powerup_homing_missiles_name",d:'powerup_homing_missiles_desc',t:'HOMING_MISSILES'},{c:"arsenal_cat_defense",n:"powerup_shield_name",d:'powerup_shield_desc',t:'SHIELD'},{c:"arsenal_cat_defense",n:"powerup_repair_kit_name",d:'powerup_repair_kit_desc',t:'REPAIR_KIT'},{c:"arsenal_cat_defense",n:"powerup_extra_life_name",d:'powerup_extra_life_desc',t:'EXTRA_LIFE'},{c:"arsenal_cat_defense",n:"powerup_ghost_protocol_name",d:'powerup_ghost_protocol_desc',t:'GHOST_PROTOCOL'},{c:"arsenal_cat_defense",n:"powerup_orbital_drone_name",d:'powerup_orbital_drone_desc',t:'ORBITAL_DRONE'},{c:"arsenal_cat_special",n:"powerup_nuke_name",d:'powerup_nuke_desc',t:'NUKE'},{c:"arsenal_cat_special",n:"powerup_black_hole_name",d:'powerup_black_hole_desc',t:'BLACK_HOLE'},{c:"arsenal_cat_special",n:"powerup_score_boost_name",d:'powerup_score_boost_desc',t:'SCORE_BOOST'}]; const lE=document.getElementById('arsenal-list')!;lE.innerHTML='';let cC='';pL.forEach(p=>{const cN=this.localizationManager.translate(p.c);if(cN!==cC){cC=cN;lE.innerHTML+=`<h3>- ${cC} -</h3>`;} const iS=powerUpImageSources[p.t];lE.innerHTML+=`<div class="powerup-entry"><img src="${iS}" class="arsenal-icon" alt="${p.n}"/><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.n)}</div><div class="powerup-desc">${this.localizationManager.translate(p.d)}</div></div></div>`;}); }
     
-    public populateGalerie(): void {
+        public populateGalerie(): void {
         const t = (key: string) => this.localizationManager.translate(key);
         const galleryEl = document.getElementById('galerie-list')!;
         galleryEl.innerHTML = '';
+    
+        // --- Sektion: Spieler-Skins ---
+        const skinsHeader = document.createElement('h3');
+        skinsHeader.textContent = `- ${t('gallery_skins_header')} -`;
+        galleryEl.appendChild(skinsHeader);
 
         const allSkins = [
             { id: 'skin_default', nameKey: 'shop_skin_default_name', imageSrc: playerImgSrc1 },
@@ -3808,19 +4047,13 @@ class UIManager {
             { id: 'skin_juggernaut', nameKey: 'shop_skin_juggernaut_name', imageSrc: playerImgSrcJuggernaut },
             { id: 'skin_leviathan', nameKey: 'shop_skin_leviathan_name', imageSrc: playerImgSrcLeviathan },
         ];
-
         const equippedSkin = this.game.shopManager.playerCosmetics.equipped_skin;
-
         allSkins.forEach(skin => {
             const isUnlocked = this.game.shopManager.isCosmeticUnlocked(skin.id, 'player_skin');
-            
             const itemEl = document.createElement('div');
             itemEl.className = 'gallery-item';
-
             if (isUnlocked) {
-                if (skin.id === equippedSkin) {
-                    itemEl.classList.add('selected');
-                }
+                if (skin.id === equippedSkin) itemEl.classList.add('selected');
                 itemEl.addEventListener('click', () => {
                     this.game.shopManager.equipCosmetic(skin.id, 'player_skin');
                     this.populateGalerie();
@@ -3829,11 +4062,66 @@ class UIManager {
             } else {
                 itemEl.classList.add('locked');
             }
+            itemEl.innerHTML = `<img src="${skin.imageSrc}" alt="${t(skin.nameKey)}"><div class="gallery-item-name">${t(skin.nameKey)}</div>`;
+            galleryEl.appendChild(itemEl);
+        });
+    
+        // --- Sektion: Projektilstile ---
+        const projectilesHeader = document.createElement('h3');
+        projectilesHeader.textContent = `- ${t('gallery_projectiles_header')} -`;
+        galleryEl.appendChild(projectilesHeader);
 
-            itemEl.innerHTML = `
-                <img src="${skin.imageSrc}" alt="${t(skin.nameKey)}">
-                <div class="gallery-item-name">${t(skin.nameKey)}</div>
-            `;
+        const allProjectiles = [
+            { id: 'default', nameKey: 'proj_default_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
+            { id: 'proj_green', nameKey: 'shop_proj_green_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
+            { id: 'proj_fireball', nameKey: 'shop_proj_fireball_name', imageSrc: powerupRapidFireSrc },
+            { id: 'proj_purple', nameKey: 'shop_proj_purple_name', imageSrc: powerupBlackHoleSrc },
+            { id: 'proj_rainbow', nameKey: 'shop_proj_rainbow_name', imageSrc: iconTrailRainbowSrc },
+        ];
+        const equippedProjectile = this.game.shopManager.playerCosmetics.equipped_projectile;
+        allProjectiles.forEach(proj => {
+            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(proj.id, 'projectile_style');
+            const itemEl = document.createElement('div');
+            itemEl.className = 'gallery-item projectile-item';
+            if (isUnlocked) {
+                if (proj.id === equippedProjectile) itemEl.classList.add('selected');
+                itemEl.addEventListener('click', () => {
+                    this.game.shopManager.equipCosmetic(proj.id, 'projectile_style');
+                    this.populateGalerie();
+                    this.soundManager.play('uiClick');
+                });
+            } else {
+                itemEl.classList.add('locked');
+            }
+            itemEl.innerHTML = `<div class="gallery-projectile-preview"><img src="${proj.imageSrc}" alt="${t(proj.nameKey)}"></div><div class="gallery-item-name">${t(proj.nameKey)}</div>`;
+            galleryEl.appendChild(itemEl);
+        });
+
+        // --- NEUE SEKTION: Triebwerksspuren (Engine Trails) ---
+        const trailsHeader = document.createElement('h3');
+        trailsHeader.textContent = `- ${t('gallery_trails_header')} -`;
+        galleryEl.appendChild(trailsHeader);
+
+        const allTrails = [
+            { id: 'default', nameKey: 'trail_default_name', imageSrc: playerImgSrc1 }, // Using default ship as icon
+            { id: 'trail_rainbow', nameKey: 'shop_trail_rainbow_name', imageSrc: iconTrailRainbowSrc },
+        ];
+        const equippedTrail = this.game.shopManager.playerCosmetics.equipped_trail;
+        allTrails.forEach(trail => {
+            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(trail.id, 'engine_trail');
+            const itemEl = document.createElement('div');
+            itemEl.className = 'gallery-item trail-item';
+            if (isUnlocked) {
+                if (trail.id === equippedTrail) itemEl.classList.add('selected');
+                itemEl.addEventListener('click', () => {
+                    this.game.shopManager.equipCosmetic(trail.id, 'engine_trail');
+                    this.populateGalerie();
+                    this.soundManager.play('uiClick');
+                });
+            } else {
+                itemEl.classList.add('locked');
+            }
+            itemEl.innerHTML = `<div class="gallery-trail-preview"><img src="${trail.imageSrc}" alt="${t(trail.nameKey)}"></div><div class="gallery-item-name">${t(trail.nameKey)}</div>`;
             galleryEl.appendChild(itemEl);
         });
     }
@@ -3946,7 +4234,7 @@ class UIManager {
         const ctx = this.ctx; 
         ctx.fillStyle = 'rgba(0,0,0,0.7)';         ctx.fillRect(0, 0, this.game.width, this.game.height); 
     }
-    public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory_title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
+    public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
     public drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
@@ -4007,6 +4295,7 @@ const LEVELS: ILevelDefinition[] = [
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     public phoenixCoreUI: PhoenixCoreUI;
+    public isBossSlayerActive: boolean = false;
     
     public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN';
     
@@ -4031,7 +4320,6 @@ class Game {
 
     private introAnimationTimer: number = 0;
 
-    // NEUER Code-Block zum Einfügen
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -4040,35 +4328,19 @@ class Game {
     this.container = document.getElementById('gameContainer')!;
     this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // =========================================================================
-    // START DER NEUEN, ROBUSTEREN LOGIK FÜR DIE BILDSCHIRMGRÖSSE
-    // =========================================================================
     const handleResize = () => {
-        // Die zuverlässigste Methode ist, die Höhe direkt vom visualViewport zu nehmen.
-        // Dieser misst den TATSÄCHLICH sichtbaren Bereich, ohne Browser-Leisten.
         const newHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-        // Wir setzen die Höhe des Haupt-Containers DIREKT in Pixeln.
-        // Das ist viel zuverlässiger als mit CSS-Variablen.
         this.container.style.height = `${newHeight}px`;
-
-        // Nachdem der Container die richtige Größe hat, passen wir das Canvas darin an.
         this.resizeGame();
     };
 
-    // Führe die Funktion einmal beim Start aus, um die korrekte Größe zu setzen.
     handleResize();
 
-    // Reagiere auf Änderungen. Der 'resize' des visualViewport ist für mobile Browser entscheidend.
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', handleResize);
     } else {
-        // Fallback für Desktop und ältere Browser
         window.addEventListener('resize', handleResize);
     }
-    // =========================================================================
-    // ENDE DER NEUEN LOGIK
-    // =========================================================================
 
     this.shopManager = new ShopManager(this);
     this.uiManager = new UIManager(this, ui);
@@ -4099,7 +4371,7 @@ class Game {
         const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     
         this.width = screenWidth;
-        this.height = screenHeight - 90; // 90px für die beiden UI-Leisten oben
+        this.height = screenHeight - 90;
     
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -4387,6 +4659,7 @@ class Game {
                     this.level = 1;
                     this.score = 0;
                     this.entities = [];
+                    this.isBossSlayerActive = false;
                     const initialStats = this.shopManager.getInitialPlayerStats();
                     this.player = new Player(this, initialStats);
                     this.addEntity(this.player);
@@ -4985,7 +5258,7 @@ class Game {
     isColliding(a: Entity, b: Entity): boolean { return a.pos.x < b.pos.x + b.width && a.pos.x + a.width > b.pos.x && a.pos.y < b.pos.y + b.height && a.pos.y + a.height > b.pos.y; }
     addEntity(entity: Entity): void { this.entities.push(entity); }
     cleanupEntities(): void { this.entities = this.entities.filter(e => e.isAlive()); }
-    handleCollisions(): void { const projectiles = this.entities.filter(e => e.family === 'projectile'); const enemies = this.entities.filter(e => e.family === 'enemy') as Enemy[]; const player = this.player; if (!player || !player.isAlive()) return; if (player.laser && player.laser.isAlive()) { for (const enemy of enemies) { if (!player.laser) break; if (this.isColliding(player.laser, enemy)) { enemy.takeHit(player.laser.damage); if (this.uiManager.settings.particles > 0 && player.laser) this.addEntity(new Particle(this, player.laser.pos.x + player.laser.width / 2, enemy.pos.y, '#FF8C00')); } } } projectiles.forEach(p => { if (p instanceof Projectile && p.type !== 'ENEMY_PROJECTILE') { for (const e of enemies) { if (p.isAlive() && e.isAlive() && this.isColliding(p, e)) { if (p instanceof PiercingProjectile) { if (!p.hasHit(e)) { p.onHit(e); e.takeHit(p.damage); } continue; } p.onHit(e); if (!(p instanceof BlackHoleProjectile)) e.takeHit(p.damage); break; } } } }); const pickups = this.entities.filter(e => e.family === 'pickup'); pickups.forEach(p => { if (p.isAlive() && this.isColliding(player, p)) { (p as PowerUp | Coin).onCollect(); } }); if (!player.isGhosted()) { enemies.forEach(e => { if (e.isAlive() && this.isColliding(player, e)) { e.takeHit(e.isBoss ? 10 : 999); player.takeHit(e.collisionDamage); } }); this.entities.filter(e => e.type === 'ENEMY_PROJECTILE').forEach(p => { const proj = p as EnemyProjectile; if (proj.isAlive() && this.isColliding(player, proj)) { proj.destroy(); player.takeHit(proj.playerDamage); } }); } }
+    handleCollisions(): void { const projectiles = this.entities.filter(e => e.family === 'projectile'); const enemies = this.entities.filter(e => e.family === 'enemy') as Enemy[]; const player = this.player; if (!player || !player.isAlive()) return; if (player.laser && player.laser.isAlive()) { for (const enemy of enemies) { if (!player.laser) break; if (this.isColliding(player.laser, enemy)) { let damage = player.laser.damage; if (this.isBossSlayerActive && enemy.isBoss) damage *= 1.5; enemy.takeHit(damage); if (this.uiManager.settings.particles > 0 && player.laser) this.addEntity(new Particle(this, player.laser.pos.x + player.laser.width / 2, enemy.pos.y, '#FF8C00')); } } } projectiles.forEach(p => { if (p instanceof Projectile && p.type !== 'ENEMY_PROJECTILE') { for (const e of enemies) { if (p.isAlive() && e.isAlive() && this.isColliding(p, e)) { if (p instanceof PiercingProjectile) { if (!p.hasHit(e)) { p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; e.takeHit(damage); } continue; } p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; if (!(p instanceof BlackHoleProjectile)) e.takeHit(damage); break; } } } }); const pickups = this.entities.filter(e => e.family === 'pickup'); pickups.forEach(p => { if (p.isAlive() && this.isColliding(player, p)) { (p as PowerUp | Coin).onCollect(); } }); if (!player.isGhosted()) { enemies.forEach(e => { if (e.isAlive() && this.isColliding(player, e)) { e.takeHit(e.isBoss ? 10 : 999); player.takeHit(e.collisionDamage); } }); this.entities.filter(e => e.type === 'ENEMY_PROJECTILE').forEach(p => { const proj = p as EnemyProjectile; if (proj.isAlive() && this.isColliding(player, proj)) { proj.destroy(); player.takeHit(proj.playerDamage); } }); } }
 }
 
 // --- SECTION 8: INITIALISIERUNG ---
