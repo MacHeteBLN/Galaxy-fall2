@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -173,6 +172,7 @@
 
     <!-- ÜBERARBEITETER SHOP-CONTAINER -->
     <div id="shop-container" style="display: none;">
+        <!-- Das innere Menü, das den scrollbaren Inhalt enthält -->
         <div class="shop-menu">
             <!-- Header mit Titel, Münzen und Pi-Anzeige -->
             <div class="shop-header">
@@ -199,10 +199,10 @@
             <div id="shop-content" class="menu-content">
                 <!-- Die Inhalte werden hier dynamisch per JavaScript eingefügt -->
             </div>
-
-            <!-- Zurück-Button am unteren Rand -->
-            <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
         </div>
+
+        <!-- DER "ZURÜCK"-BUTTON IST JETZT HIER, AUSSERHALB DES SCROLL-BEREICHS -->
+        <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
     </div>
 
     <!-- Container für den "Goodbye"-Bildschirm (nur für Mobilgeräte) -->

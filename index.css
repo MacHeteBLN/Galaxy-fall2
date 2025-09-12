@@ -1,4 +1,3 @@
-
 :root {
     --cyan-glow: #0ff;
     --purple-glow: #B10DC9;
@@ -32,7 +31,7 @@ body {
     height: 100svh;
     position: relative;
     background: var(--bg-color);
-    overflow: hidden;
+    /* overflow: hidden;  <-- WICHTIG: DIESE ZEILE WURDE ENTFERNT, UM DEN SAFARI-FIX ZU ERLAUBEN */
 }
 
 canvas {
@@ -118,19 +117,20 @@ canvas {
     border-radius: 1px;
 }
 
+/* KORREKTUR FÜR DAS INVENTAR */
 #bottom-ui-container {
     position: absolute;
-    bottom: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
     left: 10px;
     display: flex;
     gap: 20px;
     z-index: 10;
     align-items: flex-end;
-    padding-bottom: env(safe-area-inset-bottom);
 }
 
+
 #level-display-container {
-   display: none; /* Wird nicht mehr angezeigt */
+   display: none;
 }
 
 #special-inventory,
@@ -187,7 +187,7 @@ canvas {
 
 #weapon-status {
     position: absolute;
-    bottom: 80px; /* Position über dem Inventar */
+    bottom: calc(80px + env(safe-area-inset-bottom));
     left: 10px;
     z-index: 10;
     font-size: 12px;
@@ -197,7 +197,7 @@ canvas {
     border: 2px solid var(--cyan-glow);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-    display: none; /* Standardmäßig ausblenden, JS blendet es ein */
+    display: none;
 }
 
 #mobile-pause-button {
@@ -211,10 +211,10 @@ canvas {
 /* --- MENÜ & OVERLAYS --- */
 #menu-container {
     position: absolute;
-    top: 90px; /* Angepasst an die Höhe der UI-Leisten */
+    top: 90px;
     left: 0;
     width: 100%;
-    height: calc(100% - 90px); /* Angepasst */
+    height: calc(100% - 90px);
     background: var(--menu-bg);
     z-index: 20;
     display: none;
@@ -404,7 +404,6 @@ canvas {
     animation: final-boss-glow 1.5s ease-in-out infinite;
 }
 
-/* NEU: GALERIE-STYLING */
 #galerie-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -452,7 +451,6 @@ canvas {
     text-align: center;
     color: var(--text-color);
 }
-
 
 #language-select-screen {
     position: absolute;
@@ -503,7 +501,6 @@ canvas {
     display: none;
 }
 
-/* --- GAME OVER BILDSCHIRM --- */
 #game-over-container {
     position: absolute;
     top: 0;
@@ -536,7 +533,6 @@ canvas {
     text-shadow: none;
 }
 
-/* --- GOODBYE-BILDSCHIRM (für Mobilgeräte) --- */
 #exit-screen {
     position: absolute;
     top: 0;
@@ -566,9 +562,6 @@ canvas {
     font-size: clamp(14px, 4vw, 18px);
 }
 
-/*
- NEUER CSS-ABSCHNITT FÜR DIE MODUS-AUSWAHL
-*/
 #mode-select-container {
     position: absolute;
     top: 0;
@@ -594,7 +587,7 @@ canvas {
 }
 
 /* =================================== */
-/*        SHOP-STYLING                 */
+/*        SHOP-STYLING (FINAL)         */
 /* =================================== */
 
 #shop-container {
@@ -608,7 +601,7 @@ canvas {
     display: none;
     justify-content: center;
     align-items: flex-start;
-    padding: 20px 0 0 0; /* Oben Padding, unten nichts mehr */
+    padding: 20px 0 0 0;
     box-sizing: border-box;
 }
 
@@ -619,7 +612,6 @@ canvas {
     max-width: 950px;
     height: 100%;
     overflow: hidden;
-    position: relative; /* Wichtig für die Positionierung des Headers */
 }
 
 #shop-container .shop-header {
@@ -628,6 +620,15 @@ canvas {
     position: relative;
     flex-shrink: 0;
     margin-bottom: 10px;
+}
+
+#shop-container > #shop-back-button {
+    position: absolute;
+    z-index: 25;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(15px + env(safe-area-inset-bottom));
+    margin: 0;
 }
 
 #shop-container .menu-tabs {
@@ -666,35 +667,147 @@ canvas {
     -webkit-overflow-scrolling: touch;
     border: 1px solid var(--border-color);
     border-top: none;
-    /* SICHERHEITSABSTAND, DAMIT DER INHALT NICHT HINTER DEN BUTTON SCROLLT */
-    padding-bottom: 120px; 
+    padding-bottom: 120px;
 }
 
-/* 
-   ************************************************************************
-   *** DER ENTSCHEIDENDE FIX FÜR DEN "ZURÜCK"-BUTTON IST HIER UNTEN ***
-   ************************************************************************
-*/
-#shop-container .menu-button#shop-back-button {
-    position: fixed; /* Fixiert den Button am Bildschirm, unabhängig vom Scrollen */
-    z-index: 25;     /* Stellt sicher, dass er über dem Inhalt liegt */
-    
-    /* Positioniert ihn unten zentriert */
-    left: 50%;
-    transform: translateX(-50%);
-    
-    /* Sorgt für den korrekten Abstand zur Safari-Leiste */
-    bottom: 20px; /* Standardabstand */
-    bottom: calc(20px + env(safe-area-inset-bottom)); 
-    
-    /* Stellt sicher, dass alte Margin-Werte weg sind */
-    margin: 0; 
+.shop-tab-pane {
+    display: none;
 }
 
-/* =================================== */
-/*        PI-STYLING                   */
-/* =================================== */
+.shop-tab-pane.active {
+    display: block;
+}
 
+.shop-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 200px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #444;
+    padding: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+    gap: 20px;
+    transition: border-color 0.3s, background-color 0.3s;
+}
+
+.shop-item:hover {
+    border-color: var(--cyan-glow);
+    background-color: rgba(0, 50, 70, 0.3);
+}
+
+.shop-item-icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+    padding: 5px;
+    border-radius: 5px;
+    border: 2px solid #555;
+}
+
+.shop-item-details {
+    text-align: left;
+}
+
+.shop-item-title {
+    font-size: 16px;
+    color: var(--text-color);
+    margin: 0 0 8px 0;
+}
+
+.shop-item-desc {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.shop-item-level-container {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--cyan-glow);
+}
+
+.shop-item-level-progress {
+    width: 100%;
+    height: 8px;
+    background-color: #222;
+    border: 1px solid #555;
+    margin-top: 4px;
+}
+
+.shop-item-level-bar {
+    height: 100%;
+    background-color: var(--cyan-glow);
+    width: 0%;
+    transition: width 0.3s ease-in-out;
+}
+
+.shop-item-purchase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.shop-buy-button {
+    background: none;
+    border: 2px solid #2ECC40;
+    color: #2ECC40;
+    padding: 12px 20px;
+    font-family: var(--main-font);
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.shop-buy-button.cosmetic-equip-button {
+    border-color: #11aaff;
+    color: #11aaff;
+}
+.shop-buy-button.cosmetic-equip-button:hover:not(:disabled) {
+    background: #11aaff;
+}
+.shop-buy-button.cosmetic-equip-button.equipped {
+    background: #11aaff;
+    color: #000;
+    border-color: #55ffff;
+}
+
+.shop-buy-button:hover:not(:disabled) {
+    background: #2ECC40;
+    color: var(--bg-color);
+}
+
+.shop-buy-button:disabled {
+    border-color: #555;
+    color: #555;
+    cursor: not-allowed;
+}
+
+.shop-buy-button.maxed {
+    border-color: #FFD700;
+    color: #FFD700;
+    background: rgba(255, 215, 0, 0.1);
+    cursor: default;
+}
+
+.shop-buy-button .shop-item-cost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.shop-item-cost img {
+    width: 16px;
+    height: 16px;
+}
+
+/* PI-STYLING */
 #pi-user-display {
     font-size: 12px;
     color: var(--pi-yellow);
@@ -749,17 +862,13 @@ canvas {
     border-color: var(--pi-yellow);
 }
 
-
 .shop-item-cost .pi-symbol {
     font-family: sans-serif;
     font-weight: bold;
     color: var(--pi-yellow);
 }
 
-/* =================================== */
-/*        RANGLISTEN-STYLING           */
-/* =================================== */
-
+/* RANGLISTEN-STYLING */
 #leaderboard-content {
     color: var(--text-color);
     font-size: 12px;
@@ -774,7 +883,7 @@ canvas {
 }
 
 .leaderboard-error {
-    color: #FF4136; /* Rot für Fehlermeldungen */
+    color: #FF4136;
 }
 
 .leaderboard-controls {
@@ -836,9 +945,9 @@ canvas {
     font-weight: bold;
 }
 
-.leaderboard-row:nth-child(1) .rank { color: #FFD700; } /* Gold */
-.leaderboard-row:nth-child(2) .rank { color: #C0C0C0; } /* Silber */
-.leaderboard-row:nth-child(3) .rank { color: #CD7F32; } /* Bronze */
+.leaderboard-row:nth-child(1) .rank { color: #FFD700; }
+.leaderboard-row:nth-child(2) .rank { color: #C0C0C0; }
+.leaderboard-row:nth-child(3) .rank { color: #CD7F32; }
 
 .leaderboard-row .username {
     font-weight: bold;
@@ -852,7 +961,6 @@ canvas {
     text-align: right;
     color: #aaa;
 }
-
 
 /* --- ANIMATIONEN & HELFER --- */
 .timer-warning {
@@ -874,7 +982,6 @@ canvas {
     50% { box-shadow: 0 0 25px var(--pi-yellow); }
     100% { box-shadow: 0 0 15px var(--pi-purple); }
 }
-
 
 /* --- MEDIA QUERIES --- */
 @media (max-width: 800px) {
@@ -926,10 +1033,8 @@ canvas {
         font-size: 14px;
         padding: 8px 15px;
     }
-
-    /* Shop-Anpassungen für Mobile */
     .shop-item {
-        grid-template-columns: 1fr; /* Alles untereinander */
+        grid-template-columns: 1fr;
         text-align: center;
     }
     .shop-item-icon {
@@ -946,8 +1051,6 @@ canvas {
         margin: 10px auto;
         width: fit-content;
     }
-    
-    /* Ranglisten-Anpassungen für Mobile */
     .leaderboard-header, .leaderboard-row {
         grid-template-columns: 40px 1fr 80px 60px;
         font-size: 10px;
@@ -957,7 +1060,6 @@ canvas {
         font-size: 11px;
     }
 }
-
 
 @media (hover: none) and (pointer: coarse) {
     #mobile-pause-button {
