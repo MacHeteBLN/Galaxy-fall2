@@ -1,3 +1,4 @@
+
 :root {
     --cyan-glow: #0ff;
     --purple-glow: #B10DC9;
@@ -28,10 +29,10 @@ body {
 /* --- SPIEL-CONTAINER & CANVAS --- */
 #gameContainer {
     width: 100vw;
-    height: 100svh;
+    height: 100vh;
     position: relative;
     background: var(--bg-color);
-    /* overflow: hidden;  <-- WICHTIG: DIESE ZEILE WURDE ENTFERNT, UM DEN SAFARI-FIX ZU ERLAUBEN */
+    overflow: hidden;
 }
 
 canvas {
@@ -117,10 +118,9 @@ canvas {
     border-radius: 1px;
 }
 
-/* KORREKTUR FÜR DAS INVENTAR */
 #bottom-ui-container {
     position: absolute;
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    bottom: 10px;
     left: 10px;
     display: flex;
     gap: 20px;
@@ -128,9 +128,8 @@ canvas {
     align-items: flex-end;
 }
 
-
 #level-display-container {
-   display: none;
+   display: none; /* Wird nicht mehr angezeigt */
 }
 
 #special-inventory,
@@ -187,7 +186,7 @@ canvas {
 
 #weapon-status {
     position: absolute;
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    bottom: 80px; /* Position über dem Inventar */
     left: 10px;
     z-index: 10;
     font-size: 12px;
@@ -197,7 +196,7 @@ canvas {
     border: 2px solid var(--cyan-glow);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-    display: none;
+    display: none; /* Standardmäßig ausblenden, JS blendet es ein */
 }
 
 #mobile-pause-button {
@@ -211,10 +210,10 @@ canvas {
 /* --- MENÜ & OVERLAYS --- */
 #menu-container {
     position: absolute;
-    top: 90px;
+    top: 90px; /* Angepasst an die Höhe der UI-Leisten */
     left: 0;
     width: 100%;
-    height: calc(100% - 90px);
+    height: calc(100% - 90px); /* Angepasst */
     background: var(--menu-bg);
     z-index: 20;
     display: none;
@@ -404,6 +403,7 @@ canvas {
     animation: final-boss-glow 1.5s ease-in-out infinite;
 }
 
+/* NEU: GALERIE-STYLING */
 #galerie-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -451,6 +451,7 @@ canvas {
     text-align: center;
     color: var(--text-color);
 }
+
 
 #language-select-screen {
     position: absolute;
@@ -501,6 +502,7 @@ canvas {
     display: none;
 }
 
+/* --- GAME OVER BILDSCHIRM --- */
 #game-over-container {
     position: absolute;
     top: 0;
@@ -533,6 +535,7 @@ canvas {
     text-shadow: none;
 }
 
+/* --- GOODBYE-BILDSCHIRM (für Mobilgeräte) --- */
 #exit-screen {
     position: absolute;
     top: 0;
@@ -562,6 +565,9 @@ canvas {
     font-size: clamp(14px, 4vw, 18px);
 }
 
+/*
+ NEUER CSS-ABSCHNITT FÜR DIE MODUS-AUSWAHL
+*/
 #mode-select-container {
     position: absolute;
     top: 0;
@@ -587,7 +593,7 @@ canvas {
 }
 
 /* =================================== */
-/*        SHOP-STYLING (FINAL)         */
+/*        SHOP-STYLING                 */
 /* =================================== */
 
 #shop-container {
@@ -601,7 +607,7 @@ canvas {
     display: none;
     justify-content: center;
     align-items: flex-start;
-    padding: 20px 0 0 0;
+    padding: 20px 0;
     box-sizing: border-box;
 }
 
@@ -609,7 +615,7 @@ canvas {
     display: flex;
     flex-direction: column;
     width: 90%;
-    max-width: 950px;
+    max-width: 950px; /* Mehr Platz für Details */
     height: 100%;
     overflow: hidden;
 }
@@ -620,15 +626,6 @@ canvas {
     position: relative;
     flex-shrink: 0;
     margin-bottom: 10px;
-}
-
-#shop-container > #shop-back-button {
-    position: absolute;
-    z-index: 25;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(15px + env(safe-area-inset-bottom));
-    margin: 0;
 }
 
 #shop-container .menu-tabs {
@@ -667,7 +664,6 @@ canvas {
     -webkit-overflow-scrolling: touch;
     border: 1px solid var(--border-color);
     border-top: none;
-    padding-bottom: 120px;
 }
 
 .shop-tab-pane {
@@ -680,7 +676,7 @@ canvas {
 
 .shop-item {
     display: grid;
-    grid-template-columns: 80px 1fr 200px;
+    grid-template-columns: 80px 1fr 200px; /* Icon | Details | Kaufen */
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid #444;
     padding: 15px;
@@ -777,6 +773,7 @@ canvas {
     border-color: #55ffff;
 }
 
+
 .shop-buy-button:hover:not(:disabled) {
     background: #2ECC40;
     color: var(--bg-color);
@@ -807,7 +804,16 @@ canvas {
     height: 16px;
 }
 
-/* PI-STYLING */
+#shop-container .menu-button#shop-back-button {
+    flex-shrink: 0;
+    align-self: center;
+    margin-top: 15px;
+}
+
+/* =================================== */
+/*        PI-STYLING                   */
+/* =================================== */
+
 #pi-user-display {
     font-size: 12px;
     color: var(--pi-yellow);
@@ -862,13 +868,17 @@ canvas {
     border-color: var(--pi-yellow);
 }
 
+
 .shop-item-cost .pi-symbol {
     font-family: sans-serif;
     font-weight: bold;
     color: var(--pi-yellow);
 }
 
-/* RANGLISTEN-STYLING */
+/* =================================== */
+/*        RANGLISTEN-STYLING           */
+/* =================================== */
+
 #leaderboard-content {
     color: var(--text-color);
     font-size: 12px;
@@ -883,7 +893,7 @@ canvas {
 }
 
 .leaderboard-error {
-    color: #FF4136;
+    color: #FF4136; /* Rot für Fehlermeldungen */
 }
 
 .leaderboard-controls {
@@ -945,9 +955,9 @@ canvas {
     font-weight: bold;
 }
 
-.leaderboard-row:nth-child(1) .rank { color: #FFD700; }
-.leaderboard-row:nth-child(2) .rank { color: #C0C0C0; }
-.leaderboard-row:nth-child(3) .rank { color: #CD7F32; }
+.leaderboard-row:nth-child(1) .rank { color: #FFD700; } /* Gold */
+.leaderboard-row:nth-child(2) .rank { color: #C0C0C0; } /* Silber */
+.leaderboard-row:nth-child(3) .rank { color: #CD7F32; } /* Bronze */
 
 .leaderboard-row .username {
     font-weight: bold;
@@ -961,6 +971,7 @@ canvas {
     text-align: right;
     color: #aaa;
 }
+
 
 /* --- ANIMATIONEN & HELFER --- */
 .timer-warning {
@@ -982,6 +993,7 @@ canvas {
     50% { box-shadow: 0 0 25px var(--pi-yellow); }
     100% { box-shadow: 0 0 15px var(--pi-purple); }
 }
+
 
 /* --- MEDIA QUERIES --- */
 @media (max-width: 800px) {
@@ -1033,8 +1045,10 @@ canvas {
         font-size: 14px;
         padding: 8px 15px;
     }
+
+    /* Shop-Anpassungen für Mobile */
     .shop-item {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Alles untereinander */
         text-align: center;
     }
     .shop-item-icon {
@@ -1051,6 +1065,8 @@ canvas {
         margin: 10px auto;
         width: fit-content;
     }
+    
+    /* Ranglisten-Anpassungen für Mobile */
     .leaderboard-header, .leaderboard-row {
         grid-template-columns: 40px 1fr 80px 60px;
         font-size: 10px;
@@ -1060,6 +1076,7 @@ canvas {
         font-size: 11px;
     }
 }
+
 
 @media (hover: none) and (pointer: coarse) {
     #mobile-pause-button {
