@@ -4048,7 +4048,11 @@ class Game {
         this.initEventListeners(); 
         this.createParallaxStarfield(); 
         this.uiManager.populateAllTranslatedContent();
-        this.resizeGame(); 
+        
+        // Führen Sie die Größenanpassung direkt beim Start aus.
+        this.updateContainerSize(); 
+        this.resizeGame();
+
         if (localStorage.getItem('galaxyFallLanguage')) {
             this.changeState('INTRO');
         } else {
@@ -4056,40 +4060,18 @@ class Game {
         }
     }
 
-    public saveGameData(): void {
-        localStorage.setItem('galaxyFallSave', JSON.stringify({
-            coins: this.coins,
-            highscore: this.highscore
-        }));
-    }
-
-    public loadGameData(): void {
-        const saved = localStorage.getItem('galaxyFallSave');
-        if (saved) {
-            const data = JSON.parse(saved);
-            this.coins = data.coins || 0;
-            this.highscore = data.highscore || 0;
-        }
-    }
-    
-    public awardPiCoinBundle(bundle: IShopItem) {
-        if (bundle.coin_reward) {
-            this.coins += bundle.coin_reward;
-            this.saveGameData();
-            this.uiManager.renderShop();
+    public updateContainerSize(): void {
+        if (window.visualViewport) {
+            this.container.style.height = `${window.visualViewport.height}px`;
         }
     }
 
-    resizeGame(): void {
+    public resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     
-        this.container.style.transform = '';
-        this.container.style.left = '';
-        this.container.style.top = '';
-    
         this.width = screenWidth;
-        this.height = screenHeight - 90;
+        this.height = screenHeight - 90; // 90px für die beiden UI-Leisten oben
     
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -4098,7 +4080,16 @@ class Game {
     }
     
     initEventListeners(): void {
-        window.addEventListener('resize', () => this.resizeGame());
+        const resizeHandler = () => {
+            this.updateContainerSize();
+            this.resizeGame();
+        };
+
+        window.addEventListener('resize', resizeHandler);
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', resizeHandler);
+        }
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
@@ -4137,6 +4128,30 @@ class Game {
         }
     }
 
+    public saveGameData(): void {
+        localStorage.setItem('galaxyFallSave', JSON.stringify({
+            coins: this.coins,
+            highscore: this.highscore
+        }));
+    }
+
+    public loadGameData(): void {
+        const saved = localStorage.getItem('galaxyFallSave');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.coins = data.coins || 0;
+            this.highscore = data.highscore || 0;
+        }
+    }
+    
+    public awardPiCoinBundle(bundle: IShopItem) {
+        if (bundle.coin_reward) {
+            this.coins += bundle.coin_reward;
+            this.saveGameData();
+            this.uiManager.renderShop();
+        }
+    }
+    
     initMobileControls(): void {
         const specialInventoryEl = document.getElementById('special-inventory');
         const ultraInventoryEl = document.getElementById('ultra-inventory');
@@ -4341,42 +4356,29 @@ class Game {
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
 
                 if (isNewGame) {
-    this.level = 1;
-    this.score = 0;
-    this.entities = [];
-    const initialStats = this.shopManager.getInitialPlayerStats();
-    this.player = new Player(this, initialStats);
-    this.addEntity(this.player);
+                    this.level = 1;
+                    this.score = 0;
+                    this.entities = [];
+                    const initialStats = this.shopManager.getInitialPlayerStats();
+                    this.player = new Player(this, initialStats);
+                    this.addEntity(this.player);
 
-    // --- START DER KORRIGIERTEN LOGIK ---
-    const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge');
+                    const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge');
 
-    if (specialChargeLevel > 0) {
-        // 1. Erstelle eine veränderbare Kopie des Power-up-Pools.
-        const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
-
-        // 2. Führe die Schleife für jede Stufe des Upgrades aus.
-        for (let i = 0; i < specialChargeLevel; i++) {
-            // Stelle sicher, dass noch Power-ups im Pool sind.
-            if (availablePowerUps.length === 0) break;
-
-            // 3. Wähle einen zufälligen Index aus dem verbleibenden Pool.
-            const randomIndex = Math.floor(Math.random() * availablePowerUps.length);
-            const chosenPowerUp = availablePowerUps[randomIndex];
-
-            // 4. Gib dem Spieler das ausgewählte Power-up.
-            this.player.powerUpManager.collectSpecial(chosenPowerUp!);
-
-            // 5. Entferne das Power-up aus dem Pool, um Duplikate zu verhindern.
-            availablePowerUps.splice(randomIndex, 1);
-        }
-    }
-    // --- ENDE DER KORRIGIERTEN LOGIK ---
-
-} else {
-    this.level++;
-    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
-}
+                    if (specialChargeLevel > 0) {
+                        const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
+                        for (let i = 0; i < specialChargeLevel; i++) {
+                            if (availablePowerUps.length === 0) break;
+                            const randomIndex = Math.floor(Math.random() * availablePowerUps.length);
+                            const chosenPowerUp = availablePowerUps[randomIndex];
+                            this.player.powerUpManager.collectSpecial(chosenPowerUp!);
+                            availablePowerUps.splice(randomIndex, 1);
+                        }
+                    }
+                } else {
+                    this.level++;
+                    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
+                }
 
                 if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
                     this.changeState('WIN');
@@ -4524,72 +4526,60 @@ class Game {
         this.uiManager.update(); 
     }
     
-    // --- In der Klasse "Game" ---
+    draw(): void {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.drawParallaxStarfield();
 
-// ERSETZEN SIE NUR DIESE METHODE:
-draw(): void {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-    this.drawParallaxStarfield();
-
-    if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
-        
-        // --- FINALE, KORREKTE ZEICHENREIHENFOLGE ---
-
-        // 1. Zeichne alle Projektile. Sie sind jetzt auf der untersten Ebene.
-        this.entities.forEach(e => {
-            if (e.family === 'projectile') {
-                e.draw(this.ctx);
-            }
-        });
-
-        // 2. Zeichne alles, was weder Spieler, noch Effekt, noch Projektil ist (also Gegner, Münzen etc.).
-        this.entities.forEach(e => {
-            if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') {
-                e.draw(this.ctx);
-            }
-        });
+        if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
             
-        // 3. Zeichne den Spieler. Er liegt jetzt über seinen Schüssen und den Gegnern.
-        this.entities.forEach(e => {
-            if (e.family === 'player') {
-                e.draw(this.ctx);
-            }
-        });
+            this.entities.forEach(e => {
+                if (e.family === 'projectile') {
+                    e.draw(this.ctx);
+                }
+            });
 
-        // 4. Zeichne alle Effekte mit Leuchtmodus darüber.
-        // Der Triebwerks-Schweif wird hier gezeichnet und liegt somit über dem Spieler.
-        this.ctx.save();
-        this.ctx.globalCompositeOperation = 'lighter';
-        this.entities.forEach(e => {
-            if (e.family === 'effect') {
-                e.draw(this.ctx);
-            }
-        });
-        this.ctx.restore();
+            this.entities.forEach(e => {
+                if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') {
+                    e.draw(this.ctx);
+                }
+            });
+                
+            this.entities.forEach(e => {
+                if (e.family === 'player') {
+                    e.draw(this.ctx);
+                }
+            });
 
-        // 5. Zeichne UI-Elemente
-        this.phoenixCoreUI.draw(this.ctx);
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'lighter';
+            this.entities.forEach(e => {
+                if (e.family === 'effect') {
+                    e.draw(this.ctx);
+                }
+            });
+            this.ctx.restore();
+            
+            this.phoenixCoreUI.draw(this.ctx);
+        }
+        
+        this.uiManager.drawOverlay();
+
+        switch (this.gameState) {
+            case 'INTRO':
+            case 'MENU':
+                this.drawProfessionalIntro();
+                break;
+            case 'PLAYING_TRANSITION':
+                this.uiManager.drawLevelMessage();
+                break;
+            case 'GAME_OVER':
+                this.uiManager.drawGameOver();
+                break;
+            case 'WIN':
+                this.uiManager.drawWinScreen();
+                break;
+        }
     }
-    
-    // UI-Overlays und Menüs (unverändert)
-    this.uiManager.drawOverlay();
-
-    switch (this.gameState) {
-        case 'INTRO':
-        case 'MENU':
-            this.drawProfessionalIntro();
-            break;
-        case 'PLAYING_TRANSITION':
-            this.uiManager.drawLevelMessage();
-            break;
-        case 'GAME_OVER':
-            this.uiManager.drawGameOver();
-            break;
-        case 'WIN':
-            this.uiManager.drawWinScreen();
-            break;
-    }
-}
 
     private generateEndlessWave(waveNumber: number): ILevelDefinition {
         const t = (key: string) => this.uiManager.localizationManager.translate(key);
