@@ -607,7 +607,7 @@ canvas {
     z-index: 10;
     display: none;
     justify-content: center;
-    align-items: flex-end;
+    align-items: flex-start;
     padding: 20px 0;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
     box-sizing: border-box;
