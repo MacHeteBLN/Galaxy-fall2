@@ -4032,16 +4032,24 @@ class Game {
     private introAnimationTimer: number = 0;
 
     // NEUER Code-Block zum Einfügen
-constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
-    // NEU: Dieser Block behebt das Skalierungsproblem in mobilen Browsern wie Safari.
-    // Er berechnet die tatsächliche sichtbare Höhe und stellt sie als CSS-Variable bereit.
+    constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
+
     const setVisualViewportHeight = () => {
+    if (window.visualViewport) {
+        const vh = window.visualViewport.height * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    } else {
         const vh = window.innerHeight * 0.01;
         document.documentElement.style.setProperty('--vh', `${vh}px`);
+
+        }
     };
+
     setVisualViewportHeight();
+    if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setVisualViewportHeight);
+    }
     window.addEventListener('resize', setVisualViewportHeight);
-    // --- Ende des neuen Blocks ---
 
     this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
     this.width = this.baseWidth;
