@@ -4033,45 +4033,53 @@ class Game {
 
     // NEUER Code-Block zum Einfügen
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
-
-    const setVisualViewportHeight = () => {
-    if (window.visualViewport) {
-        const vh = window.visualViewport.height * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-    } else {
-        const vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-
-        }
-    };
-
-    setVisualViewportHeight();
-    if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', setVisualViewportHeight);
-    }
-    window.addEventListener('resize', setVisualViewportHeight);
-
-    this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d')!;
     this.width = this.baseWidth;
     this.height = this.baseHeight;
     this.container = document.getElementById('gameContainer')!;
     this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
+
+    // =========================================================================
+    // START DER NEUEN, ROBUSTEREN LOGIK FÜR DIE BILDSCHIRMGRÖSSE
+    // =========================================================================
+    const handleResize = () => {
+        // Die zuverlässigste Methode ist, die Höhe direkt vom visualViewport zu nehmen.
+        // Dieser misst den TATSÄCHLICH sichtbaren Bereich, ohne Browser-Leisten.
+        const newHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+        // Wir setzen die Höhe des Haupt-Containers DIREKT in Pixeln.
+        // Das ist viel zuverlässiger als mit CSS-Variablen.
+        this.container.style.height = `${newHeight}px`;
+
+        // Nachdem der Container die richtige Größe hat, passen wir das Canvas darin an.
+        this.resizeGame();
+    };
+
+    // Führe die Funktion einmal beim Start aus, um die korrekte Größe zu setzen.
+    handleResize();
+
+    // Reagiere auf Änderungen. Der 'resize' des visualViewport ist für mobile Browser entscheidend.
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+    } else {
+        // Fallback für Desktop und ältere Browser
+        window.addEventListener('resize', handleResize);
+    }
+    // =========================================================================
+    // ENDE DER NEUEN LOGIK
+    // =========================================================================
+
     this.shopManager = new ShopManager(this);
     this.uiManager = new UIManager(this, ui);
     this.piManager = new PiManager();
     this.piManager.setGame(this);
     this.phoenixCoreUI = new PhoenixCoreUI(this);
-    
+
     this.loadGameData();
-    
-    this.initEventListeners(); 
-    this.createParallaxStarfield(); 
+    this.initEventListeners();
+    this.createParallaxStarfield();
     this.uiManager.populateAllTranslatedContent();
-    
-    // Führen Sie die Größenanpassung direkt beim Start aus.
-    this.updateContainerSize(); 
-    this.resizeGame();
 
     if (localStorage.getItem('galaxyFallLanguage')) {
         this.changeState('INTRO');
