@@ -1,1 +1,0 @@
-// Dieses Skript wird vor der Webseite im Renderer-Prozess geladen.
