@@ -4082,7 +4082,7 @@ class Game {
 
     resizeGame(): void {
         const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
+        const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     
         this.container.style.transform = '';
         this.container.style.left = '';

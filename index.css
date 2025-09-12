@@ -29,7 +29,7 @@ body {
 /* --- SPIEL-CONTAINER & CANVAS --- */
 #gameContainer {
     width: 100vw;
-    height: 100vh;
+    height: 100svh;
     position: relative;
     background: var(--bg-color);
     overflow: hidden;
@@ -126,6 +126,7 @@ canvas {
     gap: 20px;
     z-index: 10;
     align-items: flex-end;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 #level-display-container {
