@@ -539,8 +539,9 @@ class Coin extends EntityFamily {
                     const finalVelY = baseVelY + perpendicularY * randomSpread * this.CONE_SPREAD_FACTOR;
                     const trailVel = new Vector2D(finalVelX, finalVelY);
 
-                    const spawnX = this.pos.x + this.width / 2;
-                    const spawnY = this.pos.y + this.height / 2;
+                    // --- ÄNDERUNG: Partikel an der alten Position der Münze erzeugen, um einen echten Schweif zu bilden ---
+                    const spawnX = oldX + this.width / 2;
+                    const spawnY = oldY + this.height / 2;
                     
                     this.game.addEntity(new Particle(
                         this.game, 
@@ -4030,35 +4031,46 @@ class Game {
 
     private introAnimationTimer: number = 0;
 
-    constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
-        this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
-        this.width = this.baseWidth;
-        this.height = this.baseHeight;
-        this.container = document.getElementById('gameContainer')!;
-        this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        
-        this.shopManager = new ShopManager(this);
-        this.uiManager = new UIManager(this, ui);
-        this.piManager = new PiManager();
-        this.piManager.setGame(this);
-        this.phoenixCoreUI = new PhoenixCoreUI(this);
-        
-        this.loadGameData();
-        
-        this.initEventListeners(); 
-        this.createParallaxStarfield(); 
-        this.uiManager.populateAllTranslatedContent();
-        
-        // Führen Sie die Größenanpassung direkt beim Start aus.
-        this.updateContainerSize(); 
-        this.resizeGame();
+    // NEUER Code-Block zum Einfügen
+constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
+    // NEU: Dieser Block behebt das Skalierungsproblem in mobilen Browsern wie Safari.
+    // Er berechnet die tatsächliche sichtbare Höhe und stellt sie als CSS-Variable bereit.
+    const setVisualViewportHeight = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    setVisualViewportHeight();
+    window.addEventListener('resize', setVisualViewportHeight);
+    // --- Ende des neuen Blocks ---
 
-        if (localStorage.getItem('galaxyFallLanguage')) {
-            this.changeState('INTRO');
-        } else {
-            document.getElementById('language-select-screen')!.style.display = 'flex';
-        }
+    this.canvas = canvas; this.ctx = canvas.getContext('2d')!;
+    this.width = this.baseWidth;
+    this.height = this.baseHeight;
+    this.container = document.getElementById('gameContainer')!;
+    this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    this.shopManager = new ShopManager(this);
+    this.uiManager = new UIManager(this, ui);
+    this.piManager = new PiManager();
+    this.piManager.setGame(this);
+    this.phoenixCoreUI = new PhoenixCoreUI(this);
+    
+    this.loadGameData();
+    
+    this.initEventListeners(); 
+    this.createParallaxStarfield(); 
+    this.uiManager.populateAllTranslatedContent();
+    
+    // Führen Sie die Größenanpassung direkt beim Start aus.
+    this.updateContainerSize(); 
+    this.resizeGame();
+
+    if (localStorage.getItem('galaxyFallLanguage')) {
+        this.changeState('INTRO');
+    } else {
+        document.getElementById('language-select-screen')!.style.display = 'flex';
     }
+}
 
     public updateContainerSize(): void {
         if (window.visualViewport) {

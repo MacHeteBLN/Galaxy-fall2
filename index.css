@@ -18,21 +18,22 @@
 }
 
 body {
-    margin: 0;
-    background: var(--bg-color);
-    color: var(--text-color);
-    font-family: var(--main-font);
-    overflow: hidden;
-    image-rendering: pixelated;
+margin: 0;
+background: var(--bg-color);
+color: var(--text-color);
+font-family: var(--main-font);
+overflow: hidden;
+image-rendering: pixelated;
+height: calc(var(--vh, 1dvh) * 100);
 }
 
 /* --- SPIEL-CONTAINER & CANVAS --- */
 #gameContainer {
     width: 100vw;
-    height: 100vh;
-    position: relative;
-    background: var(--bg-color);
-    overflow: hidden;
+height: 100%;
+position: relative;
+background: var(--bg-color);
+overflow: hidden;
 }
 
 canvas {
