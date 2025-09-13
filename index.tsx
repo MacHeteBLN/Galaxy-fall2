@@ -63,7 +63,7 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
-const API_BASE_URL = 'https://api.galaxy-fall-pi.com';
+const API_BASE_URL = 'http://194.164.197.197:3000';
 
 
 // --- SECTION 2: BILD-INITIALISIERUNG ---
