@@ -235,6 +235,23 @@ class PiManager {
             console.error("Error calling createPayment:", err);
         }
     }
+    
+    // NEUE METHODE: Zeigt eine Werbeanzeige an
+    public showAd() {
+        if (!this.Pi) {
+            console.log("Pi SDK not available, cannot show ad.");
+            return;
+        }
+        
+        // Laut Doku ist für Ads keine Authentifizierung notwendig.
+        // Wir können sie also immer versuchen anzuzeigen.
+        console.log("Requesting Pi Ad...");
+        try {
+            this.Pi.showAd();
+        } catch(err) {
+            console.error("Error calling Pi.showAd():", err);
+        }
+    }
 }
 
 
@@ -3811,7 +3828,7 @@ class UIManager {
             <div class="shop-item-purchase">${purchaseHTML}</div>`;
             
         const buyButton = itemEl.querySelector<HTMLButtonElement>(`#buy-${item.id}`);
-        if(buyButton) {
+                if(buyButton) {
             buyButton.addEventListener('click', () => {
                 if(shopManager.purchaseItem(item.id)) {
                     this.renderShop();
@@ -4758,6 +4775,8 @@ class Game {
                 this.submitScoreToServer();
                 this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.toggleGameOverScreen(true);
+                // HINZUGEFÜGT: Werbeanzeige beim Game Over aufrufen
+                this.piManager.showAd();
                 break;
             case 'WIN':
                 if (this.score > this.highscore) {

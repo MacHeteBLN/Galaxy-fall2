@@ -219,8 +219,8 @@
 <!-- Pi Network SDK Integration -->
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>
-    // Initialisiert das Pi SDK im Sandbox-Modus für die Entwicklung.
-    Pi.init({ version: "2.0", sandbox: false });
+    // GEÄNDERT: Sandbox auf 'true' für Entwicklung und Tests. Für die Live-Version auf 'false' stellen.
+    Pi.init({ version: "2.0", sandbox: true });
 </script>
 
 <!-- Das Skript wird als Modul geladen, um 'import' zu ermöglichen -->
