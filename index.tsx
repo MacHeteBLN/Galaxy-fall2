@@ -171,7 +171,7 @@ class PiManager {
     }
 
     public async authenticate() {
-        if (!this.Pi) return;
+        if (!this.Pi || this.isAuthenticated) return; // Nicht erneut authentifizieren, wenn schon geschehen
         console.log("Starting Pi authentication...");
         try {
             const scopes = ['username', 'payments'];
@@ -181,11 +181,12 @@ class PiManager {
             this.uid = authResult.user.uid;
             console.log(`Successfully authenticated as ${this.username} (UID: ${this.uid})`);
             
-            this.game.uiManager.renderShop();
+            // UI im Shop und im Menü aktualisieren
+            this.game.uiManager.updatePiUserDisplay();
 
         } catch (err) {
             console.error("Pi authentication failed:", err);
-            alert("Pi-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.");
+            // Wir zeigen kein alert mehr, damit das Spiel für nicht-Pi-Nutzer nicht blockiert wird.
         }
     }
 
@@ -3392,8 +3393,46 @@ class SoundManager {
     }
 }
 
-class LocalizationManager { private currentLanguage: string = 'en'; private translations: { [lang: string]: { [key: string]: string } } = translations; constructor() { this.setLanguage(localStorage.getItem('galaxyFallLanguage') || 'en'); } setLanguage(lang: string): void { this.currentLanguage = this.translations[lang] ? lang : 'en'; localStorage.setItem('galaxyFallLanguage', this.currentLanguage); } translate(key: string, replacements?: {[key:string]:string}): string { let text = this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key; if (replacements) { Object.keys(replacements).forEach(rKey => { text = text.replace(`{${rKey}}`, replacements[rKey]!); }); } return text; } applyTranslationsToUI(): void { document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => { const key = el.dataset.translateKey; if (key) el.textContent = this.translate(key); }); } }
+// --- ERSETZE DIESE KLASSE IN index.tsx ---
 
+class LocalizationManager {
+    private currentLanguage: string = 'en';
+    private translations: { [lang: string]: { [key: string]: string } } = translations;
+
+    constructor() {
+        // KORRIGIERTE LOGIK:
+        // Wir lesen den Wert nur aus. Wenn nichts da ist,
+        // verwenden wir 'en' als internen Standard, OHNE es sofort zu speichern.
+        const savedLang = localStorage.getItem('galaxyFallLanguage');
+        if (savedLang && this.translations[savedLang]) {
+            this.currentLanguage = savedLang;
+        }
+        // Kein 'else'-Block, der etwas in den localStorage schreibt!
+    }
+
+    setLanguage(lang: string): void {
+        // Diese Methode ist jetzt die EINZIGE, die in den localStorage schreibt.
+        this.currentLanguage = this.translations[lang] ? lang : 'en';
+        localStorage.setItem('galaxyFallLanguage', this.currentLanguage);
+    }
+
+    translate(key: string, replacements?: {[key:string]:string}): string {
+        let text = this.translations[this.currentLanguage]?.[key] || this.translations['en']?.[key] || key;
+        if (replacements) {
+            Object.keys(replacements).forEach(rKey => {
+                text = text.replace(`{${rKey}}`, replacements[rKey]!);
+            });
+        }
+        return text;
+    }
+
+    applyTranslationsToUI(): void {
+        document.querySelectorAll<HTMLElement>('[data-translate-key]').forEach(el => {
+            const key = el.dataset.translateKey;
+            if (key) el.textContent = this.translate(key);
+        });
+    }
+}
 class UIManager {
     public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
     private levelDisplayContainer: HTMLElement; 
@@ -3621,19 +3660,12 @@ class UIManager {
 
     public renderShop(): void {
         const shopManager = this.game.shopManager;
-        const piManager = this.game.piManager;
         const t = (key: string) => this.localizationManager.translate(key);
 
         this.shopCoinsEl.textContent = this.game.coins.toString();
         this.shopContentEl.innerHTML = '';
 
-        const piUserDisplay = document.getElementById('pi-user-display')!;
-        if (piManager.isAuthenticated) {
-            document.getElementById('pi-username')!.textContent = piManager.username;
-            piUserDisplay.style.display = 'block';
-        } else {
-            piUserDisplay.style.display = 'none';
-        }
+        this.updatePiUserDisplay();
 
         const itemsByCategory = shopManager.shopItems.reduce((acc, item) => {
             const category = item.type.toLowerCase();
@@ -3650,15 +3682,6 @@ class UIManager {
             pane.className = 'shop-tab-pane';
 
             const items = itemsByCategory[category as keyof typeof itemsByCategory]!;
-
-            if (category === 'pi_bundle' && !piManager.isAuthenticated) {
-                const connectButton = document.createElement('button');
-                connectButton.id = 'pi-connect-btn';
-                connectButton.className = 'pi-connect-button';
-                connectButton.textContent = "Mit Pi Wallet verbinden";
-                connectButton.onclick = () => piManager.authenticate();
-                pane.appendChild(connectButton);
-            }
             
             items.forEach(item => {
                 const itemEl = this.createShopItemElement(item);
@@ -3669,6 +3692,17 @@ class UIManager {
         }
 
         this.showShopTab(this.currentShopTabId);
+    }
+
+    public updatePiUserDisplay(): void {
+        const piManager = this.game.piManager;
+        const piUserDisplay = document.getElementById('pi-user-display')!;
+        if (piManager.isAuthenticated) {
+            document.getElementById('pi-username')!.textContent = piManager.username;
+            piUserDisplay.style.display = 'block';
+        } else {
+            piUserDisplay.style.display = 'none';
+        }
     }
 
     private createShopItemElement(item: IShopItem): HTMLElement {
@@ -3917,7 +3951,24 @@ class UIManager {
         setupButton(document.getElementById('toggle-shake'), () => { this.settings.screenShake = !this.settings.screenShake; this.applySettings(); this.saveSettings(); });
         setupButton(document.getElementById('toggle-language'), () => { this.langSelectSource = 'settings'; this.menuContainer.style.display = 'none'; this.langSelectScreen.style.display = 'flex'; this.langBackButton.style.display = 'block'; });
         setupButton(document.getElementById('lang-back-button'), () => { this.langSelectScreen.style.display = 'none'; this.menuContainer.style.display = 'flex'; this.langSelectSource = 'startup'; });
-        document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => { setupButton(button, () => { this.soundManager.initAudio(); const lang = button.dataset.lang; if (lang) { this.localizationManager.setLanguage(lang); this.populateAllTranslatedContent(); this.langSelectScreen.style.display = 'none'; if (this.langSelectSource === 'settings') { this.menuContainer.style.display = 'flex'; } else { this.game.changeState('INTRO'); } } }); });
+        
+        document.querySelectorAll<HTMLButtonElement>('.lang-button').forEach(button => { 
+            setupButton(button, () => { 
+                this.soundManager.initAudio(); 
+                const lang = button.dataset.lang; 
+                if (lang) { 
+                    this.localizationManager.setLanguage(lang); 
+                    this.populateAllTranslatedContent(); 
+                    this.langSelectScreen.style.display = 'none'; 
+                    if (this.langSelectSource === 'settings') { 
+                        this.menuContainer.style.display = 'flex'; 
+                    } else { 
+                        this.game.piManager.authenticate(); 
+                        this.game.changeState('INTRO'); 
+                    } 
+                } 
+            }); 
+        });
     
         if (this.game.isMobile) {
             const inventoryTapHandler = (event: Event) => {
@@ -4023,7 +4074,7 @@ class UIManager {
     public createEnemyIcon(enemyType: string): string { const canvas = document.createElement('canvas'); canvas.width = 60; canvas.height = 40; const ctx = canvas.getContext('2d')!; const tempGame = { width: 60, height: 40, enemySpeedMultiplier: 1, level: 1, uiManager: { settings: { particles: 0 } } } as unknown as Game; let dummyEnemy: Enemy | null = null; switch(enemyType) { case 'GRUNT': dummyEnemy = new Grunt(tempGame); break; case 'WEAVER': dummyEnemy = new Weaver(tempGame); break; case 'TANK': dummyEnemy = new Tank(tempGame); break; case 'SHOOTER': dummyEnemy = new Shooter(tempGame); break; case 'TELEPORTER': dummyEnemy = new Teleporter(tempGame); break; case 'BOSS_SENTINEL_PRIME': dummyEnemy = new BossSentinelPrime(tempGame, 1, 1); break; case 'BOSS_VOID_SERPENT': dummyEnemy = new BossVoidSerpent(tempGame, 1, 1); break; case 'BOSS_OMEGA_NEXUS': dummyEnemy = new BossOmegaNexus(tempGame, 1, 1); break; case 'BOSS_NEXUS_PRIME': dummyEnemy = new BossNexusPrime(tempGame, 1, 1); break; } if (dummyEnemy) { dummyEnemy.width = 54; dummyEnemy.height = 36; dummyEnemy.pos = new Vector2D(canvas.width / 2 - dummyEnemy.width / 2, canvas.height / 2 - dummyEnemy.height / 2); dummyEnemy.draw(ctx); } return canvas.toDataURL(); }
     public populateArsenal(): void { const pL=[{c:"arsenal_cat_weapon_upgrade",n:"powerup_wup_name",d:'powerup_wup_desc',t:'WEAPON_UP'},{c:"arsenal_cat_weapon_mod",n:"powerup_rapid_fire_name",d:'powerup_rapid_fire_desc',t:'RAPID_FIRE'},{c:"arsenal_cat_weapon_mod",n:"powerup_side_shots_name",d:'powerup_side_shots_desc',t:'SIDE_SHOTS'},{c:"arsenal_cat_ultra_weapon",n:"powerup_laser_name",d:'powerup_laser_desc',t:'LASER_BEAM'},{c:"arsenal_cat_ultra_weapon",n:"powerup_homing_missiles_name",d:'powerup_homing_missiles_desc',t:'HOMING_MISSILES'},{c:"arsenal_cat_defense",n:"powerup_shield_name",d:'powerup_shield_desc',t:'SHIELD'},{c:"arsenal_cat_defense",n:"powerup_repair_kit_name",d:'powerup_repair_kit_desc',t:'REPAIR_KIT'},{c:"arsenal_cat_defense",n:"powerup_extra_life_name",d:'powerup_extra_life_desc',t:'EXTRA_LIFE'},{c:"arsenal_cat_defense",n:"powerup_ghost_protocol_name",d:'powerup_ghost_protocol_desc',t:'GHOST_PROTOCOL'},{c:"arsenal_cat_defense",n:"powerup_orbital_drone_name",d:'powerup_orbital_drone_desc',t:'ORBITAL_DRONE'},{c:"arsenal_cat_special",n:"powerup_nuke_name",d:'powerup_nuke_desc',t:'NUKE'},{c:"arsenal_cat_special",n:"powerup_black_hole_name",d:'powerup_black_hole_desc',t:'BLACK_HOLE'},{c:"arsenal_cat_special",n:"powerup_score_boost_name",d:'powerup_score_boost_desc',t:'SCORE_BOOST'}]; const lE=document.getElementById('arsenal-list')!;lE.innerHTML='';let cC='';pL.forEach(p=>{const cN=this.localizationManager.translate(p.c);if(cN!==cC){cC=cN;lE.innerHTML+=`<h3>- ${cC} -</h3>`;} const iS=powerUpImageSources[p.t];lE.innerHTML+=`<div class="powerup-entry"><img src="${iS}" class="arsenal-icon" alt="${p.n}"/><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.n)}</div><div class="powerup-desc">${this.localizationManager.translate(p.d)}</div></div></div>`;}); }
     
-        public populateGalerie(): void {
+    public populateGalerie(): void {
         const t = (key: string) => this.localizationManager.translate(key);
         const galleryEl = document.getElementById('galerie-list')!;
         galleryEl.innerHTML = '';
@@ -4355,6 +4406,7 @@ class Game {
 
     if (localStorage.getItem('galaxyFallLanguage')) {
         this.changeState('INTRO');
+        this.piManager.authenticate(); 
     } else {
         document.getElementById('language-select-screen')!.style.display = 'flex';
     }
