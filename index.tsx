@@ -210,13 +210,33 @@ class PiManager {
         };
 
         const callbacks = {
-            onReadyForServerApproval: (paymentId: string) => {
+            onReadyForServerApproval: async (paymentId: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
+                try {
+                    // KORRIGIERT: Der Platzhalter wurde durch den relativen API-Pfad ersetzt.
+                    await fetch("/api/approve-payment", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ paymentId })
+                    });
+                } catch (err) {
+                    console.error("Fehler beim Approve-Call:", err);
+                }
             },
-            onReadyForServerCompletion: (paymentId: string, txid: string) => {
+            onReadyForServerCompletion: async (paymentId: string, txid: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
-                this.game.awardPiCoinBundle(bundle);
-                alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
+                try {
+                    // KORRIGIERT: Der Platzhalter wurde durch den relativen API-Pfad ersetzt.
+                    await fetch("/api/complete-payment", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ paymentId, txid })
+                    });
+                    this.game.awardPiCoinBundle(bundle);
+                    alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
+                } catch (err) {
+                    console.error("Fehler beim Complete-Call:", err);
+                }
             },
             onCancel: (paymentId: string) => {
                 console.log(`[CLIENT-SIDE] Payment cancelled: ${paymentId}`);
