@@ -171,32 +171,52 @@ class PiManager {
     }
 
     public async authenticate() {
-        if (!this.Pi || this.isAuthenticated) return; // Nicht erneut authentifizieren, wenn schon geschehen
-        console.log("Starting Pi authentication...");
+        if (!this.Pi) {
+            alert("FEHLER: Pi SDK wurde nicht gefunden. Laufen Sie das Spiel im Pi Browser?");
+            return;
+        }
+        if (this.isAuthenticated) return;
+
+        // ALARM 1: Bestätigt, dass die Funktion aufgerufen wird.
+        alert("Versuche, die Pi-Authentifizierung zu starten...");
+
         try {
             const scopes = ['username', 'payments'];
             const authResult = await this.Pi.authenticate(scopes, this.onIncompletePaymentFound.bind(this));
+            
             this.isAuthenticated = true;
             this.username = authResult.user.username;
             this.uid = authResult.user.uid;
-            console.log(`Successfully authenticated as ${this.username} (UID: ${this.uid})`);
+
+            // ALARM 2: Bestätigt den Erfolg.
+            alert("ERFOLG! Authentifiziert als: " + this.username);
             
-            // UI im Shop und im Menü aktualisieren
             this.game.uiManager.updatePiUserDisplay();
 
+            if (document.getElementById('shop-container')?.style.display === 'flex') {
+                this.game.uiManager.renderShop();
+            }
+
         } catch (err) {
+            // ALARM 3: Zeigt den genauen Fehler an.
+            alert("FEHLER bei der Authentifizierung! Grund: " + JSON.stringify(err));
             console.error("Pi authentication failed:", err);
-            // Wir zeigen kein alert mehr, damit das Spiel für nicht-Pi-Nutzer nicht blockiert wird.
         }
     }
 
     private onIncompletePaymentFound(payment: any) {
         console.warn("Incomplete payment found:", payment);
+        alert("Eine unvollständige Zahlung wurde gefunden: " + JSON.stringify(payment));
     }
     
     public createPayment(bundle: IShopItem) {
         if (!this.Pi || !this.isAuthenticated || !bundle.pi_cost || !bundle.coin_reward) {
-            console.error("Cannot create payment. Not authenticated or bundle is invalid.");
+            alert("Kauf nicht möglich. Grund: Nicht authentifiziert oder ungültiges Produkt.");
+            console.error("Cannot create payment. Details:", {
+                sdk_found: !!this.Pi,
+                is_authenticated: this.isAuthenticated,
+                is_bundle_valid: !!(bundle.pi_cost && bundle.coin_reward)
+            });
             return;
         }
 
@@ -213,7 +233,6 @@ class PiManager {
             onReadyForServerApproval: async (paymentId: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
                 try {
-                    // KORRIGIERT: Der Platzhalter wurde durch den relativen API-Pfad ersetzt.
                     await fetch("/api/approve-payment", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -226,7 +245,6 @@ class PiManager {
             onReadyForServerCompletion: async (paymentId: string, txid: string) => {
                 console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
                 try {
-                    // KORRIGIERT: Der Platzhalter wurde durch den relativen API-Pfad ersetzt.
                     await fetch("/api/complete-payment", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -256,15 +274,12 @@ class PiManager {
         }
     }
     
-    // NEUE METHODE: Zeigt eine Werbeanzeige an
     public showAd() {
         if (!this.Pi) {
             console.log("Pi SDK not available, cannot show ad.");
             return;
         }
         
-        // Laut Doku ist für Ads keine Authentifizierung notwendig.
-        // Wir können sie also immer versuchen anzuzeigen.
         console.log("Requesting Pi Ad...");
         try {
             this.Pi.showAd();
