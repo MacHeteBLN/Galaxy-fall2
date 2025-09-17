@@ -4467,29 +4467,41 @@ class Game {
 }
 
     public async loadPlayerDataFromServer(): Promise<void> {
-        if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
+    if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`);
-            if (response.ok) {
-                const data = await response.json();
-                this.coins = data.coins || this.coins;
-                this.shopManager.playerUpgrades = data.upgrades || this.shopManager.playerUpgrades;
-                this.shopManager.playerCosmetics = data.cosmetics || this.shopManager.playerCosmetics;
-                
-                // Wichtig: Lokalen Speicher mit Serverdaten synchronisieren
-                this.shopManager.saveUpgrades();
-                this.shopManager.saveCosmetics();
-                this.saveGameData(); // Speichert Münzen und Highscore lokal
-                console.log("Spielstand vom Server geladen.", data);
-                this.uiManager.update(); // UI nach dem Laden aktualisieren
-            } else {
-                 console.log("Kein Spielstand auf dem Server gefunden. Nutze lokalen Spielstand.");
-            }
-        } catch (error) {
-            console.error("Fehler beim Laden des Spielstands vom Server:", error);
+    try {
+        const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`);
+        
+        if (response.ok) {
+            // FALL 1: Spielstand auf Server GEFUNDEN
+            const data = await response.json();
+            this.coins = data.coins;
+            this.shopManager.playerUpgrades = data.upgrades;
+            this.shopManager.playerCosmetics = data.cosmetics;
+            
+            this.shopManager.saveUpgrades(); // Lokalen Speicher synchronisieren
+            this.shopManager.saveCosmetics();
+            console.log("Spielstand vom Server geladen.", data);
+
+        } else if (response.status === 404) {
+            // FALL 2: Kein Spielstand auf Server gefunden (NEUER SPIELER)
+            console.log("Kein Spielstand auf dem Server gefunden. Erstelle neuen lokalen Spielstand und speichere ihn.");
+            // Lade Standardwerte aus dem lokalen Speicher (oder setze sie neu)
+            this.loadGameData(); 
+            this.shopManager.playerUpgrades = this.shopManager.loadUpgrades();
+            this.shopManager.playerCosmetics = this.shopManager.loadCosmetics();
+            // Speichere diesen neuen "leeren" Spielstand sofort auf dem Server
+            await this.savePlayerDataToServer();
         }
+        
+        // UI und lokale Daten in beiden Fällen aktualisieren
+        this.saveGameData(); 
+        this.uiManager.update();
+
+    } catch (error) {
+        console.error("Fehler beim Laden/Erstellen des Spielstands:", error);
     }
+}
 
     public async savePlayerDataToServer(): Promise<void> {
         if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
