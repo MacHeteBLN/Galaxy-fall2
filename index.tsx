@@ -190,6 +190,8 @@ class PiManager {
 
             // ALARM 2: Bestätigt den Erfolg.
             alert("ERFOLG! Authentifiziert als: " + this.username);
+
+            await this.game.loadPlayerDataFromServer();
             
             this.game.uiManager.updatePiUserDisplay();
 
@@ -4464,6 +4466,53 @@ class Game {
     }
 }
 
+    public async loadPlayerDataFromServer(): Promise<void> {
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`);
+            if (response.ok) {
+                const data = await response.json();
+                this.coins = data.coins || this.coins;
+                this.shopManager.playerUpgrades = data.upgrades || this.shopManager.playerUpgrades;
+                this.shopManager.playerCosmetics = data.cosmetics || this.shopManager.playerCosmetics;
+                
+                // Wichtig: Lokalen Speicher mit Serverdaten synchronisieren
+                this.shopManager.saveUpgrades();
+                this.shopManager.saveCosmetics();
+                this.saveGameData(); // Speichert Münzen und Highscore lokal
+                console.log("Spielstand vom Server geladen.", data);
+                this.uiManager.update(); // UI nach dem Laden aktualisieren
+            } else {
+                 console.log("Kein Spielstand auf dem Server gefunden. Nutze lokalen Spielstand.");
+            }
+        } catch (error) {
+            console.error("Fehler beim Laden des Spielstands vom Server:", error);
+        }
+    }
+
+    public async savePlayerDataToServer(): Promise<void> {
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
+        
+        const playerData = {
+            pi_uid: this.piManager.uid,
+            username: this.piManager.username,
+            coins: this.coins,
+            upgrades: this.shopManager.playerUpgrades,
+            cosmetics: this.shopManager.playerCosmetics
+        };
+
+        try {
+            await fetch(`${API_BASE_URL}/save-data`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(playerData)
+            });
+            console.log("Spielstand auf dem Server gespeichert.");
+        } catch (error) {
+            console.error("Fehler beim Speichern des Spielstands auf dem Server:", error);
+        }
+    }
     public updateContainerSize(): void {
         if (window.visualViewport) {
             this.container.style.height = `${window.visualViewport.height}px`;
@@ -4537,6 +4586,7 @@ class Game {
             coins: this.coins,
             highscore: this.highscore
         }));
+        this.savePlayerDataToServer();
     }
 
     public loadGameData(): void {
