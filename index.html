@@ -16,7 +16,7 @@
     <script>eruda.init();</script>
     <!-- ====================================================================== -->
 
-  <script type="module" crossorigin src="/assets/index-vLnPtwXw.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bnq1c7JP.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CJBg38Gf.css">
 </head>
 <body>
@@ -204,17 +204,13 @@
                 <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
             </div>
 
-            <!-- Container für die Inhalte der Tabs -->
             <div id="shop-content" class="menu-content">
-                <!-- Die Inhalte werden hier dynamisch per JavaScript eingefügt -->
             </div>
 
-            <!-- Zurück-Button am unteren Rand -->
             <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
         </div>
     </div>
 
-    <!-- Container für den "Goodbye"-Bildschirm (nur für Mobilgeräte) -->
     <div id="exit-screen" style="display: none;">
         <div class="menu">
             <h1 data-translate-key="exit_title">Bis bald!</h1>
@@ -224,13 +220,13 @@
 
 </div>
 
-<!-- Pi Network SDK Integration -->
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>
-    // Sandbox ist auf 'true' für Entwicklung und Tests. Für die Live-Version auf 'false' stellen.
-    Pi.init({ version: "2.0", sandbox: true });
+    
+    Pi.init({ version: "2.0", sandbox: false });
 </script>
 
-<!-- Das Skript wird als Modul geladen, um 'import' zu ermöglichen -->
+
+
 </body>
 </html>
