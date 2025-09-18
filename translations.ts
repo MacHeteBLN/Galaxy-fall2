@@ -13,8 +13,8 @@ const en = {
   btn_back: 'Back',
   btn_shop: 'Shop',
   btn_buy: 'Buy',
-  btn_upgrade: 'Buy',
-  btn_unlock: 'Buy',
+  btn_upgrade: 'Upgrade', // VERBESSERT
+  btn_unlock: 'Unlock', // VERBESSERT
   btn_equip: 'Equip',
   btn_equipped: 'Equipped',
   btn_max_level: 'Max Level',
@@ -34,6 +34,8 @@ const en = {
   affix_thick_skins: 'Thick Skins',
   affix_bullet_hell: 'Bullet Hell',
   affix_blink_storm: 'Blink Storm',
+  
+  connected_as: 'Connected as',
 
   settings_language_label: 'Language', settings_language_desc: 'Changes the display language of the game.',
   settings_volume_label: 'Master Volume', settings_volume_desc: 'Controls the overall volume of the game.',
@@ -149,6 +151,9 @@ const en = {
   shop_proj_fireball_desc: 'A cosmetic style that makes your projectiles look like fireballs.',
   shop_proj_purple_name: 'Void Bolts',
   shop_proj_purple_desc: 'A cosmetic style that changes your projectile color to dark purple.',
+  // HINZUGEFÜGT
+  shop_proj_rainbow_name: 'Chroma Bolts',
+  shop_proj_rainbow_desc: 'A cosmetic style that makes your projectiles cycle through all colors of the rainbow.',
   
   shop_trail_rainbow_name: 'Rainbow Trail',
   shop_trail_rainbow_desc: 'A cosmetic engine trail that leaves a vibrant rainbow in your wake.',
@@ -262,8 +267,8 @@ const de = {
   btn_back: 'Zurück',
   btn_shop: "Shop",
   btn_buy: "Kaufen",
-  btn_upgrade: 'Kaufen',
-  btn_unlock: 'Kaufen',
+  btn_upgrade: 'Upgraden', // VERBESSERT
+  btn_unlock: 'Freischalten', // VERBESSERT
   btn_equip: 'Ausrüsten',
   btn_equipped: 'Ausgerüstet',
   btn_max_level: "Max. Stufe",
@@ -283,6 +288,8 @@ const de = {
   affix_thick_skins: 'Dicke Haut',
   affix_bullet_hell: 'Kugelhagel',
   affix_blink_storm: 'Teleport-Sturm',
+  
+  connected_as: 'Verbunden als',
 
   settings_language_label: 'Sprache', settings_language_desc: 'Ändert die Anzeigesprache des Spiels.',
   settings_volume_label: 'Master-Lautstärke', settings_volume_desc: 'Steuert die Gesamtlautstärke des Spiels.',
@@ -346,11 +353,11 @@ const de = {
   shop_consume_shield_desc: 'Aktiviert sofort einen Schild.',
   shop_consume_nuke_name: 'Notfall-Nuke',
   shop_consume_nuke_desc: 'Fügt deinem Inventar sofort eine Nuke hinzu.',
-  shop_consume_extralife_name: 'Letzte Chance',
+  shop_consume_extralife_name: 'Letztes Gefecht', // VERBESSERT
   shop_consume_extralife_desc: 'Gewährt sofort ein zusätzliches Leben für den aktuellen Lauf.',
-  shop_consume_ghost_name: 'Phasenverschiebungs-Serum',
+  shop_consume_ghost_name: 'Phasenserum', // VERBESSERT
   shop_consume_ghost_desc: 'Aktiviert sofort einen 30-sekündigen Geist-Protokoll-Effekt.',
-  shop_consume_boss_slayer_name: 'Boss-Jäger-Munition',
+  shop_consume_boss_slayer_name: 'Bossjäger-Munition', // VERBESSERT
   shop_consume_boss_slayer_desc: 'Deine Waffen verursachen für den aktuellen Lauf 25% mehr Schaden gegen Bosse.',
   shop_consume_black_hole_name: "Taschen-Singularität",
   shop_consume_black_hole_desc: "Fügt deinem Inventar sofort ein Schwarzes Loch hinzu.",
@@ -398,7 +405,10 @@ const de = {
   shop_proj_fireball_desc: 'Ein kosmetischer Stil, der deine Projektile wie Feuerbälle aussehen lässt.',
   shop_proj_purple_name: 'Leeren-Bolzen',
   shop_proj_purple_desc: 'Ein kosmetischer Stil, der die Farbe deiner Projektile in Dunkelviolett ändert.',
-  
+  // HINZUGEFÜGT
+  shop_proj_rainbow_name: 'Chroma-Bolzen',
+  shop_proj_rainbow_desc: 'Ein kosmetischer Stil, der deine Projektile alle Farben des Regenbogens durchlaufen lässt.',
+
   shop_trail_rainbow_name: 'Regenbogenspur',
   shop_trail_rainbow_desc: 'Eine kosmetische Antriebsspur, die einen leuchtenden Regenbogen hinterlässt.',
 
@@ -425,7 +435,8 @@ const de = {
   gegner_sentinel_prime_name: 'Sentinel Prime', gegner_sentinel_prime_desc: 'Ein Patrouillenschiff mit vielfältigen Angriffen, darunter Fächer, Spiralen und ein gefährlicher Sturzangriff.',
   gegner_void_serpent_name: 'Leeren-Serpent', gegner_void_serpent_desc: 'Ein massiver Leviathan, der sich in weiten Schlangenlinien bewegt und breite Salven sowie gezielte Peitschenhiebe abfeuert.',
   gegner_omega_nexus_name: 'Omega Nexus', gegner_omega_nexus_desc: 'Eine festungsartige Kriegsmaschine. Seine Angriffsmuster ändern sich mit dem erlittenen Schaden und gipfeln in einem mächtigen Laserstrahl.',
-  gegner_nexus_prime_name: 'Nexus Prime (Final)', gegner_nexus_prime_desc: 'Die ultimative Form des Nexus. Verfügt über einen fegenden Laser, unzerstörbare Drohnen und einen unerbittlichen Kugelhagel.',
+  gegner_nexus_prime_name: 'Nexus Prime (Finale)', // VERBESSERT
+  gegner_nexus_prime_desc: 'Die ultimative Form des Nexus. Verfügt über einen fegenden Laser, unzerstörbare Drohnen und einen unerbittlichen Kugelhagel.',
   strength_low: 'Niedrig', strength_medium: 'Mittel', strength_high: 'Hoch', strength_extreme: 'Extrem', strength_apocalyptic: 'Apokalyptisch', strength_final: 'FINAL',
   
   formation_incoming: "Formation im Anflug!",
@@ -476,7 +487,7 @@ const de = {
   wave_msg_45_multi_formation_final: "Welle 45: Die Finale Formation",
   wave_msg_46_anvil: "Welle 46: Der Amboss",
   wave_msg_47_circle_strike: "Welle 47: Zirkelschlag",
-  wave_msg_48_maelstrom: "Welle 48: Malstrom",
+  wave_msg_48_maelstrom: "Welle 48: Mahlstrom", // VERBESSERT
   wave_msg_49_critical_mass: "Welle 49: Kritische Masse",
   wave_msg_50_final: "WELLE 50: FINALER BOSS - NEXUS PRIME",
 
@@ -511,8 +522,8 @@ const es = {
   btn_back: 'Volver',
   btn_shop: "Tienda",
   btn_buy: "Comprar",
-  btn_upgrade: 'Comprar',
-  btn_unlock: 'Comprar',
+  btn_upgrade: 'Mejorar', // VERBESSERT
+  btn_unlock: 'Desbloquear', // VERBESSERT
   btn_equip: 'Equipar',
   btn_equipped: 'Equipado',
   btn_max_level: "Nivel Máx.",
@@ -532,6 +543,8 @@ const es = {
   affix_thick_skins: 'Pieles Gruesas',
   affix_bullet_hell: 'Infierno de Balas',
   affix_blink_storm: 'Tormenta de Destellos',
+
+  connected_as: 'Conectado como', // HINZUGEFÜGT
 
   settings_language_label: 'Idioma', settings_language_desc: 'Cambia el idioma de visualización del juego.',
   settings_volume_label: 'Volumen Principal', settings_volume_desc: 'Controla el volumen general del juego.',
@@ -647,6 +660,9 @@ const es = {
   shop_proj_fireball_desc: 'Un estilo cosmético que hace que tus proyectiles parezcan bolas de fuego.',
   shop_proj_purple_name: 'Virotes del Vacío',
   shop_proj_purple_desc: 'Un estilo cosmético que cambia el color de tus proyectiles a púrpura oscuro.',
+  // HINZUGEFÜGT
+  shop_proj_rainbow_name: 'Virotes Cromáticos',
+  shop_proj_rainbow_desc: 'Un estilo cosmético que hace que tus proyectiles recorran todos los colores del arcoíris.',
   
   shop_trail_rainbow_name: 'Estela Arcoíris',
   shop_trail_rainbow_desc: 'Una estela de motor cosmética que deja un vibrante arcoíris a tu paso.',
@@ -760,8 +776,8 @@ const zh = {
     btn_back: '返回',
     btn_shop: "商店",
     btn_buy: "购买",
-    btn_upgrade: '购买',
-    btn_unlock: '购买',
+    btn_upgrade: '升级', // VERBESSERT
+    btn_unlock: '解锁', // VERBESSERT
     btn_equip: '装备',
     btn_equipped: '已装备',
     btn_max_level: "已满级",
@@ -781,6 +797,8 @@ const zh = {
     affix_thick_skins: '厚皮',
     affix_bullet_hell: '弹幕地狱',
     affix_blink_storm: '闪烁风暴',
+
+    connected_as: '已连接为', // HINZUGEFÜGT
 
     settings_language_label: '语言', settings_language_desc: '更改游戏的显示语言。',
     settings_volume_label: '主音量', settings_volume_desc: '控制游戏的整体音量。',
@@ -896,6 +914,9 @@ const zh = {
     shop_proj_fireball_desc: '一种让你的投射物看起来像火球的外观风格。',
     shop_proj_purple_name: '虚空箭',
     shop_proj_purple_desc: '一种将你的投射物颜色变为深紫色的外观风格。',
+    // HINZUGEFÜGT
+    shop_proj_rainbow_name: '炫彩箭',
+    shop_proj_rainbow_desc: '一种让你的投射物循环显示彩虹所有颜色的外观风格。',
     
     shop_trail_rainbow_name: '彩虹尾迹',
     shop_trail_rainbow_desc: '一种在身后留下鲜艳彩虹的引擎尾迹外观。',
@@ -1009,8 +1030,8 @@ const ja = {
   btn_back: '戻る',
   btn_shop: "ショップ",
   btn_buy: "購入",
-  btn_upgrade: '購入',
-  btn_unlock: '購入',
+  btn_upgrade: 'アップグレード', // VERBESSERT
+  btn_unlock: 'アンロック', // VERBESSERT
   btn_equip: '装備',
   btn_equipped: '装備中',
   btn_max_level: "最大レベル",
@@ -1030,6 +1051,8 @@ const ja = {
   affix_thick_skins: '厚皮',
   affix_bullet_hell: '弾幕地獄',
   affix_blink_storm: 'ブリンクストーム',
+
+  connected_as: '接続中:', // HINZUGEFÜGT
 
   settings_language_label: '言語', settings_language_desc: 'ゲームの表示言語を変更します。',
   settings_volume_label: 'マスター音量', settings_volume_desc: 'ゲーム全体の音量を調整します。',
@@ -1145,6 +1168,9 @@ const ja = {
   shop_proj_fireball_desc: '弾が火の玉のように見えるコスメティックスタイル。',
   shop_proj_purple_name: 'ヴォイドボルト',
   shop_proj_purple_desc: '弾の色をダークパープルに変えるコスメティックスタイル。',
+  // HINZUGEFÜGT
+  shop_proj_rainbow_name: 'クロマボルト',
+  shop_proj_rainbow_desc: '弾が虹のすべての色を循環するコスメティックスタイル。',
   
   shop_trail_rainbow_name: 'レインボートレイル',
   shop_trail_rainbow_desc: '船尾に鮮やかな虹を残す、コスメティックなエンジントレイル。',
@@ -1258,8 +1284,8 @@ const it = {
   btn_back: 'Indietro',
   btn_shop: "Negozio",
   btn_buy: "Compra",
-  btn_upgrade: 'Compra',
-  btn_unlock: 'Compra',
+  btn_upgrade: 'Potenzia', // VERBESSERT
+  btn_unlock: 'Sblocca', // VERBESSERT
   btn_equip: 'Equipaggia',
   btn_equipped: 'Equipaggiato',
   btn_max_level: "Liv. Max",
@@ -1279,6 +1305,8 @@ const it = {
   affix_thick_skins: 'Pelle Dura',
   affix_bullet_hell: 'Inferno di Proiettili',
   affix_blink_storm: 'Tempesta di Teletrasporti',
+
+  connected_as: 'Connesso come', // HINZUGEFÜGT
 
   settings_language_label: 'Lingua', settings_language_desc: 'Cambia la lingua di visualizzazione del gioco.',
   settings_volume_label: 'Volume Principale', settings_volume_desc: 'Controlla il volume generale del gioco.',
@@ -1394,6 +1422,9 @@ const it = {
   shop_proj_fireball_desc: 'Uno stile cosmetico che fa sembrare i tuoi proiettili delle palle di fuoco.',
   shop_proj_purple_name: 'Dardi del Vuoto',
   shop_proj_purple_desc: 'Uno stile cosmetico che cambia il colore dei tuoi proiettili in viola scuro.',
+  // HINZUGEFÜGT
+  shop_proj_rainbow_name: 'Dardi Cromatici',
+  shop_proj_rainbow_desc: 'Uno stile cosmetico che fa sì che i tuoi proiettili passino attraverso tutti i colori dell\'arcobaleno.',
   
   shop_trail_rainbow_name: 'Scia Arcobaleno',
   shop_trail_rainbow_desc: 'Una scia motore cosmetica che lascia un vibrante arcobaleno al tuo passaggio.',

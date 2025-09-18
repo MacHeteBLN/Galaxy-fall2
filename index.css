@@ -27,17 +27,18 @@ body {
     color: var(--text-color);
     font-family: var(--main-font);
     overflow: hidden;
-    image-rendering: pixelated;
-    height: 100%; /* <-- GEÄNDERTE ZEILE */
+    /* ÄNDERUNG: Von 'pixelated' zu 'auto' für bessere Skalierungsqualität bei UI-Bildern */
+    image-rendering: auto;
+    height: 100%;
 }
 
 /* --- SPIEL-CONTAINER & CANVAS --- */
 #gameContainer {
     width: 100vw;
-height: 100%;
-position: relative;
-background: var(--bg-color);
-overflow: hidden;
+    height: 100%;
+    position: relative;
+    background: var(--bg-color);
+    overflow: hidden;
 }
 
 canvas {
@@ -358,6 +359,21 @@ canvas {
     -webkit-overflow-scrolling: touch;
 }
 
+/* VERBESSERUNG: Einheitliche Überschriften */
+.info-panel h3 {
+    text-align: center;
+    color: var(--cyan-glow);
+    text-transform: uppercase;
+    font-size: 16px;
+    margin: 30px 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+.info-panel h3:first-child {
+    margin-top: 10px;
+}
+
+
 .powerup-entry {
     display: flex;
     align-items: center;
@@ -408,40 +424,44 @@ canvas {
     animation: final-boss-glow 1.5s ease-in-out infinite;
 }
 
-/* --- NEUES, VERBESSERTES GALERIE-STYLING --- */
+/* GALERIE-STYLING (Struktur aus JS übernommen, aber hier für Vollständigkeit) */
 #galerie-list {
-    padding: 0 10px; /* Etwas Innenabstand für den Scroll-Container */
+    padding: 0 10px; /* Innenabstand für den Scroll-Container */
 }
 
 .gallery-section {
-    margin-bottom: 30px; /* Abstand zwischen den Sektionen */
+    margin-bottom: 40px; /* Größerer Abstand zwischen den Sektionen */
 }
 
+/* Stil für die Sektions-Überschriften */
 .gallery-section h3 {
     text-align: center;
     color: var(--cyan-glow);
     text-transform: uppercase;
     font-size: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
+    text-shadow: 0 0 5px var(--cyan-glow);
 }
 
 .gallery-grid {
     display: grid;
+    /* Responsive Grid: Füllt so viele Items pro Zeile wie möglich */
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 20px;
 }
 
 .gallery-item {
+    position: relative; /* Wichtig für das Schloss-Icon */
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 10px;
-    border: 2px solid transparent;
+    border: 2px solid #444; /* Dunklerer Standard-Rahmen */
     cursor: pointer;
-    transition: border-color 0.3s, background-color 0.3s;
+    transition: all 0.2s ease-in-out; /* Weiche Übergänge für alles */
     background-color: rgba(0, 20, 30, 0.5);
     border-radius: 4px;
 }
@@ -449,29 +469,72 @@ canvas {
 .gallery-item:hover {
     border-color: var(--purple-glow);
     background-color: rgba(30, 0, 40, 0.7);
+    transform: scale(1.05); /* Schöner Zoom-Effekt bei Hover */
+    z-index: 2; /* Hebt das Item über andere */
 }
 
 .gallery-item.selected {
     border-color: var(--cyan-glow);
-    box-shadow: 0 0 15px var(--cyan-glow);
+    box-shadow: 0 0 15px var(--cyan-glow), inset 0 0 10px rgba(0, 255, 255, 0.3);
     background-color: rgba(0, 50, 70, 0.7);
+    transform: scale(1.05);
 }
 
 .gallery-item.locked {
     cursor: not-allowed;
-    filter: grayscale(1) brightness(0.5);
 }
 
-.gallery-item img {
+/* Container für das Vorschaubild */
+.gallery-item-preview {
     width: 80px;
-    height: auto;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.gallery-item-preview img {
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
+}
+
+/* Spezielles Styling für gesperrte Items */
+.gallery-item.locked .gallery-item-preview {
+    filter: grayscale(1) brightness(0.5);
 }
 
 .gallery-item-name {
     font-size: 10px;
     text-align: center;
-    color: var(--text-color);
+    color: #ccc;
+    height: 2.5em; /* Stellt sicher, dass alle Namen den gleichen Platz haben */
+    line-height: 1.25em;
+    overflow: hidden;
+}
+
+.gallery-item.locked .gallery-item-name {
+    color: #666;
+}
+
+/* Das Schloss-Icon für gesperrte Items */
+.locked-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%); /* Leicht nach oben verschoben */
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.8);
+    /* SVG-Schloss direkt als Maske eingebettet - keine extra Datei nötig! */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 1.5A5.25 5.25 0 006.75 6.75v3.75H6a2.25 2.25 0 00-2.25 2.25v8.25A2.25 2.25 0 006 23.25h12A2.25 2.25 0 0020.25 21V12.75A2.25 2.25 0 0018 10.5h-.75V6.75A5.25 5.25 0 0012 1.5zM8.25 6.75a3.75 3.75 0 017.5 0v3.75H8.25V6.75z'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 1.5A5.25 5.25 0 006.75 6.75v3.75H6a2.25 2.25 0 00-2.25 2.25v8.25A2.25 2.25 0 006 23.25h12A2.25 2.25 0 0020.25 21V12.75A2.25 2.25 0 0018 10.5h-.75V6.75A5.25 5.25 0 0012 1.5zM8.25 6.75a3.75 3.75 0 017.5 0v3.75H8.25V6.75z'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 /* Spezifisches Styling für Projektile */
@@ -1013,6 +1076,28 @@ canvas {
 
 
 /* --- ANIMATIONEN & HELFER --- */
+
+/* NEU: Gestylte Scrollbalken für ein besseres UI-Gefühl */
+.info-panel::-webkit-scrollbar,
+#shop-content::-webkit-scrollbar {
+  width: 8px;
+}
+.info-panel::-webkit-scrollbar-track,
+#shop-content::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.4);
+}
+.info-panel::-webkit-scrollbar-thumb,
+#shop-content::-webkit-scrollbar-thumb {
+  background-color: var(--cyan-glow);
+  border-radius: 4px;
+  border: 2px solid var(--bg-color);
+}
+.info-panel::-webkit-scrollbar-thumb:hover,
+#shop-content::-webkit-scrollbar-thumb:hover {
+    background-color: var(--purple-glow);
+}
+
+
 .timer-warning {
     animation: blink 1s step-end infinite;
 }
@@ -1116,7 +1201,7 @@ canvas {
     }
 
     /* Galerie-Anpassungen für Mobile */
-    .gallery-grid {
+    #galerie-list {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;
     }

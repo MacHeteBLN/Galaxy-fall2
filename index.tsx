@@ -63,48 +63,160 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
+// --- START: NEUE HILFSFUNKTION FÜR HOCHWERTIGE SKALIERUNG ---
+const createScaledImage = (src: string, targetWidth: number, targetHeight: number): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const originalImg = new Image();
+        originalImg.crossOrigin = "Anonymous"; // Wichtig für Canvas-Operationen
+        originalImg.onload = () => {
+            let w = originalImg.width;
+            let h = originalImg.height;
+
+            // Wenn das Bild bereits klein genug ist, direkt zurückgeben
+            if (w <= targetWidth && h <= targetHeight) {
+                resolve(originalImg);
+                return;
+            }
+
+            // Erstelle ein temporäres Canvas, um das Bild schrittweise zu verkleinern
+            const oc = document.createElement('canvas');
+            const octx = oc.getContext('2d')!;
+
+            oc.width = w;
+            oc.height = h;
+            octx.drawImage(originalImg, 0, 0);
+
+            // Skaliere in Schritten von 50% herunter, bis wir nahe am Ziel sind
+            while (w * 0.5 > targetWidth) {
+                w *= 0.5;
+                h *= 0.5;
+                octx.drawImage(oc, 0, 0, w * 2, h * 2, 0, 0, w, h);
+            }
+
+            // Der letzte Skalierungsschritt zum finalen Ziel
+            oc.width = targetWidth;
+            oc.height = targetHeight;
+            octx.drawImage(originalImg, 0, 0, originalImg.width, originalImg.height, 0, 0, targetWidth, targetHeight);
+
+            // Erstelle ein finales Image-Element aus dem skalierten Canvas-Inhalt
+            const scaledImg = new Image();
+            scaledImg.onload = () => resolve(scaledImg);
+            scaledImg.onerror = reject;
+            scaledImg.src = oc.toDataURL();
+        };
+        originalImg.onerror = reject;
+        originalImg.src = src;
+    });
+};
+// --- ENDE: NEUE HILFSFUNKTION ---
+
+
 const API_BASE_URL = '/api';
 
 
-// --- SECTION 2: BILD-INITIALISIERUNG ---
-const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
-const playerImg1 = createImage(playerImgSrc1), playerImg2 = createImage(playerImgSrc2), playerImg3 = createImage(playerImgSrc3), playerImg4 = createImage(playerImgSrc4);
-const playerImgVoid = createImage(playerImgSrcVoid);
-const playerImgGold = createImage(playerImgSrcGold);
-const playerImgMarauder = createImage(playerImgSrcMarauder);
-const playerImgPaladin = createImage(playerImgSrcPaladin);
-const playerImgSpectre = createImage(playerImgSrcSpectre);
-const playerImgGoliath = createImage(playerImgSrcGoliath);
-const playerImgJuggernaut = createImage(playerImgSrcJuggernaut);
-const playerImgLeviathan = createImage(playerImgSrcLeviathan);
-const gruntImg = createImage(gruntImgSrc), tankImg = createImage(tankImgSrc), weaverImg = createImage(weaverImgSrc), shooterImg = createImage(shooterImgSrc), teleporterImg = createImage(teleporterImgSrc);
-const bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
-const bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
-const bossOmegaNexusBaseImg = createImage(bossOmegaNexusBaseSrc);
-const bossNexusPrimeImg = createImage(bossOmegaNexusRingSrc);
-const orbitalDroneImages = [createImage(orbitalDrone1ImgSrc), createImage(orbitalDrone2ImgSrc), createImage(orbitalDrone3ImgSrc)];
-const piCoinImg = createImage(piCoinImgSrc);
-const powerUpImages: { [key: string]: HTMLImageElement } = { 'WEAPON_UP': createImage(powerupWeaponUpSrc), 'RAPID_FIRE': createImage(powerupRapidFireSrc), 'SIDE_SHOTS': createImage(powerupSideShotsSrc), 'LASER_BEAM': createImage(powerupLaserBeamSrc), 'HOMING_MISSILES': createImage(powerupHomingMissilesSrc), 'SHIELD': createImage(powerupShieldSrc), 'REPAIR_KIT': createImage(powerupRepairKitSrc), 'EXTRA_LIFE': createImage(powerupExtraLifeSrc), 'GHOST_PROTOCOL': createImage(powerupGhostProtocolSrc), 'ORBITAL_DRONE': createImage(powerupOrbitalDroneSrc), 'NUKE': createImage(powerupNukeSrc), 'BLACK_HOLE': createImage(powerupBlackHoleSrc), 'SCORE_BOOST': createImage(powerupScoreBoostSrc), };
+// --- SECTION 2: BILD-INITIALISIERUNG (NEUE ASYNCHRONE VERSION) ---
+// Globale Variablen für die Bilder, damit sie außerhalb der async-Funktion verfügbar sind
+let playerImg1: HTMLImageElement, playerImg2: HTMLImageElement, playerImg3: HTMLImageElement, playerImg4: HTMLImageElement;
+let playerImgVoid: HTMLImageElement, playerImgGold: HTMLImageElement, playerImgMarauder: HTMLImageElement, playerImgPaladin: HTMLImageElement;
+let playerImgSpectre: HTMLImageElement, playerImgGoliath: HTMLImageElement, playerImgJuggernaut: HTMLImageElement, playerImgLeviathan: HTMLImageElement;
+let gruntImg: HTMLImageElement, tankImg: HTMLImageElement, weaverImg: HTMLImageElement, shooterImg: HTMLImageElement, teleporterImg: HTMLImageElement;
+let bossSentinelPrimeImg: HTMLImageElement, bossVoidSerpentImg: HTMLImageElement, bossOmegaNexusBaseImg: HTMLImageElement, bossNexusPrimeImg: HTMLImageElement;
+let orbitalDroneImages: HTMLImageElement[];
+let piCoinImg: HTMLImageElement;
+let powerUpImages: { [key: string]: HTMLImageElement };
 const powerUpImageSources: { [key: string]: string } = { 'WEAPON_UP': powerupWeaponUpSrc, 'RAPID_FIRE': powerupRapidFireSrc, 'SIDE_SHOTS': powerupSideShotsSrc, 'LASER_BEAM': powerupLaserBeamSrc, 'HOMING_MISSILES': powerupHomingMissilesSrc, 'SHIELD': powerupShieldSrc, 'REPAIR_KIT': powerupRepairKitSrc, 'EXTRA_LIFE': powerupExtraLifeSrc, 'GHOST_PROTOCOL': powerupGhostProtocolSrc, 'ORBITAL_DRONE': powerupOrbitalDroneSrc, 'NUKE': powerupNukeSrc, 'BLACK_HOLE': powerupBlackHoleSrc, 'SCORE_BOOST': powerupScoreBoostSrc, };
-const phoenixCoreImages: { [key: string]: HTMLImageElement } = {
-    'BLUE': createImage(phoenixCoreBlueSrc),
-    'YELLOW': createImage(phoenixCoreYellowSrc),
-    'PURPLE': createImage(phoenixCorePurpleSrc),
-};
+let phoenixCoreImages: { [key: string]: HTMLImageElement };
+let playerImageMap: { [key: string]: HTMLImageElement };
 
-const playerImageMap: { [key: string]: HTMLImageElement } = {
-    'skin_default': playerImg1,
-    'skin_sentinel': playerImg2,
-    'skin_renegade': playerImg3,
-    'skin_avenger': playerImg4,
-    'skin_void': playerImgVoid,
-    'skin_gold': playerImgGold,
-    'skin_marauder': playerImgMarauder,
-    'skin_paladin': playerImgPaladin,
-    'skin_spectre': playerImgSpectre,
-    'skin_goliath': playerImgGoliath,
-    'skin_juggernaut': playerImgJuggernaut,
-    'skin_leviathan': playerImgLeviathan,
+const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
+
+// Diese Funktion lädt und skaliert alle Bilder und muss vor dem Spielstart aufgerufen werden.
+const initializeImages = async () => {
+    const iconSize = 80; // Eine gute, einheitliche Größe für alle Galerie-Icons
+
+    // --- START DER ÄNDERUNG ---
+    // Lade die Spieler-Skins in ihrer ORIGINALGRÖSSE, um die maximale Qualität zu erhalten.
+    // Die Skalierung findet jetzt zur Laufzeit in der `Player.draw`-Methode statt.
+    const playerSkinPromises = [
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc1); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc2); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc3); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc4); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcVoid); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcGold); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcMarauder); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcPaladin); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcSpectre); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcGoliath); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcJuggernaut); img.onload = () => resolve(img); }),
+        new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcLeviathan); img.onload = () => resolve(img); }),
+    ];
+    // --- ENDE DER ÄNDERUNG ---
+    
+    // Lade die Originalbilder der Power-ups (die nicht skaliert werden müssen)
+    const powerUpImagePromises = Object.keys(powerUpImageSources).map(key => {
+        return new Promise<[string, HTMLImageElement]>(resolve => {
+            const img = createImage(powerUpImageSources[key]!);
+            img.onload = () => resolve([key, img]);
+        });
+    });
+
+    // Lade und skaliere die Galerie-Icons, die wir benötigen
+    const scaledIconPromises = Promise.all([
+        createScaledImage(powerUpImageSources['WEAPON_UP']!, iconSize, iconSize),
+        createScaledImage(powerupRapidFireSrc, iconSize, iconSize),
+        createScaledImage(powerupBlackHoleSrc, iconSize, iconSize),
+        createScaledImage(iconTrailRainbowSrc, iconSize, iconSize)
+    ]);
+    
+    // Führe alle Ladevorgänge parallel aus
+    const [playerSkins, powerUpEntries, scaledIcons] = await Promise.all([
+        Promise.all(playerSkinPromises),
+        Promise.all(powerUpImagePromises),
+        scaledIconPromises
+    ]);
+
+    [
+        playerImg1, playerImg2, playerImg3, playerImg4, playerImgVoid,
+        playerImgGold, playerImgMarauder, playerImgPaladin, playerImgSpectre,
+        playerImgGoliath, playerImgJuggernaut, playerImgLeviathan
+    ] = playerSkins;
+
+    powerUpImages = Object.fromEntries(powerUpEntries);
+    
+    // Lade die restlichen, nicht-skalierten Bilder
+    gruntImg = createImage(gruntImgSrc);
+    tankImg = createImage(tankImgSrc);
+    weaverImg = createImage(weaverImgSrc);
+    shooterImg = createImage(shooterImgSrc);
+    teleporterImg = createImage(teleporterImgSrc);
+    bossSentinelPrimeImg = createImage(bossSentinelPrimeSrc);
+    bossVoidSerpentImg = createImage(bossVoidSerpentSrc);
+    bossOmegaNexusBaseImg = createImage(bossOmegaNexusBaseSrc);
+    bossNexusPrimeImg = createImage(bossOmegaNexusRingSrc);
+    orbitalDroneImages = [createImage(orbitalDrone1ImgSrc), createImage(orbitalDrone2ImgSrc), createImage(orbitalDrone3ImgSrc)];
+    piCoinImg = createImage(piCoinImgSrc);
+    phoenixCoreImages = { 'BLUE': createImage(phoenixCoreBlueSrc), 'YELLOW': createImage(phoenixCoreYellowSrc), 'PURPLE': createImage(phoenixCorePurpleSrc) };
+    
+    playerImageMap = {
+        'skin_default': playerImg1, 'skin_sentinel': playerImg2, 'skin_renegade': playerImg3, 'skin_avenger': playerImg4,
+        'skin_void': playerImgVoid, 'skin_gold': playerImgGold, 'skin_marauder': playerImgMarauder, 'skin_paladin': playerImgPaladin,
+        'skin_spectre': playerImgSpectre, 'skin_goliath': playerImgGoliath, 'skin_juggernaut': playerImgJuggernaut, 'skin_leviathan': playerImgLeviathan,
+    };
+
+    // Ersetze die Originalquellen durch die neuen, skalierten Bilder in einer separaten Map für die Galerie
+    const galleryImageMap = {
+        'proj_default_name': scaledIcons[0], // WEAPON_UP
+        'shop_proj_green_name': scaledIcons[0], // WEAPON_UP
+        'shop_proj_fireball_name': scaledIcons[1], // rapidFire
+        'shop_proj_purple_name': scaledIcons[2], // blackHole
+        'shop_proj_rainbow_name': scaledIcons[3], // rainbow
+        'trail_default_name': playerImg1, // default ship
+        'shop_trail_rainbow_name': scaledIcons[3] // rainbow
+    };
+
+    // Global zugänglich machen (oder übergeben), damit populateGalerie darauf zugreifen kann
+    (window as any).galleryImageMap = galleryImageMap;
 };
 
 
@@ -767,6 +879,10 @@ class Coin extends EntityFamily {
     draw(ctx: CanvasRenderingContext2D): void {
         const scaleX = Math.cos(this.angle);
         ctx.save();
+
+        // AKTIVIEREN: Hochwertige Bildglättung für ein weiches und detailliertes Aussehen
+        ctx.imageSmoothingEnabled = true;
+
         ctx.translate(this.pos.x + this.width / 2, this.pos.y + this.height / 2);
         ctx.scale(scaleX, 1);
         ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
@@ -787,8 +903,18 @@ class PowerUp extends EntityFamily {
     public speed: number = 150; public powerUpType: string;
     constructor(game: Game, x: number, y: number) { super(game, x, y, 38, 38, 'pickup', 'POWERUP'); const allTypes = ['WEAPON_UP', 'SIDE_SHOTS', 'RAPID_FIRE', 'SHIELD', 'REPAIR_KIT', 'EXTRA_LIFE', 'GHOST_PROTOCOL', 'ORBITAL_DRONE', 'NUKE', 'BLACK_HOLE', 'SCORE_BOOST', 'LASER_BEAM', 'HOMING_MISSILES']; this.powerUpType = allTypes[Math.floor(Math.random() * allTypes.length)]!; }
     update(dt: number): void { this.pos.y += this.speed * (dt / 1000); if (this.pos.y > this.game.height) this.destroy(); }
-    draw(ctx: CanvasRenderingContext2D): void { const image = powerUpImages[this.powerUpType]; if (image) ctx.drawImage(image, this.pos.x, this.pos.y, this.width, this.height); }
-    public onCollect(): void { if (this.game.player) { const SPECIALS = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST']; const ULTRAS = ['LASER_BEAM', 'HOMING_MISSILES']; if(SPECIALS.includes(this.powerUpType)) this.game.player.powerUpManager.collectSpecial(this.powerUpType); else if (ULTRAS.includes(this.powerUpType)) this.game.player.powerUpManager.collectUltra(this.powerUpType); else this.game.player.powerUpManager.activate(this.powerUpType); } this.destroy(); }
+    draw(ctx: CanvasRenderingContext2D): void {
+        const image = powerUpImages[this.powerUpType];
+        if (image) {
+            ctx.save();
+            // AKTIVIEREN: Hochwertige Bildglättung für ein weiches und detailliertes Aussehen
+            ctx.imageSmoothingEnabled = true;
+            
+            ctx.drawImage(image, this.pos.x, this.pos.y, this.width, this.height);
+            
+            ctx.restore();
+        }
+    }    public onCollect(): void { if (this.game.player) { const SPECIALS = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST']; const ULTRAS = ['LASER_BEAM', 'HOMING_MISSILES']; if(SPECIALS.includes(this.powerUpType)) this.game.player.powerUpManager.collectSpecial(this.powerUpType); else if (ULTRAS.includes(this.powerUpType)) this.game.player.powerUpManager.collectUltra(this.powerUpType); else this.game.player.powerUpManager.activate(this.powerUpType); } this.destroy(); }
 }
 class Enemy extends EntityFamily {
     public baseHealth: number; public health: number; public maxHealth: number; public pointsValue: number;
@@ -1806,14 +1932,26 @@ class Player extends EntityFamily {
         this.drones.forEach(d => d.update(dt));
     }
     
+    // --- START DER ÄNDERUNG ---
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
+        
+        // 1. Bildglättung für hohe Qualität aktivieren
+        ctx.imageSmoothingEnabled = true;
+        
         ctx.globalAlpha = this.isGhosted() ? 0.5 : 1;
         
         const equippedSkinId = this.game.shopManager.playerCosmetics.equipped_skin;
         const currentImage = playerImageMap[equippedSkinId] || playerImageMap['skin_default'];
-        const drawX = this.pos.x + (this.width / 2) - (currentImage.width / 2);
-        const drawY = this.pos.y + (this.height / 2) - (currentImage.height / 2);
+        
+        // 2. Definieren Sie die visuelle Größe des Spielers. Dies kann angepasst werden,
+        // um die Größe des Skins im Spiel zu ändern.
+        const visualWidth = 120;
+        const visualHeight = 80;
+
+        // 3. Zentrieren Sie die visuelle Darstellung über der logischen Position (Hitbox-Mitte) des Spielers.
+        const drawX = (this.pos.x + this.width / 2) - (visualWidth / 2);
+        const drawY = (this.pos.y + this.height / 2) - (visualHeight / 2);
 
         if (this.isShielded()) {
             const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
@@ -1823,7 +1961,9 @@ class Player extends EntityFamily {
             ctx.shadowBlur = glowSize;
         }
         
-        ctx.drawImage(currentImage, drawX, drawY);
+        // 4. Zeichnen Sie das hochauflösende Originalbild und lassen Sie den Browser es
+        // auf die gewünschte visuelle Größe herunterskalieren.
+        ctx.drawImage(currentImage, drawX, drawY, visualWidth, visualHeight);
 
         ctx.shadowBlur = 0;
         ctx.shadowColor = 'transparent';
@@ -1834,34 +1974,26 @@ class Player extends EntityFamily {
 
         const drawFlame = (x: number, y: number) => {
             ctx.save();
-            
             const baseLength = 25, baseWidth = 9, swayAmount = 8;
             const STEERING_FLAME_OFFSET = 15;
-
             for (let i = 0; i < 3; i++) {
                 const currentLength = baseLength + Math.random() * 10;
                 const currentWidth = baseWidth + Math.random() * 4;
                 const tipSway = (Math.random() - 0.5) * swayAmount;
-
                 const nozzleX = x, nozzleY = y;
-                
                 const steeringOffset = -this.steeringDirection * STEERING_FLAME_OFFSET;
                 const tipX = x + tipSway + steeringOffset;
                 const tipY = y + currentLength;
-                
                 const controlX1 = x - currentWidth + steeringOffset * 0.5;
                 const controlY1 = y + currentLength * 0.5;
                 const controlX2 = x + currentWidth + steeringOffset * 0.5;
                 const controlY2 = y + currentLength * 0.5;
-
                 const gradient = ctx.createLinearGradient(nozzleX, nozzleY, nozzleX, tipY);
                 gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
                 gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.7)');
                 gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
-
                 ctx.fillStyle = gradient;
                 ctx.globalAlpha = 0.5;
-
                 ctx.beginPath();
                 ctx.moveTo(nozzleX, nozzleY);
                 ctx.quadraticCurveTo(controlX1, controlY1, tipX, tipY);
@@ -1881,6 +2013,7 @@ class Player extends EntityFamily {
         this.drones.forEach(d => d.draw(ctx));
         ctx.restore();
     }
+    // --- ENDE DER ÄNDERUNG ---
     
     shoot(): void { this.powerUpManager.shoot(); }
     takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return; } this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { if (this.availableReviveCrystals.length > 0) { const crystalToUse = this.availableReviveCrystals.shift()!; this.game.startReviveSequence(this, crystalToUse); return; } this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = this.maxEnergy; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } }
@@ -3973,7 +4106,7 @@ class UIManager {
         setupButton(shopBackButton, () => {
             this.toggleShopScreen(false);
             if (this.game.isPaused) {
-                this.togglePauseMenu(true);
+                            this.togglePauseMenu(true);
             } else {
                 this.toggleMainMenu(true);
             }
@@ -4131,104 +4264,87 @@ class UIManager {
     public populateGalerie(): void {
         const t = (key: string) => this.localizationManager.translate(key);
         const galleryEl = document.getElementById('galerie-list')!;
-        galleryEl.innerHTML = '';
-    
-        // --- Sektion: Spieler-Skins ---
-        const skinsHeader = document.createElement('h3');
-        skinsHeader.textContent = `- ${t('gallery_skins_header')} -`;
-        galleryEl.appendChild(skinsHeader);
+        galleryEl.innerHTML = ''; // Start with a clean slate
 
-        const allSkins = [
-            { id: 'skin_default', nameKey: 'shop_skin_default_name', imageSrc: playerImgSrc1 },
-            { id: 'skin_sentinel', nameKey: 'shop_skin_sentinel_name', imageSrc: playerImgSrc2 },
-            { id: 'skin_renegade', nameKey: 'shop_skin_renegade_name', imageSrc: playerImgSrc3 },
-            { id: 'skin_avenger', nameKey: 'shop_skin_avenger_name', imageSrc: playerImgSrc4 },
-            { id: 'skin_void', nameKey: 'shop_skin_void_name', imageSrc: playerImgSrcVoid },
-            { id: 'skin_gold', nameKey: 'shop_skin_gold_name', imageSrc: playerImgSrcGold },
-            { id: 'skin_marauder', nameKey: 'shop_skin_marauder_name', imageSrc: playerImgSrcMarauder },
-            { id: 'skin_paladin', nameKey: 'shop_skin_paladin_name', imageSrc: playerImgSrcPaladin },
-            { id: 'skin_spectre', nameKey: 'shop_skin_spectre_name', imageSrc: playerImgSrcSpectre },
-            { id: 'skin_goliath', nameKey: 'shop_skin_goliath_name', imageSrc: playerImgSrcGoliath },
-            { id: 'skin_juggernaut', nameKey: 'shop_skin_juggernaut_name', imageSrc: playerImgSrcJuggernaut },
-            { id: 'skin_leviathan', nameKey: 'shop_skin_leviathan_name', imageSrc: playerImgSrcLeviathan },
-        ];
-        const equippedSkin = this.game.shopManager.playerCosmetics.equipped_skin;
-        allSkins.forEach(skin => {
-            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(skin.id, 'player_skin');
+        const createItemElement = (item: { id: string, nameKey: string, imageSrc: string }, type: 'player_skin' | 'projectile_style' | 'engine_trail') => {
+            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(item.id, type);
+            const equippedItem = type === 'player_skin' ? this.game.shopManager.playerCosmetics.equipped_skin :
+                                type === 'projectile_style' ? this.game.shopManager.playerCosmetics.equipped_projectile :
+                                this.game.shopManager.playerCosmetics.equipped_trail;
+            
             const itemEl = document.createElement('div');
             itemEl.className = 'gallery-item';
+            
+            // Add a specific class for item types for more granular styling
+            if (type === 'projectile_style') itemEl.classList.add('projectile-item');
+            if (type === 'engine_trail') itemEl.classList.add('trail-item');
+
             if (isUnlocked) {
-                if (skin.id === equippedSkin) itemEl.classList.add('selected');
+                if (item.id === equippedItem) {
+                    itemEl.classList.add('selected');
+                }
                 itemEl.addEventListener('click', () => {
-                    this.game.shopManager.equipCosmetic(skin.id, 'player_skin');
-                    this.populateGalerie();
+                    this.game.shopManager.equipCosmetic(item.id, type);
+                    this.populateGalerie(); // Re-render to show selection change
                     this.soundManager.play('uiClick');
                 });
             } else {
                 itemEl.classList.add('locked');
             }
-            itemEl.innerHTML = `<img src="${skin.imageSrc}" alt="${t(skin.nameKey)}"><div class="gallery-item-name">${t(skin.nameKey)}</div>`;
-            galleryEl.appendChild(itemEl);
-        });
-    
-        // --- Sektion: Projektilstile ---
-        const projectilesHeader = document.createElement('h3');
-        projectilesHeader.textContent = `- ${t('gallery_projectiles_header')} -`;
-        galleryEl.appendChild(projectilesHeader);
 
+            // Create the inner HTML with a placeholder for the icon if it's locked
+            let innerHTML = `<div class="gallery-item-preview"><img src="${item.imageSrc}" alt="${t(item.nameKey)}"></div><div class="gallery-item-name">${t(item.nameKey)}</div>`;
+            if (!isUnlocked) {
+                innerHTML += `<div class="locked-icon"></div>`;
+            }
+            itemEl.innerHTML = innerHTML;
+            return itemEl;
+        };
+
+        const createSection = (titleKey: string, items: { id: string, nameKey: string, imageSrc: string }[], type: 'player_skin' | 'projectile_style' | 'engine_trail') => {
+            const section = document.createElement('div');
+            section.className = 'gallery-section';
+            
+            const title = document.createElement('h3');
+            title.textContent = `- ${t(titleKey)} -`;
+            
+            const grid = document.createElement('div');
+            grid.className = 'gallery-grid';
+            
+            items.forEach(item => {
+                grid.appendChild(createItemElement(item, type));
+            });
+            
+            section.appendChild(title);
+            section.appendChild(grid);
+            galleryEl.appendChild(section);
+        };
+
+        // --- Daten für die Galerie ---
+        const allSkins = [
+            { id: 'skin_default', nameKey: 'shop_skin_default_name', imageSrc: playerImgSrc1 }, { id: 'skin_sentinel', nameKey: 'shop_skin_sentinel_name', imageSrc: playerImgSrc2 },
+            { id: 'skin_renegade', nameKey: 'shop_skin_renegade_name', imageSrc: playerImgSrc3 }, { id: 'skin_avenger', nameKey: 'shop_skin_avenger_name', imageSrc: playerImgSrc4 },
+            { id: 'skin_void', nameKey: 'shop_skin_void_name', imageSrc: playerImgSrcVoid }, { id: 'skin_gold', nameKey: 'shop_skin_gold_name', imageSrc: playerImgSrcGold },
+            { id: 'skin_marauder', nameKey: 'shop_skin_marauder_name', imageSrc: playerImgSrcMarauder }, { id: 'skin_paladin', nameKey: 'shop_skin_paladin_name', imageSrc: playerImgSrcPaladin },
+            { id: 'skin_spectre', nameKey: 'shop_skin_spectre_name', imageSrc: playerImgSrcSpectre }, { id: 'skin_goliath', nameKey: 'shop_skin_goliath_name', imageSrc: playerImgSrcGoliath },
+            { id: 'skin_juggernaut', nameKey: 'shop_skin_juggernaut_name', imageSrc: playerImgSrcJuggernaut }, { id: 'skin_leviathan', nameKey: 'shop_skin_leviathan_name', imageSrc: playerImgSrcLeviathan },
+        ];
+        
         const allProjectiles = [
-            { id: 'default', nameKey: 'proj_default_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
-            { id: 'proj_green', nameKey: 'shop_proj_green_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
-            { id: 'proj_fireball', nameKey: 'shop_proj_fireball_name', imageSrc: powerupRapidFireSrc },
-            { id: 'proj_purple', nameKey: 'shop_proj_purple_name', imageSrc: powerupBlackHoleSrc },
+            { id: 'default', nameKey: 'proj_default_name', imageSrc: powerUpImageSources['WEAPON_UP'] }, { id: 'proj_green', nameKey: 'shop_proj_green_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
+            { id: 'proj_fireball', nameKey: 'shop_proj_fireball_name', imageSrc: powerupRapidFireSrc }, { id: 'proj_purple', nameKey: 'shop_proj_purple_name', imageSrc: powerupBlackHoleSrc },
             { id: 'proj_rainbow', nameKey: 'shop_proj_rainbow_name', imageSrc: iconTrailRainbowSrc },
         ];
-        const equippedProjectile = this.game.shopManager.playerCosmetics.equipped_projectile;
-        allProjectiles.forEach(proj => {
-            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(proj.id, 'projectile_style');
-            const itemEl = document.createElement('div');
-            itemEl.className = 'gallery-item projectile-item';
-            if (isUnlocked) {
-                if (proj.id === equippedProjectile) itemEl.classList.add('selected');
-                itemEl.addEventListener('click', () => {
-                    this.game.shopManager.equipCosmetic(proj.id, 'projectile_style');
-                    this.populateGalerie();
-                    this.soundManager.play('uiClick');
-                });
-            } else {
-                itemEl.classList.add('locked');
-            }
-            itemEl.innerHTML = `<div class="gallery-projectile-preview"><img src="${proj.imageSrc}" alt="${t(proj.nameKey)}"></div><div class="gallery-item-name">${t(proj.nameKey)}</div>`;
-            galleryEl.appendChild(itemEl);
-        });
-
-        // --- NEUE SEKTION: Triebwerksspuren (Engine Trails) ---
-        const trailsHeader = document.createElement('h3');
-        trailsHeader.textContent = `- ${t('gallery_trails_header')} -`;
-        galleryEl.appendChild(trailsHeader);
 
         const allTrails = [
             { id: 'default', nameKey: 'trail_default_name', imageSrc: playerImgSrc1 }, // Using default ship as icon
             { id: 'trail_rainbow', nameKey: 'shop_trail_rainbow_name', imageSrc: iconTrailRainbowSrc },
         ];
-        const equippedTrail = this.game.shopManager.playerCosmetics.equipped_trail;
-        allTrails.forEach(trail => {
-            const isUnlocked = this.game.shopManager.isCosmeticUnlocked(trail.id, 'engine_trail');
-            const itemEl = document.createElement('div');
-            itemEl.className = 'gallery-item trail-item';
-            if (isUnlocked) {
-                if (trail.id === equippedTrail) itemEl.classList.add('selected');
-                itemEl.addEventListener('click', () => {
-                    this.game.shopManager.equipCosmetic(trail.id, 'engine_trail');
-                    this.populateGalerie();
-                    this.soundManager.play('uiClick');
-                });
-            } else {
-                itemEl.classList.add('locked');
-            }
-            itemEl.innerHTML = `<div class="gallery-trail-preview"><img src="${trail.imageSrc}" alt="${t(trail.nameKey)}"></div><div class="gallery-item-name">${t(trail.nameKey)}</div>`;
-            galleryEl.appendChild(itemEl);
-        });
+
+        // --- Erstelle und fülle die Sektionen ---
+        createSection('gallery_skins_header', allSkins, 'player_skin');
+        createSection('gallery_projectiles_header', allProjectiles, 'projectile_style');
+        createSection('gallery_trails_header', allTrails, 'engine_trail');
     }
 
     public populateGegner(): void {
@@ -4534,12 +4650,33 @@ class Game {
     public resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    
+
+        // --- START DER ÄNDERUNG: devicePixelRatio Berücksichtigung ---
+
+        // 1. Geräte-Pixel-Verhältnis abrufen (z.B. 2 für Retina-Displays)
+        const ratio = window.devicePixelRatio || 1;
+
+        // 2. Die tatsächliche Zeichenfläche des Canvas auf die volle Geräteauflösung einstellen.
+        //    Der Canvas hat jetzt MEHR Pixel als sichtbar sind.
+        this.canvas.width = screenWidth * ratio;
+        this.canvas.height = (screenHeight - 90) * ratio;
+
+        // 3. Den Canvas per CSS auf die sichtbare Größe herunterskalieren.
+        //    Der Browser komprimiert nun die hochauflösende Zeichenfläche in den kleineren Bereich,
+        //    was zu einem gestochen scharfen Bild führt.
+        this.canvas.style.width = `${screenWidth}px`;
+        this.canvas.style.height = `${screenHeight - 90}px`;
+
+        // 4. Den gesamten Zeichenkontext (ctx) skalieren.
+        //    Alle zukünftigen Zeichenbefehle (z.B. fillRect, drawImage) werden jetzt
+        //    automatisch an die höhere Auflösung angepasst.
+        this.ctx.scale(ratio, ratio);
+
+        // --- ENDE DER ÄNDERUNG ---
+
+        // Die logische Breite und Höhe für die Spielmechanik bleiben gleich
         this.width = screenWidth;
         this.height = screenHeight - 90;
-    
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
     
         this.createParallaxStarfield();
     }
@@ -5429,8 +5566,12 @@ class Game {
     handleCollisions(): void { const projectiles = this.entities.filter(e => e.family === 'projectile'); const enemies = this.entities.filter(e => e.family === 'enemy') as Enemy[]; const player = this.player; if (!player || !player.isAlive()) return; if (player.laser && player.laser.isAlive()) { for (const enemy of enemies) { if (!player.laser) break; if (this.isColliding(player.laser, enemy)) { let damage = player.laser.damage; if (this.isBossSlayerActive && enemy.isBoss) damage *= 1.5; enemy.takeHit(damage); if (this.uiManager.settings.particles > 0 && player.laser) this.addEntity(new Particle(this, player.laser.pos.x + player.laser.width / 2, enemy.pos.y, '#FF8C00')); } } } projectiles.forEach(p => { if (p instanceof Projectile && p.type !== 'ENEMY_PROJECTILE') { for (const e of enemies) { if (p.isAlive() && e.isAlive() && this.isColliding(p, e)) { if (p instanceof PiercingProjectile) { if (!p.hasHit(e)) { p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; e.takeHit(damage); } continue; } p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; if (!(p instanceof BlackHoleProjectile)) e.takeHit(damage); break; } } } }); const pickups = this.entities.filter(e => e.family === 'pickup'); pickups.forEach(p => { if (p.isAlive() && this.isColliding(player, p)) { (p as PowerUp | Coin).onCollect(); } }); if (!player.isGhosted()) { enemies.forEach(e => { if (e.isAlive() && this.isColliding(player, e)) { e.takeHit(e.isBoss ? 10 : 999); player.takeHit(e.collisionDamage); } }); this.entities.filter(e => e.type === 'ENEMY_PROJECTILE').forEach(p => { const proj = p as EnemyProjectile; if (proj.isAlive() && this.isColliding(player, proj)) { proj.destroy(); player.takeHit(proj.playerDamage); } }); } }
 }
 
-// --- SECTION 8: INITIALISIERUNG ---
-window.addEventListener('load', function () {
+// --- SECTION 8: INITIALISIERUNG (NEUE ASYNCHRONE VERSION) ---
+window.addEventListener('load', async function () { // Machen Sie diese Funktion async
+    // Zuerst die Bilder laden und skalieren
+    await initializeImages();
+
+    // Sobald die Bilder fertig sind, das Spiel wie gewohnt starten
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     const uiElements: IUIElements = { 
         score: document.getElementById('score')!, 
