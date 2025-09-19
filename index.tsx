@@ -36,7 +36,16 @@ import powerupScoreBoostSrc from './assets/images/powerups/powerup_score_boost.p
 import iconCoinMagnetSrc from './assets/images/icons/icon_coin_magnet.png';
 import iconReviveChanceSrc from './assets/images/icons/icon_revive_chance.png';
 import iconInventorySizeSrc from './assets/images/icons/icon_inventory_size.png';
+import iconCoinValueSrc from './assets/images/icons/icon_coin_value.png';
+import iconPowerupDurationSrc from './assets/images/icons/icon_powerup_duration.png';
+import iconLuckChanceSrc from './assets/images/icons/icon_luck_chance.png';
+import iconSpecialChargeSrc from './assets/images/icons/icon_special_charge.png';
+import iconSpecialStackSrc from './assets/images/icons/icon_special_stack.png';
 import iconBossSlayerSrc from './assets/images/icons/icon_boss_slayer.png';
+import iconProjGreenSrc from './assets/images/icons/icon_proj_green.png';
+import iconProjFireballSrc from './assets/images/icons/icon_proj_fireball.png';
+import iconProjVoidSrc from './assets/images/icons/icon_proj_void.png';
+import iconProjRainbowSrc from './assets/images/icons/icon_proj_rainbow.png';
 import iconWeaponPrestigeSrc from './assets/images/icons/icon_weapon_prestige.png';
 import iconTrailRainbowSrc from './assets/images/icons/icon_trail_rainbow.png';
 import phoenixCoreBlueSrc from './assets/images/crystal_blue.png';
@@ -3126,51 +3135,54 @@ class ShopManager {
         this.playerCosmetics = this.loadCosmetics();
 
         this.shopItems = [
-            { id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc', iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000] },
-            { id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc', iconSrc: powerupRepairKitSrc, maxLevel: 10, cost: [100, 200, 400, 800, 1600, 3200, 5000, 7500, 10000, 15000] },
-            { id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc', iconSrc: piCoin2ImgSrc, maxLevel: 10, cost: [250, 500, 1250, 3000, 7500, 15000, 25000, 40000, 60000, 90000] },
-            { id: 'powerup_duration', type: 'PERMANENT', nameKey: 'shop_powerup_duration_name', descKey: 'shop_powerup_duration_desc', iconSrc: powerupScoreBoostSrc, maxLevel: 10, cost: [500, 1000, 2000, 4000, 8000, 12000, 18000, 25000, 35000, 50000] },
-            { id: 'luck_chance', type: 'PERMANENT', nameKey: 'shop_luck_chance_name', descKey: 'shop_luck_chance_desc', iconSrc: powerupSideShotsSrc, maxLevel: 5, cost: [1000, 2500, 5000, 10000, 20000] },
-            { id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc', iconSrc: powerupNukeSrc, maxLevel: 3, cost: [25000, 50000, 75000] },
-            { id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc', iconSrc: iconCoinMagnetSrc, maxLevel: 1, cost: [10000] },
-            { id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc', iconSrc: iconReviveChanceSrc, maxLevel: 3, cost: [15000, 30000, 75000] },
-            { id: 'special_stack_size', type: 'PERMANENT', nameKey: 'shop_special_stack_name', descKey: 'shop_special_stack_desc', iconSrc: iconInventorySizeSrc, maxLevel: 2, cost: [20000, 50000] },
-            { id: 'ultimate_drone_mastery', type: 'ULTIMATE', nameKey: 'shop_ultimate_drone_mastery_name', descKey: 'shop_ultimate_drone_mastery_desc', iconSrc: orbitalDrone1ImgSrc, maxLevel: 1, cost: [75000] },
-            { id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc', iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000] },
-            { id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc', iconSrc: powerupShieldSrc, cost: [400], applyEffect: (game) => { game.player?.powerUpManager.activate('SHIELD'); } },
-            { id: 'consume_nuke', type: 'CONSUMABLE', nameKey: 'shop_consume_nuke_name', descKey: 'shop_consume_nuke_desc', iconSrc: powerupNukeSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('NUKE'); } },
-            { id: 'consume_extralife', type: 'CONSUMABLE', nameKey: 'shop_consume_extralife_name', descKey: 'shop_consume_extralife_desc', iconSrc: powerupExtraLifeSrc, cost: [2500], applyEffect: (game) => { if(game.player && game.player.lives < game.player.maxLives) game.player.lives++; } },
-            { id: 'consume_ghost', type: 'CONSUMABLE', nameKey: 'shop_consume_ghost_name', descKey: 'shop_consume_ghost_desc', iconSrc: powerupGhostProtocolSrc, cost: [1500], applyEffect: (game) => { game.player?.powerUpManager.activate('GHOST_PROTOCOL', 30000); } },
-            { id: 'consume_boss_slayer', type: 'CONSUMABLE', nameKey: 'shop_consume_boss_slayer_name', descKey: 'shop_consume_boss_slayer_desc', iconSrc: iconBossSlayerSrc, cost: [5000], applyEffect: (game) => { game.isBossSlayerActive = true; } },
-            { id: 'consume_black_hole', type: 'CONSUMABLE', nameKey: 'shop_consume_black_hole_name', descKey: 'shop_consume_black_hole_desc', iconSrc: powerupBlackHoleSrc, cost: [1200], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('BLACK_HOLE'); } },
-            { id: 'consume_score_boost', type: 'CONSUMABLE', nameKey: 'shop_consume_score_boost_name', descKey: 'shop_consume_score_boost_desc', iconSrc: powerupScoreBoostSrc, cost: [800], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('SCORE_BOOST'); } },
-            { id: 'consume_laser_beam', type: 'CONSUMABLE', nameKey: 'shop_consume_laser_beam_name', descKey: 'shop_consume_laser_beam_desc', iconSrc: powerupLaserBeamSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('LASER_BEAM'); } },
-            { id: 'consume_homing_missiles', type: 'CONSUMABLE', nameKey: 'shop_consume_homing_missiles_name', descKey: 'shop_consume_homing_missiles_desc', iconSrc: powerupHomingMissilesSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('HOMING_MISSILES'); } },
-            { id: 'consume_rapid_fire', type: 'CONSUMABLE', nameKey: 'shop_consume_rapid_fire_name', descKey: 'shop_consume_rapid_fire_desc', iconSrc: powerupRapidFireSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('RAPID_FIRE'); } },
-            { id: 'consume_side_shots', type: 'CONSUMABLE', nameKey: 'shop_consume_side_shots_name', descKey: 'shop_consume_side_shots_desc', iconSrc: powerupSideShotsSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('SIDE_SHOTS'); } },
-            { id: 'consume_orbital_drone', type: 'CONSUMABLE', nameKey: 'shop_consume_orbital_drone_name', descKey: 'shop_consume_orbital_drone_desc', iconSrc: powerupOrbitalDroneSrc, cost: [2000], applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); } },
-            { id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc', iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin' },
-            { id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc', iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin' },
-            { id: 'skin_avenger', type: 'SKIN', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc', iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin' },
-            { id: 'skin_void', type: 'SKIN', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc', iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin' },
-            { id: 'skin_gold', type: 'SKIN', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc', iconSrc: playerImgSrcGold, cost: [80000], cosmeticType: 'player_skin' },
-            { id: 'skin_marauder', type: 'SKIN', nameKey: 'shop_skin_marauder_name', descKey: 'shop_skin_marauder_desc', iconSrc: playerImgSrcMarauder, cost: [30000], cosmeticType: 'player_skin' },
-            { id: 'skin_paladin', type: 'SKIN', nameKey: 'shop_skin_paladin_name', descKey: 'shop_skin_paladin_desc', iconSrc: playerImgSrcPaladin, cost: [35000], cosmeticType: 'player_skin' },
-            { id: 'skin_spectre', type: 'SKIN', nameKey: 'shop_skin_spectre_name', descKey: 'shop_skin_spectre_desc', iconSrc: playerImgSrcSpectre, cost: [40000], cosmeticType: 'player_skin' },
-            { id: 'skin_goliath', type: 'SKIN', nameKey: 'shop_skin_goliath_name', descKey: 'shop_skin_goliath_desc', iconSrc: playerImgSrcGoliath, cost: [50000], cosmeticType: 'player_skin' },
-            { id: 'skin_juggernaut', type: 'SKIN', nameKey: 'shop_skin_juggernaut_name', descKey: 'shop_skin_juggernaut_desc', iconSrc: playerImgSrcJuggernaut, cost: [60000], cosmeticType: 'player_skin' },
-            { id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc', iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin' },
-            { id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc', iconSrc: powerUpImageSources['WEAPON_UP'], cost: [5000], cosmeticType: 'projectile_style' },
-            { id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc', iconSrc: powerupRapidFireSrc, cost: [7500], cosmeticType: 'projectile_style' },
-            { id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc', iconSrc: powerupBlackHoleSrc, cost: [7500], cosmeticType: 'projectile_style' },
-            { id: 'proj_rainbow', type: 'COSMETIC', nameKey: 'shop_proj_rainbow_name', descKey: 'shop_proj_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [15000], cosmeticType: 'projectile_style' },
-            { id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail' },
-            { id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000 },
-            { id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500 },
-            { id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc', iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000 },
-            { id: 'pi_bundle_4', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_4_name', descKey: 'shop_pi_bundle_4_desc', iconSrc: piCoin2ImgSrc, pi_cost: 5.0, coin_reward: 65000 },
-            { id: 'pi_bundle_5', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_5_name', descKey: 'shop_pi_bundle_5_desc', iconSrc: piCoin2ImgSrc, pi_cost: 10.0, coin_reward: 150000 },
-        ];
+    // --- PERMANENT UPGRADES ---
+    { id: 'start_lives', type: 'PERMANENT', nameKey: 'shop_start_lives_name', descKey: 'shop_start_lives_desc', iconSrc: powerupExtraLifeSrc, maxLevel: 5, cost: [150, 450, 1000, 2500, 5000] },
+    { id: 'start_energy', type: 'PERMANENT', nameKey: 'shop_start_energy_name', descKey: 'shop_start_energy_desc', iconSrc: powerupRepairKitSrc, maxLevel: 10, cost: [100, 200, 400, 800, 1600, 3200, 5000, 7500, 10000, 15000] },
+    { id: 'coin_value', type: 'PERMANENT', nameKey: 'shop_coin_value_name', descKey: 'shop_coin_value_desc', iconSrc: iconCoinValueSrc, maxLevel: 10, cost: [250, 500, 1250, 3000, 7500, 15000, 25000, 40000, 60000, 90000] },
+    { id: 'powerup_duration', type: 'PERMANENT', nameKey: 'shop_powerup_duration_name', descKey: 'shop_powerup_duration_desc', iconSrc: iconPowerupDurationSrc, maxLevel: 10, cost: [500, 1000, 2000, 4000, 8000, 12000, 18000, 25000, 35000, 50000] },
+    { id: 'luck_chance', type: 'PERMANENT', nameKey: 'shop_luck_chance_name', descKey: 'shop_luck_chance_desc', iconSrc: iconLuckChanceSrc, maxLevel: 5, cost: [1000, 2500, 5000, 10000, 20000] },
+    { id: 'special_charge', type: 'PERMANENT', nameKey: 'shop_special_charge_name', descKey: 'shop_special_charge_desc', iconSrc: iconSpecialChargeSrc, maxLevel: 3, cost: [25000, 50000, 75000] },
+    { id: 'coin_magnet', type: 'PERMANENT', nameKey: 'shop_coin_magnet_name', descKey: 'shop_coin_magnet_desc', iconSrc: iconCoinMagnetSrc, maxLevel: 1, cost: [10000] },
+    { id: 'revive_chance', type: 'PERMANENT', nameKey: 'shop_revive_chance_name', descKey: 'shop_revive_chance_desc', iconSrc: iconReviveChanceSrc, maxLevel: 3, cost: [15000, 30000, 75000] },
+    { id: 'special_stack_size', type: 'PERMANENT', nameKey: 'shop_special_stack_name', descKey: 'shop_special_stack_desc', iconSrc: iconSpecialStackSrc, maxLevel: 2, cost: [20000, 50000] },
+    { id: 'ultimate_drone_mastery', type: 'ULTIMATE', nameKey: 'shop_ultimate_drone_mastery_name', descKey: 'shop_ultimate_drone_mastery_desc', iconSrc: orbitalDrone1ImgSrc, maxLevel: 1, cost: [75000] },
+    { id: 'ultimate_weapon_prestige', type: 'ULTIMATE', nameKey: 'shop_ultimate_weapon_prestige_name', descKey: 'shop_ultimate_weapon_prestige_desc', iconSrc: iconWeaponPrestigeSrc, maxLevel: 1, cost: [125000] },
+
+    // --- CONSUMABLES ---
+    { id: 'consume_shield', type: 'CONSUMABLE', nameKey: 'shop_consume_shield_name', descKey: 'shop_consume_shield_desc', iconSrc: powerupShieldSrc, cost: [400], applyEffect: (game) => { game.player?.powerUpManager.activate('SHIELD'); } },
+    { id: 'consume_nuke', type: 'CONSUMABLE', nameKey: 'shop_consume_nuke_name', descKey: 'shop_consume_nuke_desc', iconSrc: powerupNukeSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('NUKE'); } },
+    { id: 'consume_extralife', type: 'CONSUMABLE', nameKey: 'shop_consume_extralife_name', descKey: 'shop_consume_extralife_desc', iconSrc: powerupExtraLifeSrc, cost: [2500], applyEffect: (game) => { if(game.player && game.player.lives < game.player.maxLives) game.player.lives++; } },
+    { id: 'consume_ghost', type: 'CONSUMABLE', nameKey: 'shop_consume_ghost_name', descKey: 'shop_consume_ghost_desc', iconSrc: powerupGhostProtocolSrc, cost: [1500], applyEffect: (game) => { game.player?.powerUpManager.activate('GHOST_PROTOCOL', 30000); } },
+    { id: 'consume_boss_slayer', type: 'CONSUMABLE', nameKey: 'shop_consume_boss_slayer_name', descKey: 'shop_consume_boss_slayer_desc', iconSrc: iconBossSlayerSrc, cost: [5000], applyEffect: (game) => { game.isBossSlayerActive = true; } },
+    { id: 'consume_black_hole', type: 'CONSUMABLE', nameKey: 'shop_consume_black_hole_name', descKey: 'shop_consume_black_hole_desc', iconSrc: powerupBlackHoleSrc, cost: [1200], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('BLACK_HOLE'); } },
+    { id: 'consume_score_boost', type: 'CONSUMABLE', nameKey: 'shop_consume_score_boost_name', descKey: 'shop_consume_score_boost_desc', iconSrc: powerupScoreBoostSrc, cost: [800], applyEffect: (game) => { game.player?.powerUpManager.collectSpecial('SCORE_BOOST'); } },
+    { id: 'consume_laser_beam', type: 'CONSUMABLE', nameKey: 'shop_consume_laser_beam_name', descKey: 'shop_consume_laser_beam_desc', iconSrc: powerupLaserBeamSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('LASER_BEAM'); } },
+    { id: 'consume_homing_missiles', type: 'CONSUMABLE', nameKey: 'shop_consume_homing_missiles_name', descKey: 'shop_consume_homing_missiles_desc', iconSrc: powerupHomingMissilesSrc, cost: [1750], applyEffect: (game) => { game.player?.powerUpManager.collectUltra('HOMING_MISSILES'); } },
+    { id: 'consume_rapid_fire', type: 'CONSUMABLE', nameKey: 'shop_consume_rapid_fire_name', descKey: 'shop_consume_rapid_fire_desc', iconSrc: powerupRapidFireSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('RAPID_FIRE'); } },
+    { id: 'consume_side_shots', type: 'CONSUMABLE', nameKey: 'shop_consume_side_shots_name', descKey: 'shop_consume_side_shots_desc', iconSrc: powerupSideShotsSrc, cost: [1000], applyEffect: (game) => { game.player?.powerUpManager.activate('SIDE_SHOTS'); } },
+    { id: 'consume_orbital_drone', type: 'CONSUMABLE', nameKey: 'shop_consume_orbital_drone_name', descKey: 'shop_consume_orbital_drone_desc', iconSrc: powerupOrbitalDroneSrc, cost: [2000], applyEffect: (game) => { game.player?.powerUpManager.activate('ORBITAL_DRONE'); } },
+
+    // --- SKINS & COSMETICS ---
+    { id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc', iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin' },
+    { id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc', iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin' },
+    // ... (alle anderen Skins bleiben unverändert)
+    { id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc', iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin' },
+    
+    // HIER SIND DIE ÄNDERUNGEN:
+    { id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc', iconSrc: iconProjGreenSrc, cost: [5000], cosmeticType: 'projectile_style' },
+    { id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc', iconSrc: iconProjFireballSrc, cost: [7500], cosmeticType: 'projectile_style' },
+    { id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc', iconSrc: iconProjVoidSrc, cost: [7500], cosmeticType: 'projectile_style' },
+    { id: 'proj_rainbow', type: 'COSMETIC', nameKey: 'shop_proj_rainbow_name', descKey: 'shop_proj_rainbow_desc', iconSrc: iconProjRainbowSrc, cost: [15000], cosmeticType: 'projectile_style' },
+    
+    { id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail' },
+
+    // --- PI BUNDLES ---
+    { id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000 },
+    { id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500 },
+    { id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc', iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000 },
+    { id: 'pi_bundle_4', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_4_name', descKey: 'shop_pi_bundle_4_desc', iconSrc: piCoin2ImgSrc, pi_cost: 5.0, coin_reward: 65000 },
+    { id: 'pi_bundle_5', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_5_name', descKey: 'shop_pi_bundle_5_desc', iconSrc: piCoin2ImgSrc, pi_cost: 10.0, coin_reward: 150000 },
+];
     }
 
     public loadUpgrades = (): IPlayerUpgrades => JSON.parse(localStorage.getItem('galaxyFallUpgrades') || '{}');
@@ -4331,10 +4343,12 @@ class UIManager {
         ];
         
         const allProjectiles = [
-            { id: 'default', nameKey: 'proj_default_name', imageSrc: powerUpImageSources['WEAPON_UP'] }, { id: 'proj_green', nameKey: 'shop_proj_green_name', imageSrc: powerUpImageSources['WEAPON_UP'] },
-            { id: 'proj_fireball', nameKey: 'shop_proj_fireball_name', imageSrc: powerupRapidFireSrc }, { id: 'proj_purple', nameKey: 'shop_proj_purple_name', imageSrc: powerupBlackHoleSrc },
-            { id: 'proj_rainbow', nameKey: 'shop_proj_rainbow_name', imageSrc: iconTrailRainbowSrc },
-        ];
+    { id: 'default', nameKey: 'proj_default_name', imageSrc: powerUpImageSources['WEAPON_UP'] }, 
+    { id: 'proj_green', nameKey: 'shop_proj_green_name', imageSrc: iconProjGreenSrc },
+    { id: 'proj_fireball', nameKey: 'shop_proj_fireball_name', imageSrc: iconProjFireballSrc }, 
+    { id: 'proj_purple', nameKey: 'shop_proj_purple_name', imageSrc: iconProjVoidSrc },
+    { id: 'proj_rainbow', nameKey: 'shop_proj_rainbow_name', imageSrc: iconProjRainbowSrc },
+];
 
         const allTrails = [
             { id: 'default', nameKey: 'trail_default_name', imageSrc: playerImgSrc1 }, // Using default ship as icon
