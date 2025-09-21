@@ -3165,18 +3165,23 @@ class ShopManager {
     // --- SKINS & COSMETICS ---
     { id: 'skin_sentinel', type: 'SKIN', nameKey: 'shop_skin_sentinel_name', descKey: 'shop_skin_sentinel_desc', iconSrc: playerImgSrc2, cost: [10000], cosmeticType: 'player_skin' },
     { id: 'skin_renegade', type: 'SKIN', nameKey: 'shop_skin_renegade_name', descKey: 'shop_skin_renegade_desc', iconSrc: playerImgSrc3, cost: [15000], cosmeticType: 'player_skin' },
-    // ... (alle anderen Skins bleiben unverändert)
+    { id: 'skin_avenger', type: 'SKIN', nameKey: 'shop_skin_avenger_name', descKey: 'shop_skin_avenger_desc', iconSrc: playerImgSrc4, cost: [20000], cosmeticType: 'player_skin' },
+    { id: 'skin_void', type: 'SKIN', nameKey: 'shop_skin_void_name', descKey: 'shop_skin_void_desc', iconSrc: playerImgSrcVoid, cost: [25000], cosmeticType: 'player_skin' },
+    { id: 'skin_marauder', type: 'SKIN', nameKey: 'shop_skin_marauder_name', descKey: 'shop_skin_marauder_desc', iconSrc: playerImgSrcMarauder, cost: [30000], cosmeticType: 'player_skin' },
+    { id: 'skin_paladin', type: 'SKIN', nameKey: 'shop_skin_paladin_name', descKey: 'shop_skin_paladin_desc', iconSrc: playerImgSrcPaladin, cost: [30000], cosmeticType: 'player_skin' },
+    { id: 'skin_spectre', type: 'SKIN', nameKey: 'shop_skin_spectre_name', descKey: 'shop_skin_spectre_desc', iconSrc: playerImgSrcSpectre, cost: [40000], cosmeticType: 'player_skin' },
+    { id: 'skin_gold', type: 'SKIN', nameKey: 'shop_skin_gold_name', descKey: 'shop_skin_gold_desc', iconSrc: playerImgSrcGold, cost: [50000], cosmeticType: 'player_skin' },
+    { id: 'skin_goliath', type: 'SKIN', nameKey: 'shop_skin_goliath_name', descKey: 'shop_skin_goliath_desc', iconSrc: playerImgSrcGoliath, cost: [60000], cosmeticType: 'player_skin' },
+    { id: 'skin_juggernaut', type: 'SKIN', nameKey: 'shop_skin_juggernaut_name', descKey: 'shop_skin_juggernaut_desc', iconSrc: playerImgSrcJuggernaut, cost: [75000], cosmeticType: 'player_skin' },
     { id: 'skin_leviathan', type: 'SKIN', nameKey: 'shop_skin_leviathan_name', descKey: 'shop_skin_leviathan_desc', iconSrc: playerImgSrcLeviathan, cost: [100000], cosmeticType: 'player_skin' },
-    
-    // HIER SIND DIE ÄNDERUNGEN:
+
     { id: 'proj_green', type: 'COSMETIC', nameKey: 'shop_proj_green_name', descKey: 'shop_proj_green_desc', iconSrc: iconProjGreenSrc, cost: [5000], cosmeticType: 'projectile_style' },
     { id: 'proj_fireball', type: 'COSMETIC', nameKey: 'shop_proj_fireball_name', descKey: 'shop_proj_fireball_desc', iconSrc: iconProjFireballSrc, cost: [7500], cosmeticType: 'projectile_style' },
     { id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc', iconSrc: iconProjVoidSrc, cost: [7500], cosmeticType: 'projectile_style' },
     { id: 'proj_rainbow', type: 'COSMETIC', nameKey: 'shop_proj_rainbow_name', descKey: 'shop_proj_rainbow_desc', iconSrc: iconProjRainbowSrc, cost: [15000], cosmeticType: 'projectile_style' },
     
     { id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail' },
-
-    // --- PI BUNDLES ---
+    
     { id: 'pi_bundle_1', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_1_name', descKey: 'shop_pi_bundle_1_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.1, coin_reward: 1000 },
     { id: 'pi_bundle_2', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_2_name', descKey: 'shop_pi_bundle_2_desc', iconSrc: piCoin2ImgSrc, pi_cost: 0.5, coin_reward: 5500 },
     { id: 'pi_bundle_3', type: 'PI_BUNDLE', nameKey: 'shop_pi_bundle_3_name', descKey: 'shop_pi_bundle_3_desc', iconSrc: piCoin2ImgSrc, pi_cost: 1.0, coin_reward: 12000 },
