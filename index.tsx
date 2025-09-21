@@ -4142,8 +4142,8 @@ class UIManager {
             setupButton(this.tabButtons[key], () => {
                 this.showTab(key);
                 if (key === 'rangliste') {
-                    this.populateLeaderboard('campaign', 'score');
-                }
+    this.populateLeaderboard('campaign');
+}
             }); 
         }
 
@@ -4388,25 +4388,29 @@ class UIManager {
         });
     }
 
-    public async populateLeaderboard(mode: 'campaign' | 'endless', metric: 'score' | 'waves'): Promise<void> {
+    public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise<void> {
         const t = (key: string) => this.localizationManager.translate(key);
         const contentEl = document.getElementById('leaderboard-content')!;
         
+        // Der HTML-Code ist vereinfacht: Die zweite Button-Reihe wurde entfernt.
         contentEl.innerHTML = `
             <div class="leaderboard-controls">
                 <button class="menu-button ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
                 <button class="menu-button ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button>
             </div>
-            <div class="leaderboard-controls">
-                <button class="menu-button ${metric === 'score' ? 'active' : ''}" id="lb-btn-score">${t('score')}</button>
-                <button class="menu-button ${metric === 'waves' ? 'active' : ''}" id="lb-btn-waves">${t('waves')}</button>
-            </div>
-            <p>${t('leaderboard_loading')}...</p>`;
+            <div id="leaderboard-status"><p>${t('leaderboard_loading')}...</p></div>
+            <div id="leaderboard-table-container"></div>
+        `;
             
-        this.attachLeaderboardControlEvents(mode, metric);
+        // Die Events werden für die neuen, einfachen Buttons jedes Mal neu registriert.
+        this.attachLeaderboardControlEvents();
+        
+        const statusEl = document.getElementById('leaderboard-status')!;
+        const tableContainerEl = document.getElementById('leaderboard-table-container')!;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&metric=${metric}`);
+            // Die API wird immer mit `metric=score` aufgerufen, da die Buttons entfernt wurden.
+            const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&metric=score`);
 
             if (!response.ok) {
                 throw new Error(`Server responded with status: ${response.status}`);
@@ -4415,10 +4419,11 @@ class UIManager {
             const data: ILeaderboardEntry[] = await response.json();
 
             if (!data || data.length === 0) {
-                 const p = contentEl.querySelector('p');
-                 if(p) p.textContent = t('leaderboard_no_entries');
+                 statusEl.innerHTML = `<p>${t('leaderboard_no_entries')}</p>`;
                  return;
             }
+
+            statusEl.innerHTML = ''; 
 
             let tableHTML = `
                 <div class="leaderboard-table">
@@ -4440,22 +4445,18 @@ class UIManager {
             });
 
             tableHTML += '</div>';
-            const p = contentEl.querySelector('p');
-            if(p) p.remove();
-            contentEl.innerHTML += tableHTML;
+            tableContainerEl.innerHTML = tableHTML;
 
         } catch (error) {
             console.error("Fehler beim Laden der Rangliste:", error);
-            const p = contentEl.querySelector('p');
-            if(p) p.innerHTML = `<span class="leaderboard-error">${t('leaderboard_error')}</span>`;
+            statusEl.innerHTML = `<p class="leaderboard-error">${t('leaderboard_error')}</p>`;
         }
     }
 
-    private attachLeaderboardControlEvents(currentMode: 'campaign' | 'endless', currentMetric: 'score' | 'waves'): void {
-        document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign', currentMetric));
-        document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless', currentMetric));
-        document.getElementById('lb-btn-score')?.addEventListener('click', () => this.populateLeaderboard(currentMode, 'score'));
-        document.getElementById('lb-btn-waves')?.addEventListener('click', () => this.populateLeaderboard(currentMode, 'waves'));
+    private attachLeaderboardControlEvents(): void {
+        // Diese Funktion erwartet jetzt keine Argumente mehr und ist viel einfacher.
+        document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign'));
+        document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless'));
     }
 
     public drawLevelMessage(): void { 
@@ -5043,37 +5044,37 @@ class Game {
     }
 
     private async submitScoreToServer(): Promise<void> {
-        if (!this.piManager.isAuthenticated || !this.piManager.uid) {
-            console.log("Spieler nicht via Pi authentifiziert. Score wird nicht übermittelt.");
-            return;
-        }
-
-        const scoreData = {
-            pi_uid: this.piManager.uid,
-            username: this.piManager.username,
-            score: this.score,
-            waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
-            mode: this.gameMode 
-        };
-
-        console.log("Versuche, Score an den Server zu senden:", scoreData);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/submit-score`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(scoreData)
-            });
-
-            if (response.ok) {
-                console.log("Score erfolgreich an den Server übermittelt.");
-            } else {
-                console.error("Server meldet Fehler beim Speichern des Scores:", response.statusText);
-            }
-        } catch (error) {
-            console.error("Netzwerkfehler beim Übermitteln des Scores:", error);
-        }
+    if (!this.piManager.isAuthenticated || !this.piManager.uid) {
+        console.log("Spieler nicht via Pi authentifiziert. Score wird nicht übermittelt.");
+        return;
     }
+
+    const scoreData = {
+        pi_uid: this.piManager.uid,
+        username: this.piManager.username,
+        score: this.score,
+        waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
+        mode: this.gameMode.toLowerCase() 
+    };
+
+    console.log("Versuche, Score an den Server zu senden:", scoreData);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/submit-score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scoreData)
+        });
+
+        if (response.ok) {
+            console.log("Score erfolgreich an den Server übermittelt.");
+        } else {
+            console.error("Server meldet Fehler beim Speichern des Scores:", response.statusText);
+        }
+    } catch (error) {
+        console.error("Netzwerkfehler beim Übermitteln des Scores:", error);
+    }
+}
 
     update(deltaTime: number): void { 
         if (this.gameState === 'REVIVING') {
