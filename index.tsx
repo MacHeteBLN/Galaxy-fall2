@@ -939,9 +939,14 @@ takeHit(damage: number): void {
         if (this.game.player && this.game.player.isScoreBoosted()) scoreToAdd *= 2;
         this.game.score += scoreToAdd;
         this.game.scoreEarnedThisLevel += scoreToAdd;
+
         if (this.isBoss) {
-            this.game.isBossActive = false;
-            setTimeout(() => this.game.changeState('LEVEL_START'), 3000);
+            if (this.game.isFinalBattleActive) {
+                this.game.isBossActive = false; 
+            } else {
+                this.game.isBossActive = false;
+                setTimeout(() => this.game.changeState('LEVEL_START'), 3000);
+            }
         }
         if (this.game.uiManager.settings.particles > 0) this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
 
@@ -2210,19 +2215,21 @@ class BossSentinelPrime extends Enemy {
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
-        ctx.save();
-        if (this.isPreparingLineAttack) {
-            const glow = (1 - this.lineAttackPreparationTimer / 1500) * 0.8;
-            ctx.shadowColor = `rgba(255, 0, 0, ${glow})`;
-            ctx.shadowBlur = 30;
-        } else if (this.isPreparingCharge) {
-            const pulse = 1 + Math.sin(Date.now() / 100);
-            ctx.shadowColor = `rgba(255, 215, 0, 0.8)`;
-            ctx.shadowBlur = 20 + pulse * 10;
-        }
-        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 150);
-        ctx.restore();
+    if (!this.image || !this.image.complete) return; // SICHERHEITSPRÜFUNG
+
+    ctx.save();
+    if (this.isPreparingLineAttack) {
+        const glow = (1 - this.lineAttackPreparationTimer / 1500) * 0.8;
+        ctx.shadowColor = `rgba(255, 0, 0, ${glow})`;
+        ctx.shadowBlur = 30;
+    } else if (this.isPreparingCharge) {
+        const pulse = 1 + Math.sin(Date.now() / 100);
+        ctx.shadowColor = `rgba(255, 215, 0, 0.8)`;
+        ctx.shadowBlur = 20 + pulse * 10;
     }
+    ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 150);
+    ctx.restore();
+}
 }
 class BossVoidSerpent extends Enemy {
     private image: HTMLImageElement; private attackTimer: number = 4000; private angle: number = 0;
@@ -2308,21 +2315,23 @@ class BossVoidSerpent extends Enemy {
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
-        ctx.save();
-        const pulse = 1 + Math.sin(Date.now() / 500) * 0.1;
-        ctx.globalAlpha = 0.85;
-        ctx.shadowColor = `rgba(148, 0, 211, 0.7)`;
-        ctx.shadowBlur = 25 * pulse;
+    if (!this.image || !this.image.complete) return; // SICHERHEITSPRÜFUNG
 
-        if (this.isPreparingToAttack) {
-            const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9;
-            ctx.shadowColor = `rgba(148, 0, 211, ${glow})`;
-            ctx.shadowBlur = 20 + glow * 15;
-        }
-        
-        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240);
-        ctx.restore();
+    ctx.save();
+    const pulse = 1 + Math.sin(Date.now() / 500) * 0.1;
+    ctx.globalAlpha = 0.85;
+    ctx.shadowColor = `rgba(148, 0, 211, 0.7)`;
+    ctx.shadowBlur = 25 * pulse;
+
+    if (this.isPreparingToAttack) {
+        const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9;
+        ctx.shadowColor = `rgba(148, 0, 211, ${glow})`;
+        ctx.shadowBlur = 20 + glow * 15;
     }
+    
+    ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240);
+    ctx.restore();
+}
 }
 class BossOmegaNexus extends Enemy {
     private baseImage: HTMLImageElement;
@@ -2586,100 +2595,103 @@ class BossOmegaNexus extends Enemy {
     }
 
     draw(ctx: CanvasRenderingContext2D): void {
-        const visualX = this.pos.x;
-        const visualY = this.pos.y - this.visualOffsetY;
-        const centerX = visualX + this.width / 2;
-        const centerY = visualY + this.height / 2 + this.visualOffsetY;
-        
-        if(this.isInvulnerable) {
-             ctx.save();
-             const pulse = 1 + Math.sin(Date.now() / 100) * 0.05;
-             ctx.globalAlpha = 0.8;
-             ctx.shadowColor = '#FFFFFF';
-             ctx.shadowBlur = 40;
-             ctx.translate(centerX, centerY);
-             ctx.scale(pulse, pulse);
-             ctx.translate(-centerX, -centerY);
-        }
+    if (!this.baseImage || !this.baseImage.complete) return; // SICHERHEITSPRÜFUNG
 
-        ctx.drawImage(this.baseImage, visualX, visualY, this.width, this.height + this.visualOffsetY * 2);
-        this.drawNexusRings(ctx, centerX, centerY);
-        
-        if(this.isInvulnerable) ctx.restore();
-
-        if (this.isChargingCannon) {
-            const chargeRatio = 1 - (this.cannonChargeTimer / 4000);
-            const radius = (this.width * 0.4) * chargeRatio;
-            if(Math.random() > 0.5) {
-                 this.game.addEntity(new Particle(this.game, centerX + (Math.random() - 0.5) * 800, centerY + (Math.random() - 0.5) * 800, '#FF4136', 0.3, 4));
-            }
-            ctx.save();
-            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-            grad.addColorStop(0, `rgba(255, 255, 255, ${chargeRatio})`);
-            grad.addColorStop(0.8, `rgba(255, 65, 54, ${chargeRatio * 0.7})`);
-            grad.addColorStop(1, `rgba(255, 140, 0, 0)`);
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
-        
-        if (this.isFiringCannon) {
-            const beamWidth = this.game.width * 1.2;
-            const beamX = centerX - beamWidth / 2;
-            ctx.save();
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(Date.now() / 50) * 0.2})`;
-            ctx.fillRect(beamX, visualY, beamWidth, this.game.height);
-            const grad = ctx.createLinearGradient(centerX - 150, 0, centerX + 150, 0);
-            grad.addColorStop(0, 'rgba(255, 65, 54, 0)');
-            grad.addColorStop(0.5, 'rgba(255, 65, 54, 0.6)');
-            grad.addColorStop(1, 'rgba(255, 65, 54, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(centerX - 150, visualY, 300, this.game.height);
-            ctx.restore();
-        }
-
-        if (this.laserFanActive) {
-             const laserOriginX = this.pos.x > this.game.width / 2 ? visualX + 40 : visualX + this.width - 40;
-             const laserOriginY = centerY;
-             for (let i = 0; i < 7; i++) {
-                 const angle = this.laserFanAngle + (i - 3) * (Math.PI / 2 / 6);
-                 const endX = laserOriginX + Math.sin(angle) * this.game.height * 1.5;
-                 const endY = laserOriginY + Math.cos(angle) * this.game.height * 1.5;
- 
-                 ctx.save();
-                 ctx.beginPath();
-                 ctx.moveTo(laserOriginX, laserOriginY);
-                 ctx.lineTo(endX, endY);
-                 ctx.strokeStyle = `rgba(255, 0, 255, 0.6)`;
-                 ctx.lineWidth = 10;
-                 ctx.shadowColor = '#EE82EE';
-                 ctx.shadowBlur = 20;
-                 ctx.stroke();
-                 ctx.strokeStyle = `rgba(255, 255, 255, 0.8)`;
-                 ctx.lineWidth = 3;
-                 ctx.stroke();
-                 ctx.restore();
-             }
-        }
-        this.energyOrbs.forEach(orb => {
-            ctx.save();
-            const pulse = Math.sin(Date.now() / 200);
-            const radius = 25 + pulse * 5;
-            const gradient = ctx.createRadialGradient(orb.pos.x, orb.pos.y, 0, orb.pos.x, orb.pos.y, radius);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-            gradient.addColorStop(0.5, 'rgba(255, 100, 100, 1)');
-            gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
-            ctx.fillStyle = gradient;
-            ctx.shadowColor = '#FF4136';
-            ctx.shadowBlur = 30;
-            ctx.beginPath();
-            ctx.arc(orb.pos.x, orb.pos.y, radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        });
+    const visualX = this.pos.x;
+    const visualY = this.pos.y - this.visualOffsetY;
+    const centerX = visualX + this.width / 2;
+    const centerY = visualY + this.height / 2 + this.visualOffsetY;
+    
+    if(this.isInvulnerable) {
+         ctx.save();
+         const pulse = 1 + Math.sin(Date.now() / 100) * 0.05;
+         ctx.globalAlpha = 0.8;
+         ctx.shadowColor = '#FFFFFF';
+         ctx.shadowBlur = 40;
+         ctx.translate(centerX, centerY);
+         ctx.scale(pulse, pulse);
+         ctx.translate(-centerX, -centerY);
     }
+
+    ctx.drawImage(this.baseImage, visualX, visualY, this.width, this.height + this.visualOffsetY * 2);
+    this.drawNexusRings(ctx, centerX, centerY);
+    
+    if(this.isInvulnerable) ctx.restore();
+
+
+    if (this.isChargingCannon) {
+        const chargeRatio = 1 - (this.cannonChargeTimer / 4000);
+        const radius = (this.width * 0.4) * chargeRatio;
+        if(Math.random() > 0.5) {
+             this.game.addEntity(new Particle(this.game, centerX + (Math.random() - 0.5) * 800, centerY + (Math.random() - 0.5) * 800, '#FF4136', 0.3, 4));
+        }
+        ctx.save();
+        const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${chargeRatio})`);
+        grad.addColorStop(0.8, `rgba(255, 65, 54, ${chargeRatio * 0.7})`);
+        grad.addColorStop(1, `rgba(255, 140, 0, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    
+    if (this.isFiringCannon) {
+        const beamWidth = this.game.width * 1.2;
+        const beamX = centerX - beamWidth / 2;
+        ctx.save();
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(Date.now() / 50) * 0.2})`;
+        ctx.fillRect(beamX, visualY, beamWidth, this.game.height);
+        const grad = ctx.createLinearGradient(centerX - 150, 0, centerX + 150, 0);
+        grad.addColorStop(0, 'rgba(255, 65, 54, 0)');
+        grad.addColorStop(0.5, 'rgba(255, 65, 54, 0.6)');
+        grad.addColorStop(1, 'rgba(255, 65, 54, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(centerX - 150, visualY, 300, this.game.height);
+        ctx.restore();
+    }
+
+    if (this.laserFanActive) {
+         const laserOriginX = this.pos.x > this.game.width / 2 ? visualX + 40 : visualX + this.width - 40;
+         const laserOriginY = centerY;
+         for (let i = 0; i < 7; i++) {
+             const angle = this.laserFanAngle + (i - 3) * (Math.PI / 2 / 6);
+             const endX = laserOriginX + Math.sin(angle) * this.game.height * 1.5;
+             const endY = laserOriginY + Math.cos(angle) * this.game.height * 1.5;
+
+             ctx.save();
+             ctx.beginPath();
+             ctx.moveTo(laserOriginX, laserOriginY);
+             ctx.lineTo(endX, endY);
+             ctx.strokeStyle = `rgba(255, 0, 255, 0.6)`;
+             ctx.lineWidth = 10;
+             ctx.shadowColor = '#EE82EE';
+             ctx.shadowBlur = 20;
+             ctx.stroke();
+             ctx.strokeStyle = `rgba(255, 255, 255, 0.8)`;
+             ctx.lineWidth = 3;
+             ctx.stroke();
+             ctx.restore();
+         }
+    }
+    this.energyOrbs.forEach(orb => {
+        ctx.save();
+        const pulse = Math.sin(Date.now() / 200);
+        const radius = 25 + pulse * 5;
+        const gradient = ctx.createRadialGradient(orb.pos.x, orb.pos.y, 0, orb.pos.x, orb.pos.y, radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.5, 'rgba(255, 100, 100, 1)');
+        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FF4136';
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.arc(orb.pos.x, orb.pos.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
 }
 
 class NexusLanceProjectile extends EnemyProjectile {
@@ -2710,7 +2722,6 @@ class NexusLanceProjectile extends EnemyProjectile {
         ctx.restore();
     }
 }
-
 
 class BossNexusPrime extends Enemy {
     private phase: number = 1;
@@ -2904,102 +2915,46 @@ class BossNexusPrime extends Enemy {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        ctx.save();
-        if (this.phaseTransitionTimer > 0) {
-            const transitionProgress = 1 - this.phaseTransitionTimer / 3000;
-            this.drawTransition(ctx, centerX, centerY, transitionProgress);
-        } else {
-            this.drawCoreWithWhips(ctx, centerX, centerY);
-        }
-        this.drawAttackVisuals(ctx, centerX, centerY);
-        ctx.restore();
-    }
-
     private drawCoreWithWhips(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        const coreColor = this.phase === 1 ? '#00FFFF' : (this.phase === 2 ? '#FF851B' : '#FF4136');
-        ctx.save();
-        const pulseValue = 1 + Math.sin(this.corePulse) * 0.05;
-        ctx.globalAlpha = 0.7;
-        ctx.translate(cx, cy);
-        ctx.scale(pulseValue, pulseValue);
-        const ringSize = 180 + this.phase * 20;
-        ctx.drawImage(bossNexusPrimeImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
-        ctx.restore();
-        for(let i=0; i < 8; i++) {
-            ctx.beginPath();
-            const baseAngle = (i / 8) * Math.PI * 2;
-            const len = 120 + this.phase * 20 + Math.sin(this.corePulse * 1.5 + i) * 40;
-            const wave = Math.sin(this.corePulse * 3 + i) * 0.6;
-            ctx.moveTo(cx, cy);
-            ctx.quadraticCurveTo(cx + Math.cos(baseAngle + wave) * len * 0.6, cy + Math.sin(baseAngle + wave) * len * 0.6, cx + Math.cos(baseAngle) * len, cy + Math.sin(baseAngle) * len);
-            ctx.strokeStyle = coreColor;
-            ctx.lineWidth = 3 + Math.sin(this.corePulse + i*2) * 2;
-            ctx.globalAlpha = 0.6 + Math.sin(this.corePulse*4 + i) * 0.2;
-            ctx.shadowColor = coreColor; ctx.shadowBlur = 15;
-            ctx.stroke();
-        }
-        const radius = (this.phase === 3 ? 60 : 40) + Math.sin(this.corePulse) * 10;
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        grad.addColorStop(0.7, coreColor);
-        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = grad; ctx.shadowColor = coreColor; ctx.shadowBlur = 30;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
+    if (!bossNexusPrimeImg || !bossNexusPrimeImg.complete) return; // SICHERHEITSPRÜFUNG
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const coreColor = this.phase === 1 ? '#00FFFF' : (this.phase === 2 ? '#FF851B' : '#FF4136');
+    
+    ctx.save();
+    const pulseValue = 1 + Math.sin(this.corePulse) * 0.05;
+    ctx.globalAlpha = 0.7;
+    ctx.translate(cx, cy);
+    ctx.scale(pulseValue, pulseValue);
+    const ringSize = 180 + this.phase * 20;
+    ctx.drawImage(bossNexusPrimeImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+    ctx.restore();
+    
+    for(let i=0; i < 8; i++) {
+        ctx.beginPath();
+        const baseAngle = (i / 8) * Math.PI * 2;
+        const len = 120 + this.phase * 20 + Math.sin(this.corePulse * 1.5 + i) * 40;
+        const wave = Math.sin(this.corePulse * 3 + i) * 0.6;
+        ctx.moveTo(cx, cy);
+        ctx.quadraticCurveTo(cx + Math.cos(baseAngle + wave) * len * 0.6, cy + Math.sin(baseAngle + wave) * len * 0.6, cx + Math.cos(baseAngle) * len, cy + Math.sin(baseAngle) * len);
+        ctx.strokeStyle = coreColor;
+        ctx.lineWidth = 3 + Math.sin(this.corePulse + i*2) * 2;
+        ctx.globalAlpha = 0.6 + Math.sin(this.corePulse*4 + i) * 0.2;
+        ctx.shadowColor = coreColor; ctx.shadowBlur = 15;
+        ctx.stroke();
     }
 
-    private drawAttackVisuals(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
-        this.scythes.forEach(s => {
-            ctx.save();
-            const x = cx + Math.cos(s.angle) * s.radius;
-            const y = cy + Math.sin(s.angle) * s.radius;
-            ctx.translate(x, y); ctx.rotate(s.angle + Math.PI/2);
-            ctx.fillStyle = '#FF4136'; ctx.shadowColor = '#FF4136'; ctx.shadowBlur = 25;
-            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-20, 30); ctx.lineTo(20, 30); ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        });
-        if (this.plasmaSweepProgress >= 0) {
-            const direction = this.pos.x < this.game.width/2 ? 1 : -1;
-            const beamX = (this.game.width / 2) - (direction * this.game.width/2) + (direction * this.game.width * this.plasmaSweepProgress);
-            const grad = ctx.createLinearGradient(beamX - 60, 0, beamX + 60, 0);
-            grad.addColorStop(0, 'rgba(255, 133, 27, 0)');
-            grad.addColorStop(0.5, `rgba(255, 133, 27, ${0.9 * Math.sin(this.plasmaSweepProgress * Math.PI)})`);
-            grad.addColorStop(1, 'rgba(255, 133, 27, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(beamX - 60, 0, 120, this.game.height);
-        }
-        if (this.isPreparingAttack && this.currentAttack === 'HORIZON') {
-            const chargeRatio = 1 - this.preparationTimer / 9000;
-            ctx.fillStyle = `rgba(0, 0, 0, ${chargeRatio * 0.9})`;
-            ctx.fillRect(0,0, this.game.width, this.game.height);
-            const safeRadius = (1 - chargeRatio) * this.game.width;
-            ctx.save();
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = `rgba(255, 255, 255, ${1-chargeRatio})`;
-            ctx.lineWidth = 5; ctx.shadowColor = '#FFF'; ctx.shadowBlur = 20;
-            ctx.beginPath(); ctx.arc(cx, cy, safeRadius, 0, Math.PI*2); ctx.stroke();
-            ctx.restore();
-        } else if (this.eventHorizonCharge > 0) {
-             ctx.fillStyle = `rgba(255, 65, 54, ${this.eventHorizonCharge * 0.5})`;
-             ctx.fillRect(0,0, this.game.width, this.game.height);
-        }
-    }
+    const radius = (this.phase === 3 ? 60 : 40) + Math.sin(this.corePulse) * 10;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    grad.addColorStop(0.7, coreColor);
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
     
-    private drawTransition(ctx: CanvasRenderingContext2D, cx: number, cy: number, progress: number): void {
-        const alpha = Math.sin(progress * Math.PI);
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
-        ctx.fillRect(0, 0, this.game.width, this.game.height);
-        const radius = progress * this.game.width;
-        ctx.strokeStyle = `rgba(255, 133, 27, ${alpha * 0.8})`;
-        ctx.lineWidth = 15;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
-    }
+    ctx.fillStyle = grad; ctx.shadowColor = coreColor; ctx.shadowBlur = 30;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+}
 }
 
 class NexusFragment extends Enemy {
@@ -4197,7 +4152,25 @@ class UIManager {
     public saveSettings(): void { localStorage.setItem('galaxyFallCelestialSettings', JSON.stringify(this.settings)); }
     public loadSettings() { const saved = localStorage.getItem('galaxyFallCelestialSettings'); return saved ? JSON.parse(saved) : { masterVolume: 0.5, music: true, sfx: true, particles: 2, screenShake: false }; }
     public populateAllTranslatedContent() { this.populateGalerie(); this.populateArsenal(); this.populateGegner(); this.localizationManager.applyTranslationsToUI(); this.applySettings(); }
-    public createEnemyIcon(enemyType: string): string { const canvas = document.createElement('canvas'); canvas.width = 60; canvas.height = 40; const ctx = canvas.getContext('2d')!; const tempGame = { width: 60, height: 40, enemySpeedMultiplier: 1, level: 1, uiManager: { settings: { particles: 0 } } } as unknown as Game; let dummyEnemy: Enemy | null = null; switch(enemyType) { case 'GRUNT': dummyEnemy = new Grunt(tempGame); break; case 'WEAVER': dummyEnemy = new Weaver(tempGame); break; case 'TANK': dummyEnemy = new Tank(tempGame); break; case 'SHOOTER': dummyEnemy = new Shooter(tempGame); break; case 'TELEPORTER': dummyEnemy = new Teleporter(tempGame); break; case 'BOSS_SENTINEL_PRIME': dummyEnemy = new BossSentinelPrime(tempGame, 1, 1); break; case 'BOSS_VOID_SERPENT': dummyEnemy = new BossVoidSerpent(tempGame, 1, 1); break; case 'BOSS_OMEGA_NEXUS': dummyEnemy = new BossOmegaNexus(tempGame, 1, 1); break; case 'BOSS_NEXUS_PRIME': dummyEnemy = new BossNexusPrime(tempGame, 1, 1); break; } if (dummyEnemy) { dummyEnemy.width = 54; dummyEnemy.height = 36; dummyEnemy.pos = new Vector2D(canvas.width / 2 - dummyEnemy.width / 2, canvas.height / 2 - dummyEnemy.height / 2); dummyEnemy.draw(ctx); } return canvas.toDataURL(); }
+    public createEnemyIcon(enemyType: string, image: HTMLImageElement): string {
+    const canvas = document.createElement('canvas');
+    const visualWidth = 120; // Angepasste Größe für bessere Darstellung
+    const visualHeight = 80;
+    canvas.width = visualWidth;
+    canvas.height = visualHeight;
+    const ctx = canvas.getContext('2d')!;
+
+    if (image && image.complete) {
+        // Berechne die Skalierung, um das Bild in den Canvas einzupassen
+        const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+        const w = image.width * scale;
+        const h = image.height * scale;
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 2;
+        ctx.drawImage(image, x, y, w, h);
+    }
+    return canvas.toDataURL();
+}
     public populateArsenal(): void { const pL=[{c:"arsenal_cat_weapon_upgrade",n:"powerup_wup_name",d:'powerup_wup_desc',t:'WEAPON_UP'},{c:"arsenal_cat_weapon_mod",n:"powerup_rapid_fire_name",d:'powerup_rapid_fire_desc',t:'RAPID_FIRE'},{c:"arsenal_cat_weapon_mod",n:"powerup_side_shots_name",d:'powerup_side_shots_desc',t:'SIDE_SHOTS'},{c:"arsenal_cat_ultra_weapon",n:"powerup_laser_name",d:'powerup_laser_desc',t:'LASER_BEAM'},{c:"arsenal_cat_ultra_weapon",n:"powerup_homing_missiles_name",d:'powerup_homing_missiles_desc',t:'HOMING_MISSILES'},{c:"arsenal_cat_defense",n:"powerup_shield_name",d:'powerup_shield_desc',t:'SHIELD'},{c:"arsenal_cat_defense",n:"powerup_repair_kit_name",d:'powerup_repair_kit_desc',t:'REPAIR_KIT'},{c:"arsenal_cat_defense",n:"powerup_extra_life_name",d:'powerup_extra_life_desc',t:'EXTRA_LIFE'},{c:"arsenal_cat_defense",n:"powerup_ghost_protocol_name",d:'powerup_ghost_protocol_desc',t:'GHOST_PROTOCOL'},{c:"arsenal_cat_defense",n:"powerup_orbital_drone_name",d:'powerup_orbital_drone_desc',t:'ORBITAL_DRONE'},{c:"arsenal_cat_special",n:"powerup_nuke_name",d:'powerup_nuke_desc',t:'NUKE'},{c:"arsenal_cat_special",n:"powerup_black_hole_name",d:'powerup_black_hole_desc',t:'BLACK_HOLE'},{c:"arsenal_cat_special",n:"powerup_score_boost_name",d:'powerup_score_boost_desc',t:'SCORE_BOOST'}]; const lE=document.getElementById('arsenal-list')!;lE.innerHTML='';let cC='';pL.forEach(p=>{const cN=this.localizationManager.translate(p.c);if(cN!==cC){cC=cN;lE.innerHTML+=`<h3>- ${cC} -</h3>`;} const iS=powerUpImageSources[p.t];lE.innerHTML+=`<div class="powerup-entry"><img src="${iS}" class="arsenal-icon" alt="${p.n}"/><div class="powerup-info"><div class="powerup-title">${this.localizationManager.translate(p.n)}</div><div class="powerup-desc">${this.localizationManager.translate(p.d)}</div></div></div>`;}); }
     
     public populateGalerie(): void {
@@ -4289,26 +4262,26 @@ class UIManager {
     }
 
     public populateGegner(): void {
-        const enemyList = [
-            { nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low' },
-            { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low' },
-            { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium' },
-            { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium' },
-            { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high' },
-            { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high' },
-            { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme' },
-            { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic' },
-            { nameKey: "gegner_nexus_prime_name", descKey: "gegner_nexus_prime_desc", type: 'BOSS_NEXUS_PRIME', strengthKey: 'strength_final' },
-        ];
-        const t = (key: string) => this.localizationManager.translate(key);
-        const listEl = document.getElementById('gegner-list')!;
-        listEl.innerHTML = `<h3>- ${t('gegner_header')} -</h3>`;
-        enemyList.forEach(e => {
-            const iconSrc = this.createEnemyIcon(e.type); 
-            const strengthClass = e.strengthKey.split('_')[1];
-            listEl.innerHTML += `<div class="powerup-entry"> <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/> <div class="powerup-info"> <div class="powerup-title"> <span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div>`;
-        });
-    }
+    const enemyList = [
+        { nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low', image: gruntImg },
+        { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low', image: weaverImg },
+        { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium', image: tankImg },
+        { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium', image: shooterImg },
+        { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high', image: teleporterImg },
+        { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high', image: bossSentinelPrimeImg },
+        { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme', image: bossVoidSerpentImg },
+        { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic', image: bossOmegaNexusBaseImg },
+        { nameKey: "gegner_nexus_prime_name", descKey: "gegner_nexus_prime_desc", type: 'BOSS_NEXUS_PRIME', strengthKey: 'strength_final', image: bossNexusPrimeImg },
+    ];
+    const t = (key: string) => this.localizationManager.translate(key);
+    const listEl = document.getElementById('gegner-list')!;
+    listEl.innerHTML = `<h3>- ${t('gegner_header')} -</h3>`;
+    enemyList.forEach(e => {
+        const iconSrc = this.createEnemyIcon(e.type, e.image); 
+        const strengthClass = e.strengthKey.split('_')[1];
+        listEl.innerHTML += `<div class="powerup-entry"> <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/> <div class="powerup-info"> <div class="powerup-title"> <span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div>`;
+    });
+}
 
     public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise<void> {
         const t = (key: string) => this.localizationManager.translate(key);
@@ -4791,7 +4764,8 @@ class Game {
             case 'LEVEL_START':
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
                 if (isNewGame) {
-                    this.level = 1; this.score = 0; this.entities = []; this.isBossSlayerActive = false;
+                    this.level = 1;
+                    this.score = 0; this.entities = []; this.isBossSlayerActive = false;
                     const initialStats = this.shopManager.getInitialPlayerStats();
                     this.player = new Player(this, initialStats);
                     this.addEntity(this.player);
@@ -5178,15 +5152,15 @@ class Game {
     }
     
     private addEnemyToFormation(enemy: Enemy | null, x: number, y: number) {
-        if(enemy) {
-            enemy.pos.x = x;
-            enemy.pos.y = y;
-            enemy.speed = 0;
-            enemy.inFormation = true;
-            this.activeFormationEnemies.push(enemy);
-            this.addEntity(enemy);
-        }
+    if (enemy) {
+        enemy.pos.x = x;
+        enemy.pos.y = y;
+        enemy.speed = 0;
+        enemy.inFormation = true;
+        this.activeFormationEnemies.push(enemy);
+        this.addEntity(enemy);
     }
+}
     
     spawnFormation_Wave5_Stage1(): void {
         const d = { r: 4, c: 4, hS: 110, vS: 55, sX: (this.width - (4 * 110)) / 2, sY: -300 };
