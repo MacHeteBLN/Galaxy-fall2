@@ -72,42 +72,35 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
-
 const createScaledImage = (src: string, targetWidth: number, targetHeight: number): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
         const originalImg = new Image();
-        originalImg.crossOrigin = "Anonymous"; // Wichtig für Canvas-Operationen
+        originalImg.crossOrigin = "Anonymous";
         originalImg.onload = () => {
             let w = originalImg.width;
             let h = originalImg.height;
 
-            // Wenn das Bild bereits klein genug ist, direkt zurückgeben
             if (w <= targetWidth && h <= targetHeight) {
                 resolve(originalImg);
                 return;
             }
 
-            // Erstelle ein temporäres Canvas, um das Bild schrittweise zu verkleinern
             const oc = document.createElement('canvas');
             const octx = oc.getContext('2d')!;
-
             oc.width = w;
             oc.height = h;
             octx.drawImage(originalImg, 0, 0);
 
-            // Skaliere in Schritten von 50% herunter, bis wir nahe am Ziel sind
             while (w * 0.5 > targetWidth) {
                 w *= 0.5;
                 h *= 0.5;
                 octx.drawImage(oc, 0, 0, w * 2, h * 2, 0, 0, w, h);
             }
 
-            // Der letzte Skalierungsschritt zum finalen Ziel
             oc.width = targetWidth;
             oc.height = targetHeight;
             octx.drawImage(originalImg, 0, 0, originalImg.width, originalImg.height, 0, 0, targetWidth, targetHeight);
 
-            // Erstelle ein finales Image-Element aus dem skalierten Canvas-Inhalt
             const scaledImg = new Image();
             scaledImg.onload = () => resolve(scaledImg);
             scaledImg.onerror = reject;
@@ -117,14 +110,9 @@ const createScaledImage = (src: string, targetWidth: number, targetHeight: numbe
         originalImg.src = src;
     });
 };
-// --- ENDE: NEUE HILFSFUNKTION ---
-
 
 const API_BASE_URL = '/api';
 
-
-// --- SECTION 2: BILD-INITIALISIERUNG (NEUE ASYNCHRONE VERSION) ---
-// Globale Variablen für die Bilder, damit sie außerhalb der async-Funktion verfügbar sind
 let playerImg1: HTMLImageElement, playerImg2: HTMLImageElement, playerImg3: HTMLImageElement, playerImg4: HTMLImageElement;
 let playerImgVoid: HTMLImageElement, playerImgGold: HTMLImageElement, playerImgMarauder: HTMLImageElement, playerImgPaladin: HTMLImageElement;
 let playerImgSpectre: HTMLImageElement, playerImgGoliath: HTMLImageElement, playerImgJuggernaut: HTMLImageElement, playerImgLeviathan: HTMLImageElement;
@@ -139,13 +127,9 @@ let playerImageMap: { [key: string]: HTMLImageElement };
 
 const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
 
-// Diese Funktion lädt und skaliert alle Bilder und muss vor dem Spielstart aufgerufen werden.
 const initializeImages = async () => {
-    const iconSize = 80; // Eine gute, einheitliche Größe für alle Galerie-Icons
+    const iconSize = 80;
 
-    // --- START DER ÄNDERUNG ---
-    // Lade die Spieler-Skins in ihrer ORIGINALGRÖSSE, um die maximale Qualität zu erhalten.
-    // Die Skalierung findet jetzt zur Laufzeit in der `Player.draw`-Methode statt.
     const playerSkinPromises = [
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc1); img.onload = () => resolve(img); }),
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc2); img.onload = () => resolve(img); }),
@@ -160,9 +144,7 @@ const initializeImages = async () => {
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcJuggernaut); img.onload = () => resolve(img); }),
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcLeviathan); img.onload = () => resolve(img); }),
     ];
-    // --- ENDE DER ÄNDERUNG ---
     
-    // Lade die Originalbilder der Power-ups (die nicht skaliert werden müssen)
     const powerUpImagePromises = Object.keys(powerUpImageSources).map(key => {
         return new Promise<[string, HTMLImageElement]>(resolve => {
             const img = createImage(powerUpImageSources[key]!);
@@ -170,7 +152,6 @@ const initializeImages = async () => {
         });
     });
 
-    // Lade und skaliere die Galerie-Icons, die wir benötigen
     const scaledIconPromises = Promise.all([
         createScaledImage(powerUpImageSources['WEAPON_UP']!, iconSize, iconSize),
         createScaledImage(powerupRapidFireSrc, iconSize, iconSize),
@@ -178,7 +159,6 @@ const initializeImages = async () => {
         createScaledImage(iconTrailRainbowSrc, iconSize, iconSize)
     ]);
     
-    // Führe alle Ladevorgänge parallel aus
     const [playerSkins, powerUpEntries, scaledIcons] = await Promise.all([
         Promise.all(playerSkinPromises),
         Promise.all(powerUpImagePromises),
@@ -193,7 +173,6 @@ const initializeImages = async () => {
 
     powerUpImages = Object.fromEntries(powerUpEntries);
     
-    // Lade die restlichen, nicht-skalierten Bilder
     gruntImg = createImage(gruntImgSrc);
     tankImg = createImage(tankImgSrc);
     weaverImg = createImage(weaverImgSrc);
@@ -213,23 +192,19 @@ const initializeImages = async () => {
         'skin_spectre': playerImgSpectre, 'skin_goliath': playerImgGoliath, 'skin_juggernaut': playerImgJuggernaut, 'skin_leviathan': playerImgLeviathan,
     };
 
-    // Ersetze die Originalquellen durch die neuen, skalierten Bilder in einer separaten Map für die Galerie
     const galleryImageMap = {
-        'proj_default_name': scaledIcons[0], // WEAPON_UP
-        'shop_proj_green_name': scaledIcons[0], // WEAPON_UP
-        'shop_proj_fireball_name': scaledIcons[1], // rapidFire
-        'shop_proj_purple_name': scaledIcons[2], // blackHole
-        'shop_proj_rainbow_name': scaledIcons[3], // rainbow
-        'trail_default_name': playerImg1, // default ship
-        'shop_trail_rainbow_name': scaledIcons[3] // rainbow
+        'proj_default_name': scaledIcons[0],
+        'shop_proj_green_name': scaledIcons[0],
+        'shop_proj_fireball_name': scaledIcons[1],
+        'shop_proj_purple_name': scaledIcons[2],
+        'shop_proj_rainbow_name': scaledIcons[3],
+        'trail_default_name': playerImg1,
+        'shop_trail_rainbow_name': scaledIcons[3]
     };
 
-    // Global zugänglich machen (oder übergeben), damit populateGalerie darauf zugreifen kann
     (window as any).galleryImageMap = galleryImageMap;
 };
 
-
-// --- SECTION 3: TYP-DEFINITIONEN & LEVEL DEFINITION---
 interface IKeyMap { [key: string]: boolean; }
 interface IStar { pos: Vector2D; s: number; v: number; a: number; }
 interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[]; boss?: string; formation?: string; msgKey: string; s: number; m: number; h?: number; isMultiFormation?: boolean; }
@@ -251,9 +226,7 @@ interface IShopItem {
     cosmeticType?: 'player_skin' | 'projectile_style' | 'engine_trail'; 
 }
 
-interface IPlayerUpgrades {
-    [key: string]: number; 
-}
+interface IPlayerUpgrades { [key: string]: number; }
 
 interface IPlayerCosmetics {
     unlocked_skins: string[];
@@ -271,8 +244,6 @@ interface ILeaderboardEntry {
     waves: number;
 }
 
-
-// --- Pi Manager Klasse ---
 class PiManager {
     private game: Game;
     public isAuthenticated: boolean = false;
@@ -282,9 +253,6 @@ class PiManager {
 
     constructor() {
         this.Pi = (window as any).Pi;
-        if (!this.Pi) {
-            console.error("Pi SDK not found!");
-        }
     }
     
     public setGame(game: Game) {
@@ -293,13 +261,9 @@ class PiManager {
 
     public async authenticate() {
         if (!this.Pi) {
-            alert("FEHLER: Pi SDK wurde nicht gefunden. Laufen Sie das Spiel im Pi Browser?");
             return;
         }
         if (this.isAuthenticated) return;
-
-        // ALARM 1: Bestätigt, dass die Funktion aufgerufen wird.
-        alert("Versuche, die Pi-Authentifizierung zu starten...");
 
         try {
             const scopes = ['username', 'payments'];
@@ -308,9 +272,6 @@ class PiManager {
             this.isAuthenticated = true;
             this.username = authResult.user.username;
             this.uid = authResult.user.uid;
-
-            // ALARM 2: Bestätigt den Erfolg.
-            alert("ERFOLG! Authentifiziert als: " + this.username);
 
             await this.game.loadPlayerDataFromServer();
             
@@ -321,25 +282,16 @@ class PiManager {
             }
 
         } catch (err) {
-            // ALARM 3: Zeigt den genauen Fehler an.
-            alert("FEHLER bei der Authentifizierung! Grund: " + JSON.stringify(err));
             console.error("Pi authentication failed:", err);
         }
     }
 
     private onIncompletePaymentFound(payment: any) {
         console.warn("Incomplete payment found:", payment);
-        alert("Eine unvollständige Zahlung wurde gefunden: " + JSON.stringify(payment));
     }
     
     public createPayment(bundle: IShopItem) {
         if (!this.Pi || !this.isAuthenticated || !bundle.pi_cost || !bundle.coin_reward) {
-            alert("Kauf nicht möglich. Grund: Nicht authentifiziert oder ungültiges Produkt.");
-            console.error("Cannot create payment. Details:", {
-                sdk_found: !!this.Pi,
-                is_authenticated: this.isAuthenticated,
-                is_bundle_valid: !!(bundle.pi_cost && bundle.coin_reward)
-            });
             return;
         }
 
@@ -354,7 +306,6 @@ class PiManager {
 
         const callbacks = {
             onReadyForServerApproval: async (paymentId: string) => {
-                console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
                 try {
                     await fetch("/api/approve-payment", {
                         method: "POST",
@@ -366,7 +317,6 @@ class PiManager {
                 }
             },
             onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-                console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
                 try {
                     await fetch("/api/complete-payment", {
                         method: "POST",
@@ -374,20 +324,12 @@ class PiManager {
                         body: JSON.stringify({ paymentId, txid })
                     });
                     this.game.awardPiCoinBundle(bundle);
-                    alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
                 } catch (err) {
                     console.error("Fehler beim Complete-Call:", err);
                 }
             },
-            onCancel: (paymentId: string) => {
-                console.log(`[CLIENT-SIDE] Payment cancelled: ${paymentId}`);
-                alert("Zahlungsvorgang abgebrochen.");
-            },
-            onError: (error: any, payment: any) => {
-                console.error("[CLIENT-SIDE] Payment error:", error);
-                if (payment) console.error("--> Payment details:", payment);
-                alert("Ein Fehler ist während der Zahlung aufgetreten.");
-            },
+            onCancel: (paymentId: string) => {},
+            onError: (error: any, payment: any) => {},
         };
 
         try {
@@ -398,12 +340,8 @@ class PiManager {
     }
     
     public showAd() {
-        if (!this.Pi) {
-            console.log("Pi SDK not available, cannot show ad.");
-            return;
-        }
+        if (!this.Pi) return;
         
-        console.log("Requesting Pi Ad...");
         try {
             this.Pi.showAd();
         } catch(err) {
@@ -412,38 +350,82 @@ class PiManager {
     }
 }
 
-
-// --- SECTION 4: KERN-KLASSEN ---
 class Vector2D { public x: number; public y: number; constructor(x: number, y: number) { this.x = x; this.y = y; } }
 class Entity { public game: Game; public pos: Vector2D; public width: number; public height: number; public family: string = 'none'; public type: string = 'NONE'; protected _isGarbage: boolean = false; public inFormation: boolean = false; constructor(game: Game, x: number, y: number, w: number, h: number) { this.game = game; this.pos = new Vector2D(x, y); this.width = w; this.height = h; } update(dt: number): void {} draw(ctx: CanvasRenderingContext2D): void {} isAlive(): boolean { return !this._isGarbage; } destroy(): void { this._isGarbage = true; } }
 class EntityFamily extends Entity { constructor(game: Game, x: number, y: number, w: number, h: number, family: string, type: string) { super(game, x, y, w, h); this.family = family; this.type = type; } }
 
-// --- SECTION 5: SPIEL-ENTITÄTEN ---
 class Particle extends Entity {
     private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number;
-constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { 
-    super(game, x, y, 0, 0); 
-    this.family = 'effect'; 
-    this.type = 'PARTICLE'; 
-    
-    if (vel) {
-        this.vel = vel;
-    } else {
-        this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+    constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { 
+        super(game, x, y, 0, 0); 
+        this.family = 'effect'; 
+        this.type = 'PARTICLE'; 
+        
+        if (vel) {
+            this.vel = vel;
+        } else {
+            this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+        }
+        
+        this.size = Math.random() * size + 1; 
+        this.life = Math.random() * life; 
+        this.initialLife = this.life; 
+        this.color = color; 
     }
-    
-    this.size = Math.random() * size + 1; 
-    this.life = Math.random() * life; 
-    this.initialLife = this.life; 
-    this.color = color; 
-}    update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
-    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    update(dt: number): void { 
+        const dt_s = dt / 1000; 
+        this.pos.x += this.vel.x * dt_s; 
+        this.pos.y += this.vel.y * dt_s; 
+        this.life -= dt_s; 
+        if (this.life <= 0) this.destroy(); 
+    }
+    draw(ctx: CanvasRenderingContext2D): void { 
+        ctx.save(); 
+        ctx.globalAlpha = this.life / this.initialLife; 
+        ctx.fillStyle = this.color; 
+        ctx.beginPath(); 
+        ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); 
+        ctx.fill(); 
+        ctx.restore(); 
+    }
 }
+
 class Explosion extends EntityFamily {
     private particles: IParticle[] = [];
-    constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; for (let i = 0; i < count; i++) { this.particles.push({ pos: new Vector2D(x, y), vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), size: Math.random() * 4 + 1, life: 0.7, color: color }); } }
-    update(dt: number): void { const dt_s = dt / 1000; this.particles.forEach(p => { p.pos.x += p.vel.x * dt_s; p.pos.y += p.vel.y * dt_s; p.life -= dt_s; }); this.particles = this.particles.filter(p => p.life > 0); if (this.particles.length === 0) this.destroy(); }
-    draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
+    constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { 
+        super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); 
+        const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; 
+        for (let i = 0; i < count; i++) { 
+            this.particles.push({ 
+                pos: new Vector2D(x, y), 
+                vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), 
+                size: Math.random() * 4 + 1, 
+                life: 0.7, 
+                color: color 
+            }); 
+        } 
+    }
+    update(dt: number): void { 
+        const dt_s = dt / 1000; 
+        this.particles.forEach(p => { 
+            p.pos.x += p.vel.x * dt_s; 
+            p.pos.y += p.vel.y * dt_s; 
+            p.life -= dt_s; 
+        }); 
+        this.particles = this.particles.filter(p => p.life > 0); 
+        if (this.particles.length === 0) this.destroy(); 
+    }
+    draw(ctx: CanvasRenderingContext2D): void { 
+        this.particles.forEach(p => { 
+            ctx.save(); 
+            ctx.globalAlpha = p.life / 0.7; 
+            ctx.fillStyle = p.color; 
+            ctx.beginPath(); 
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); 
+            ctx.fill(); 
+            ctx.restore(); 
+        }); 
+    }
 }
 
 class ImpactEffect extends EntityFamily {
@@ -473,21 +455,18 @@ class ImpactEffect extends EntityFamily {
     }
 }
 
-// --- HINZUFÜGEN: Neue Klasse für den grünen Einschlag-Effekt ---
 class GreenSizzleEffect extends EntityFamily {
     private particles: IParticle[] = [];
     constructor(game: Game, x: number, y: number) {
         super(game, x, y, 0, 0, 'effect', 'GREEN_SIZZLE');
-        // Erzeugt mehr Partikel als der Standard-Impact für einen befriedigenderen Effekt
         const count = this.game.uiManager.settings.particles > 0 ? 12 : 0;
         for (let i = 0; i < count; i++) {
-            const life = 0.2 + Math.random() * 0.2; // Etwas längere Lebensdauer für den "Sizzle"
+            const life = 0.2 + Math.random() * 0.2;
             this.particles.push({
                 pos: new Vector2D(x, y),
                 vel: new Vector2D(Math.random() * 180 - 90, Math.random() * 180 - 90),
                 size: Math.random() * 2.5 + 1,
                 life: life,
-                // Eine Mischung aus hellgrünen und fast weißen Partikeln
                 color: Math.random() > 0.3 ? '#39FF14' : '#E8FFED'
             });
         }
@@ -507,7 +486,7 @@ class GreenSizzleEffect extends EntityFamily {
             ctx.save();
             ctx.globalAlpha = p.life / 0.4;
             ctx.fillStyle = p.color;
-            ctx.shadowColor = '#39FF14'; // Grüner Schein
+            ctx.shadowColor = '#39FF14';
             ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
@@ -517,9 +496,8 @@ class GreenSizzleEffect extends EntityFamily {
     }
 }
 
-// --- HINZUFÜGEN: Neue Klasse für das grüne Mündungsfeuer ---
 class GreenMuzzleFlash extends Entity {
-    private life: number = 0.1; // Sehr kurze Lebensdauer
+    private life: number = 0.1;
     private initialLife: number = 0.1;
     private player: Player;
 
@@ -533,7 +511,6 @@ class GreenMuzzleFlash extends Entity {
         const dt_s = dt / 1000;
         this.life -= dt_s;
         if (this.life <= 0) this.destroy();
-        // Position an den Spieler anheften
         this.pos.x = this.player.pos.x;
         this.pos.y = this.player.pos.y;
     }
@@ -615,7 +592,6 @@ class VoidImpactEffect extends EntityFamily {
             const speed = 50 + Math.random() * 50;
             this.particles.push({
                 pos: new Vector2D(x, y),
-                // Partikel bewegen sich erst nach außen
                 vel: new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed),
                 size: Math.random() * 2 + 1,
                 life: this.initialLife,
@@ -626,8 +602,6 @@ class VoidImpactEffect extends EntityFamily {
     update(dt: number): void {
         const dt_s = dt / 1000;
         this.life -= dt_s;
-
-        // Implosions-Effekt: In der zweiten Hälfte ihres Lebens ziehen sich die Partikel zusammen
         const pullFactor = Math.max(0, (this.initialLife / 2) - this.life) * 800;
 
         this.particles.forEach(p => {
@@ -656,18 +630,21 @@ class VoidImpactEffect extends EntityFamily {
         });
     }
 }
+
 class NukeEffect extends Entity {
     private radius: number = 0; private life: number = 1;
     constructor(game: Game) { super(game, game.width / 2, game.height / 2, 0, 0); this.type = 'EFFECT'; }
     update(dt: number): void { const dt_s = dt / 1000; this.radius += 1200 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = `rgba(255,255,255,${this.life})`; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
+
 class ShockwaveEffect extends Entity {
     private radius: number = 0; private life: number = 0.5; private initialLife: number = 0.5; private color: string;
     constructor(game: Game, x: number, y: number, color: string = '#F0F') { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'SHOCKWAVE'; this.color = color; }
     update(dt: number): void { const dt_s = dt / 1000; this.radius += 800 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
+
 class TeleportEffect extends Entity {
     private life: number = 0.4;
     private radius: number = 0;
@@ -690,7 +667,6 @@ class TeleportEffect extends Entity {
 
     draw(ctx: CanvasRenderingContext2D): void {
         if (this.radius < 0) return;
-
         ctx.save();
         const alpha = this.life / 0.4;
         ctx.globalAlpha = alpha;
@@ -704,6 +680,7 @@ class TeleportEffect extends Entity {
         ctx.restore();
     }
 }
+
 class ReviveEffect extends Entity {
     private radius: number = 0;
     private life: number = 0.8;
@@ -791,7 +768,6 @@ class ReviveCrystalAnimation extends Entity {
 
     update(dt: number): void {
         const dt_s = dt / 1000;
-
         this.rotationSpeed += 20 * dt_s;
         this.rotationAngle += this.rotationSpeed * dt_s;
 
