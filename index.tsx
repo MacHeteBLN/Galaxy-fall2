@@ -4142,8 +4142,8 @@ class UIManager {
             setupButton(this.tabButtons[key], () => {
                 this.showTab(key);
                 if (key === 'rangliste') {
-    this.populateLeaderboard('campaign');
-}
+                    this.populateLeaderboard('campaign');
+                }
             }); 
         }
 
@@ -4392,7 +4392,7 @@ class UIManager {
         const t = (key: string) => this.localizationManager.translate(key);
         const contentEl = document.getElementById('leaderboard-content')!;
         
-        // Der HTML-Code ist vereinfacht: Die zweite Button-Reihe wurde entfernt.
+        // HIER IST DER KORRIGIERTE HTML-CODE, DER NUR DIE ZWEI GEWÜNSCHTEN BUTTONS ERZEUGT
         contentEl.innerHTML = `
             <div class="leaderboard-controls">
                 <button class="menu-button ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
@@ -4402,14 +4402,14 @@ class UIManager {
             <div id="leaderboard-table-container"></div>
         `;
             
-        // Die Events werden für die neuen, einfachen Buttons jedes Mal neu registriert.
+        // Event-Listener werden neu registriert
         this.attachLeaderboardControlEvents();
         
         const statusEl = document.getElementById('leaderboard-status')!;
         const tableContainerEl = document.getElementById('leaderboard-table-container')!;
 
         try {
-            // Die API wird immer mit `metric=score` aufgerufen, da die Buttons entfernt wurden.
+            // Die API wird jetzt immer mit metric=score aufgerufen, da die Buttons dafür entfernt wurden.
             const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&metric=score`);
 
             if (!response.ok) {
@@ -4454,7 +4454,7 @@ class UIManager {
     }
 
     private attachLeaderboardControlEvents(): void {
-        // Diese Funktion erwartet jetzt keine Argumente mehr und ist viel einfacher.
+        // Diese Funktion ist jetzt einfacher und registriert nur die Events für die verbleibenden Buttons.
         document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign'));
         document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless'));
     }
