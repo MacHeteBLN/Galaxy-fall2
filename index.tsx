@@ -72,35 +72,42 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
+
 const createScaledImage = (src: string, targetWidth: number, targetHeight: number): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
         const originalImg = new Image();
-        originalImg.crossOrigin = "Anonymous";
+        originalImg.crossOrigin = "Anonymous"; // Wichtig für Canvas-Operationen
         originalImg.onload = () => {
             let w = originalImg.width;
             let h = originalImg.height;
 
+            // Wenn das Bild bereits klein genug ist, direkt zurückgeben
             if (w <= targetWidth && h <= targetHeight) {
                 resolve(originalImg);
                 return;
             }
 
+            // Erstelle ein temporäres Canvas, um das Bild schrittweise zu verkleinern
             const oc = document.createElement('canvas');
             const octx = oc.getContext('2d')!;
+
             oc.width = w;
             oc.height = h;
             octx.drawImage(originalImg, 0, 0);
 
+            // Skaliere in Schritten von 50% herunter, bis wir nahe am Ziel sind
             while (w * 0.5 > targetWidth) {
                 w *= 0.5;
                 h *= 0.5;
                 octx.drawImage(oc, 0, 0, w * 2, h * 2, 0, 0, w, h);
             }
 
+            // Der letzte Skalierungsschritt zum finalen Ziel
             oc.width = targetWidth;
             oc.height = targetHeight;
             octx.drawImage(originalImg, 0, 0, originalImg.width, originalImg.height, 0, 0, targetWidth, targetHeight);
 
+            // Erstelle ein finales Image-Element aus dem skalierten Canvas-Inhalt
             const scaledImg = new Image();
             scaledImg.onload = () => resolve(scaledImg);
             scaledImg.onerror = reject;
@@ -110,9 +117,14 @@ const createScaledImage = (src: string, targetWidth: number, targetHeight: numbe
         originalImg.src = src;
     });
 };
+// --- ENDE: NEUE HILFSFUNKTION ---
+
 
 const API_BASE_URL = '/api';
 
+
+// --- SECTION 2: BILD-INITIALISIERUNG (NEUE ASYNCHRONE VERSION) ---
+// Globale Variablen für die Bilder, damit sie außerhalb der async-Funktion verfügbar sind
 let playerImg1: HTMLImageElement, playerImg2: HTMLImageElement, playerImg3: HTMLImageElement, playerImg4: HTMLImageElement;
 let playerImgVoid: HTMLImageElement, playerImgGold: HTMLImageElement, playerImgMarauder: HTMLImageElement, playerImgPaladin: HTMLImageElement;
 let playerImgSpectre: HTMLImageElement, playerImgGoliath: HTMLImageElement, playerImgJuggernaut: HTMLImageElement, playerImgLeviathan: HTMLImageElement;
@@ -127,9 +139,13 @@ let playerImageMap: { [key: string]: HTMLImageElement };
 
 const createImage = (src: string): HTMLImageElement => { const img = new Image(); img.src = src; return img; };
 
+// Diese Funktion lädt und skaliert alle Bilder und muss vor dem Spielstart aufgerufen werden.
 const initializeImages = async () => {
-    const iconSize = 80;
+    const iconSize = 80; // Eine gute, einheitliche Größe für alle Galerie-Icons
 
+    // --- START DER ÄNDERUNG ---
+    // Lade die Spieler-Skins in ihrer ORIGINALGRÖSSE, um die maximale Qualität zu erhalten.
+    // Die Skalierung findet jetzt zur Laufzeit in der `Player.draw`-Methode statt.
     const playerSkinPromises = [
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc1); img.onload = () => resolve(img); }),
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrc2); img.onload = () => resolve(img); }),
@@ -144,7 +160,9 @@ const initializeImages = async () => {
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcJuggernaut); img.onload = () => resolve(img); }),
         new Promise<HTMLImageElement>(resolve => { const img = createImage(playerImgSrcLeviathan); img.onload = () => resolve(img); }),
     ];
+    // --- ENDE DER ÄNDERUNG ---
     
+    // Lade die Originalbilder der Power-ups (die nicht skaliert werden müssen)
     const powerUpImagePromises = Object.keys(powerUpImageSources).map(key => {
         return new Promise<[string, HTMLImageElement]>(resolve => {
             const img = createImage(powerUpImageSources[key]!);
@@ -152,6 +170,7 @@ const initializeImages = async () => {
         });
     });
 
+    // Lade und skaliere die Galerie-Icons, die wir benötigen
     const scaledIconPromises = Promise.all([
         createScaledImage(powerUpImageSources['WEAPON_UP']!, iconSize, iconSize),
         createScaledImage(powerupRapidFireSrc, iconSize, iconSize),
@@ -159,6 +178,7 @@ const initializeImages = async () => {
         createScaledImage(iconTrailRainbowSrc, iconSize, iconSize)
     ]);
     
+    // Führe alle Ladevorgänge parallel aus
     const [playerSkins, powerUpEntries, scaledIcons] = await Promise.all([
         Promise.all(playerSkinPromises),
         Promise.all(powerUpImagePromises),
@@ -173,6 +193,7 @@ const initializeImages = async () => {
 
     powerUpImages = Object.fromEntries(powerUpEntries);
     
+    // Lade die restlichen, nicht-skalierten Bilder
     gruntImg = createImage(gruntImgSrc);
     tankImg = createImage(tankImgSrc);
     weaverImg = createImage(weaverImgSrc);
@@ -192,19 +213,23 @@ const initializeImages = async () => {
         'skin_spectre': playerImgSpectre, 'skin_goliath': playerImgGoliath, 'skin_juggernaut': playerImgJuggernaut, 'skin_leviathan': playerImgLeviathan,
     };
 
+    // Ersetze die Originalquellen durch die neuen, skalierten Bilder in einer separaten Map für die Galerie
     const galleryImageMap = {
-        'proj_default_name': scaledIcons[0],
-        'shop_proj_green_name': scaledIcons[0],
-        'shop_proj_fireball_name': scaledIcons[1],
-        'shop_proj_purple_name': scaledIcons[2],
-        'shop_proj_rainbow_name': scaledIcons[3],
-        'trail_default_name': playerImg1,
-        'shop_trail_rainbow_name': scaledIcons[3]
+        'proj_default_name': scaledIcons[0], // WEAPON_UP
+        'shop_proj_green_name': scaledIcons[0], // WEAPON_UP
+        'shop_proj_fireball_name': scaledIcons[1], // rapidFire
+        'shop_proj_purple_name': scaledIcons[2], // blackHole
+        'shop_proj_rainbow_name': scaledIcons[3], // rainbow
+        'trail_default_name': playerImg1, // default ship
+        'shop_trail_rainbow_name': scaledIcons[3] // rainbow
     };
 
+    // Global zugänglich machen (oder übergeben), damit populateGalerie darauf zugreifen kann
     (window as any).galleryImageMap = galleryImageMap;
 };
 
+
+// --- SECTION 3: TYP-DEFINITIONEN & LEVEL DEFINITION---
 interface IKeyMap { [key: string]: boolean; }
 interface IStar { pos: Vector2D; s: number; v: number; a: number; }
 interface ILevelDefinition { wave: number; scoreToEarn: number; enemies: string[]; boss?: string; formation?: string; msgKey: string; s: number; m: number; h?: number; isMultiFormation?: boolean; }
@@ -226,7 +251,9 @@ interface IShopItem {
     cosmeticType?: 'player_skin' | 'projectile_style' | 'engine_trail'; 
 }
 
-interface IPlayerUpgrades { [key: string]: number; }
+interface IPlayerUpgrades {
+    [key: string]: number; 
+}
 
 interface IPlayerCosmetics {
     unlocked_skins: string[];
@@ -244,6 +271,8 @@ interface ILeaderboardEntry {
     waves: number;
 }
 
+
+// --- Pi Manager Klasse ---
 class PiManager {
     private game: Game;
     public isAuthenticated: boolean = false;
@@ -253,6 +282,9 @@ class PiManager {
 
     constructor() {
         this.Pi = (window as any).Pi;
+        if (!this.Pi) {
+            console.error("Pi SDK not found!");
+        }
     }
     
     public setGame(game: Game) {
@@ -261,9 +293,13 @@ class PiManager {
 
     public async authenticate() {
         if (!this.Pi) {
+            alert("FEHLER: Pi SDK wurde nicht gefunden. Laufen Sie das Spiel im Pi Browser?");
             return;
         }
         if (this.isAuthenticated) return;
+
+        // ALARM 1: Bestätigt, dass die Funktion aufgerufen wird.
+        alert("Versuche, die Pi-Authentifizierung zu starten...");
 
         try {
             const scopes = ['username', 'payments'];
@@ -272,6 +308,9 @@ class PiManager {
             this.isAuthenticated = true;
             this.username = authResult.user.username;
             this.uid = authResult.user.uid;
+
+            // ALARM 2: Bestätigt den Erfolg.
+            alert("ERFOLG! Authentifiziert als: " + this.username);
 
             await this.game.loadPlayerDataFromServer();
             
@@ -282,16 +321,25 @@ class PiManager {
             }
 
         } catch (err) {
+            // ALARM 3: Zeigt den genauen Fehler an.
+            alert("FEHLER bei der Authentifizierung! Grund: " + JSON.stringify(err));
             console.error("Pi authentication failed:", err);
         }
     }
 
     private onIncompletePaymentFound(payment: any) {
         console.warn("Incomplete payment found:", payment);
+        alert("Eine unvollständige Zahlung wurde gefunden: " + JSON.stringify(payment));
     }
     
     public createPayment(bundle: IShopItem) {
         if (!this.Pi || !this.isAuthenticated || !bundle.pi_cost || !bundle.coin_reward) {
+            alert("Kauf nicht möglich. Grund: Nicht authentifiziert oder ungültiges Produkt.");
+            console.error("Cannot create payment. Details:", {
+                sdk_found: !!this.Pi,
+                is_authenticated: this.isAuthenticated,
+                is_bundle_valid: !!(bundle.pi_cost && bundle.coin_reward)
+            });
             return;
         }
 
@@ -306,6 +354,7 @@ class PiManager {
 
         const callbacks = {
             onReadyForServerApproval: async (paymentId: string) => {
+                console.log(`[CLIENT-SIDE] onReadyForServerApproval: ${paymentId}`);
                 try {
                     await fetch("/api/approve-payment", {
                         method: "POST",
@@ -317,6 +366,7 @@ class PiManager {
                 }
             },
             onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+                console.log(`[CLIENT-SIDE] onReadyForServerCompletion: ${paymentId}, TXID: ${txid}`);
                 try {
                     await fetch("/api/complete-payment", {
                         method: "POST",
@@ -324,12 +374,20 @@ class PiManager {
                         body: JSON.stringify({ paymentId, txid })
                     });
                     this.game.awardPiCoinBundle(bundle);
+                    alert(`${bundle.coin_reward} Münzen wurden erfolgreich hinzugefügt!`);
                 } catch (err) {
                     console.error("Fehler beim Complete-Call:", err);
                 }
             },
-            onCancel: (paymentId: string) => {},
-            onError: (error: any, payment: any) => {},
+            onCancel: (paymentId: string) => {
+                console.log(`[CLIENT-SIDE] Payment cancelled: ${paymentId}`);
+                alert("Zahlungsvorgang abgebrochen.");
+            },
+            onError: (error: any, payment: any) => {
+                console.error("[CLIENT-SIDE] Payment error:", error);
+                if (payment) console.error("--> Payment details:", payment);
+                alert("Ein Fehler ist während der Zahlung aufgetreten.");
+            },
         };
 
         try {
@@ -340,8 +398,12 @@ class PiManager {
     }
     
     public showAd() {
-        if (!this.Pi) return;
+        if (!this.Pi) {
+            console.log("Pi SDK not available, cannot show ad.");
+            return;
+        }
         
+        console.log("Requesting Pi Ad...");
         try {
             this.Pi.showAd();
         } catch(err) {
@@ -350,82 +412,38 @@ class PiManager {
     }
 }
 
+
+// --- SECTION 4: KERN-KLASSEN ---
 class Vector2D { public x: number; public y: number; constructor(x: number, y: number) { this.x = x; this.y = y; } }
 class Entity { public game: Game; public pos: Vector2D; public width: number; public height: number; public family: string = 'none'; public type: string = 'NONE'; protected _isGarbage: boolean = false; public inFormation: boolean = false; constructor(game: Game, x: number, y: number, w: number, h: number) { this.game = game; this.pos = new Vector2D(x, y); this.width = w; this.height = h; } update(dt: number): void {} draw(ctx: CanvasRenderingContext2D): void {} isAlive(): boolean { return !this._isGarbage; } destroy(): void { this._isGarbage = true; } }
 class EntityFamily extends Entity { constructor(game: Game, x: number, y: number, w: number, h: number, family: string, type: string) { super(game, x, y, w, h); this.family = family; this.type = type; } }
 
+// --- SECTION 5: SPIEL-ENTITÄTEN ---
 class Particle extends Entity {
     private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number;
-    constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { 
-        super(game, x, y, 0, 0); 
-        this.family = 'effect'; 
-        this.type = 'PARTICLE'; 
-        
-        if (vel) {
-            this.vel = vel;
-        } else {
-            this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
-        }
-        
-        this.size = Math.random() * size + 1; 
-        this.life = Math.random() * life; 
-        this.initialLife = this.life; 
-        this.color = color; 
+constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { 
+    super(game, x, y, 0, 0); 
+    this.family = 'effect'; 
+    this.type = 'PARTICLE'; 
+    
+    if (vel) {
+        this.vel = vel;
+    } else {
+        this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
     }
-    update(dt: number): void { 
-        const dt_s = dt / 1000; 
-        this.pos.x += this.vel.x * dt_s; 
-        this.pos.y += this.vel.y * dt_s; 
-        this.life -= dt_s; 
-        if (this.life <= 0) this.destroy(); 
-    }
-    draw(ctx: CanvasRenderingContext2D): void { 
-        ctx.save(); 
-        ctx.globalAlpha = this.life / this.initialLife; 
-        ctx.fillStyle = this.color; 
-        ctx.beginPath(); 
-        ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); 
-        ctx.fill(); 
-        ctx.restore(); 
-    }
+    
+    this.size = Math.random() * size + 1; 
+    this.life = Math.random() * life; 
+    this.initialLife = this.life; 
+    this.color = color; 
+}    update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
+    draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
-
 class Explosion extends EntityFamily {
     private particles: IParticle[] = [];
-    constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { 
-        super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); 
-        const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; 
-        for (let i = 0; i < count; i++) { 
-            this.particles.push({ 
-                pos: new Vector2D(x, y), 
-                vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), 
-                size: Math.random() * 4 + 1, 
-                life: 0.7, 
-                color: color 
-            }); 
-        } 
-    }
-    update(dt: number): void { 
-        const dt_s = dt / 1000; 
-        this.particles.forEach(p => { 
-            p.pos.x += p.vel.x * dt_s; 
-            p.pos.y += p.vel.y * dt_s; 
-            p.life -= dt_s; 
-        }); 
-        this.particles = this.particles.filter(p => p.life > 0); 
-        if (this.particles.length === 0) this.destroy(); 
-    }
-    draw(ctx: CanvasRenderingContext2D): void { 
-        this.particles.forEach(p => { 
-            ctx.save(); 
-            ctx.globalAlpha = p.life / 0.7; 
-            ctx.fillStyle = p.color; 
-            ctx.beginPath(); 
-            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); 
-            ctx.fill(); 
-            ctx.restore(); 
-        }); 
-    }
+    constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; for (let i = 0; i < count; i++) { this.particles.push({ pos: new Vector2D(x, y), vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), size: Math.random() * 4 + 1, life: 0.7, color: color }); } }
+    update(dt: number): void { const dt_s = dt / 1000; this.particles.forEach(p => { p.pos.x += p.vel.x * dt_s; p.pos.y += p.vel.y * dt_s; p.life -= dt_s; }); this.particles = this.particles.filter(p => p.life > 0); if (this.particles.length === 0) this.destroy(); }
+    draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
 }
 
 class ImpactEffect extends EntityFamily {
@@ -455,18 +473,21 @@ class ImpactEffect extends EntityFamily {
     }
 }
 
+// --- HINZUFÜGEN: Neue Klasse für den grünen Einschlag-Effekt ---
 class GreenSizzleEffect extends EntityFamily {
     private particles: IParticle[] = [];
     constructor(game: Game, x: number, y: number) {
         super(game, x, y, 0, 0, 'effect', 'GREEN_SIZZLE');
+        // Erzeugt mehr Partikel als der Standard-Impact für einen befriedigenderen Effekt
         const count = this.game.uiManager.settings.particles > 0 ? 12 : 0;
         for (let i = 0; i < count; i++) {
-            const life = 0.2 + Math.random() * 0.2;
+            const life = 0.2 + Math.random() * 0.2; // Etwas längere Lebensdauer für den "Sizzle"
             this.particles.push({
                 pos: new Vector2D(x, y),
                 vel: new Vector2D(Math.random() * 180 - 90, Math.random() * 180 - 90),
                 size: Math.random() * 2.5 + 1,
                 life: life,
+                // Eine Mischung aus hellgrünen und fast weißen Partikeln
                 color: Math.random() > 0.3 ? '#39FF14' : '#E8FFED'
             });
         }
@@ -486,7 +507,7 @@ class GreenSizzleEffect extends EntityFamily {
             ctx.save();
             ctx.globalAlpha = p.life / 0.4;
             ctx.fillStyle = p.color;
-            ctx.shadowColor = '#39FF14';
+            ctx.shadowColor = '#39FF14'; // Grüner Schein
             ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
@@ -496,8 +517,9 @@ class GreenSizzleEffect extends EntityFamily {
     }
 }
 
+// --- HINZUFÜGEN: Neue Klasse für das grüne Mündungsfeuer ---
 class GreenMuzzleFlash extends Entity {
-    private life: number = 0.1;
+    private life: number = 0.1; // Sehr kurze Lebensdauer
     private initialLife: number = 0.1;
     private player: Player;
 
@@ -511,6 +533,7 @@ class GreenMuzzleFlash extends Entity {
         const dt_s = dt / 1000;
         this.life -= dt_s;
         if (this.life <= 0) this.destroy();
+        // Position an den Spieler anheften
         this.pos.x = this.player.pos.x;
         this.pos.y = this.player.pos.y;
     }
@@ -592,6 +615,7 @@ class VoidImpactEffect extends EntityFamily {
             const speed = 50 + Math.random() * 50;
             this.particles.push({
                 pos: new Vector2D(x, y),
+                // Partikel bewegen sich erst nach außen
                 vel: new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed),
                 size: Math.random() * 2 + 1,
                 life: this.initialLife,
@@ -602,6 +626,8 @@ class VoidImpactEffect extends EntityFamily {
     update(dt: number): void {
         const dt_s = dt / 1000;
         this.life -= dt_s;
+
+        // Implosions-Effekt: In der zweiten Hälfte ihres Lebens ziehen sich die Partikel zusammen
         const pullFactor = Math.max(0, (this.initialLife / 2) - this.life) * 800;
 
         this.particles.forEach(p => {
@@ -630,21 +656,18 @@ class VoidImpactEffect extends EntityFamily {
         });
     }
 }
-
 class NukeEffect extends Entity {
     private radius: number = 0; private life: number = 1;
     constructor(game: Game) { super(game, game.width / 2, game.height / 2, 0, 0); this.type = 'EFFECT'; }
     update(dt: number): void { const dt_s = dt / 1000; this.radius += 1200 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.fillStyle = `rgba(255,255,255,${this.life})`; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
-
 class ShockwaveEffect extends Entity {
     private radius: number = 0; private life: number = 0.5; private initialLife: number = 0.5; private color: string;
     constructor(game: Game, x: number, y: number, color: string = '#F0F') { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'SHOCKWAVE'; this.color = color; }
     update(dt: number): void { const dt_s = dt / 1000; this.radius += 800 * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); }
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
-
 class TeleportEffect extends Entity {
     private life: number = 0.4;
     private radius: number = 0;
@@ -667,6 +690,7 @@ class TeleportEffect extends Entity {
 
     draw(ctx: CanvasRenderingContext2D): void {
         if (this.radius < 0) return;
+
         ctx.save();
         const alpha = this.life / 0.4;
         ctx.globalAlpha = alpha;
@@ -680,7 +704,6 @@ class TeleportEffect extends Entity {
         ctx.restore();
     }
 }
-
 class ReviveEffect extends Entity {
     private radius: number = 0;
     private life: number = 0.8;
@@ -768,6 +791,7 @@ class ReviveCrystalAnimation extends Entity {
 
     update(dt: number): void {
         const dt_s = dt / 1000;
+
         this.rotationSpeed += 20 * dt_s;
         this.rotationAngle += this.rotationSpeed * dt_s;
 
@@ -2007,6 +2031,54 @@ class Player extends EntityFamily {
     isGhosted(): boolean { return this.powerUpManager.isActive('GHOST_PROTOCOL'); }
     isScoreBoosted(): boolean { return this.powerUpManager.isActive('SCORE_BOOST'); }
 }
+
+class VoidPool extends EntityFamily {
+    private life: number = 8000;
+    private radius: number = 0;
+    private maxRadius: number = 80;
+    private damageCooldown: number = 500;
+    private damageTimer: number = 0;
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0, 'effect', 'VOID_POOL');
+    }
+
+    update(dt: number): void {
+        this.life -= dt;
+        if (this.life <= 0) {
+            this.destroy();
+            return;
+        }
+        this.radius = Math.min(this.maxRadius, this.radius + 30 * (dt / 1000));
+
+        this.damageTimer -= dt;
+        if (this.damageTimer <= 0 && this.game.player && !this.game.player.isGhosted()) {
+            const dist = Math.hypot(this.pos.x - (this.game.player.pos.x + this.game.player.width / 2), this.pos.y - (this.game.player.pos.y + this.game.player.height / 2));
+            if (dist < this.radius) {
+                this.game.player.takeHit(15);
+                this.damageTimer = this.damageCooldown;
+            }
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const alpha = Math.min(1, this.life / 2000);
+        const pulse = 1 + Math.sin(Date.now() / 300) * 0.1;
+        ctx.globalAlpha = alpha * 0.7;
+        
+        const gradient = ctx.createRadialGradient(this.pos.x, this.pos.y, 0, this.pos.x, this.pos.y, this.radius * pulse);
+        gradient.addColorStop(0, 'rgba(148, 0, 211, 0.8)');
+        gradient.addColorStop(0.7, 'rgba(75, 0, 130, 0.5)');
+        gradient.addColorStop(1, 'rgba(44, 0, 62, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
 class BossSentinelPrime extends Enemy {
     private attackPattern: number = 0; private attackTimer: number = 5000;
     private movementPattern: string = 'ENTER'; private hSpeed: number; private image: HTMLImageElement;
@@ -2016,37 +2088,32 @@ class BossSentinelPrime extends Enemy {
     private chargeTargetPos: Vector2D | null = null;
     private chargeOriginPos: Vector2D | null = null;
     private visualOffsetY: number;
+    private isFinalBattleVersion: boolean;
 
-
-    constructor(game: Game, health: number, speedMultiplier: number) {
+    constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) {
         const visualHeight = 150;
         const hitboxHeight = 100;
-
         super(game, game.width / 2 - 112.5, -visualHeight, 225, hitboxHeight, health, 5000, 'BOSS_SENTINEL_PRIME');
-        
         this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
         this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50;
+        this.isFinalBattleVersion = isFinalBattleVersion;
+        if (this.isFinalBattleVersion) {
+            this.attackTimer = 3500;
+        }
     }
 
     update(dt: number): void {
         const dt_s = dt / 1000;
-
         if (this.isPreparingCharge) {
             this.chargePreparationTimer -= dt;
-            if (this.chargePreparationTimer <= 0) {
-                this.executeAttack();
-            }
+            if (this.chargePreparationTimer <= 0) this.executeAttack();
             return; 
         }
-
         if (this.isPreparingLineAttack) {
             this.lineAttackPreparationTimer -= dt;
-            if (this.lineAttackPreparationTimer <= 0) {
-                this.executeAttack();
-            }
+            if (this.lineAttackPreparationTimer <= 0) this.executeAttack();
             return;
         }
-
         if (this.movementPattern === 'DASH_TO_PLAYER' && this.chargeTargetPos) {
             const chargeSpeed = 800;
             const targetX = this.chargeTargetPos.x - (this.width / 2);
@@ -2054,11 +2121,8 @@ class BossSentinelPrime extends Enemy {
             const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
             this.pos.x += Math.cos(angle) * chargeSpeed * dt_s;
             this.pos.y += Math.sin(angle) * chargeSpeed * dt_s;
-
             const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y);
-            if (dist < 20) {
-                this.movementPattern = 'RETURN_TO_ORIGIN';
-            }
+            if (dist < 20) this.movementPattern = 'RETURN_TO_ORIGIN';
         } else if (this.movementPattern === 'RETURN_TO_ORIGIN' && this.chargeOriginPos) {
             const returnSpeed = 400;
             const targetX = this.chargeOriginPos.x;
@@ -2066,7 +2130,6 @@ class BossSentinelPrime extends Enemy {
             const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x);
             this.pos.x += Math.cos(angle) * returnSpeed * dt_s;
             this.pos.y += Math.sin(angle) * returnSpeed * dt_s;
-            
             const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y);
             if (dist < 20) {
                 this.movementPattern = 'PATROL';
@@ -2087,14 +2150,11 @@ class BossSentinelPrime extends Enemy {
                 this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
                 this.hSpeed *= -1;
             }
-        } else if (this.movementPattern === 'PREPARE_CHARGE') {
-            // Boss hält an, während er sich auflädt.
         }
-
         this.attackTimer -= dt;
         if (this.attackTimer <= 0) {
             this.prepareAttack();
-            this.attackTimer = 5000;
+            this.attackTimer = this.isFinalBattleVersion ? 3500 : 5000;
         }
     }
     
@@ -2113,9 +2173,7 @@ class BossSentinelPrime extends Enemy {
                     this.isPreparingCharge = true;
                     this.chargePreparationTimer = 1500;
                     this.chargeOriginPos = new Vector2D(this.pos.x, this.pos.y);
-                    const targetX = this.game.player.pos.x + this.game.player.width / 2;
-                    const targetY = this.game.player.pos.y + this.game.player.height / 2;
-                    this.chargeTargetPos = new Vector2D(targetX, targetY);
+                    this.chargeTargetPos = new Vector2D(this.game.player.pos.x + this.game.player.width / 2, this.game.player.pos.y + this.game.player.height / 2);
                     this.movementPattern = 'PREPARE_CHARGE';
                 }
                 break;
@@ -2123,21 +2181,24 @@ class BossSentinelPrime extends Enemy {
     }
     
     executeAttack(): void {
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
+        const { x, y } = this.pos;
+        const { width: w, height: h } = this;
+        const projectileType = this.isFinalBattleVersion ? FireballProjectile : PlasmaBallProjectile;
+
         switch (this.attackPattern) {
             case 0: 
                 this.game.uiManager.soundManager.play('enemyPlasmaShoot');
-                const attackWidth = w * 0.7;
-                const startX = x + (w * 0.15);
+                const attackWidth = this.width * 0.7;
+                const startX = x + (this.width * 0.15);
                 for (let i = 0; i < 7; i++) {
-                    this.game.addEntity(new PlasmaBallProjectile(this.game, startX + (i * attackWidth / 6), y + h, 0, 360, this.collisionDamage));
+                    this.game.addEntity(new projectileType(this.game, startX + (i * attackWidth / 6), y + this.height, 0, 360, this.collisionDamage));
                 }
                 break;
             case 1: 
                 this.game.uiManager.soundManager.play('enemyPlasmaShoot');
                 for (let i = 0; i < 12; i++) {
                     const angle = i * Math.PI / 6;
-                    this.game.addEntity(new PlasmaBallProjectile(this.game, x + w / 2, y + h / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
+                    this.game.addEntity(new projectileType(this.game, x + this.width / 2, y + this.height / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage));
                 }
                 break;
             case 2:
@@ -2159,10 +2220,7 @@ class BossSentinelPrime extends Enemy {
             ctx.shadowColor = `rgba(255, 215, 0, 0.8)`;
             ctx.shadowBlur = 20 + pulse * 10;
         }
-
-        const visualHeight = 150;
-        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, visualHeight);
-        
+        ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 150);
         ctx.restore();
     }
 }
@@ -2173,17 +2231,19 @@ class BossVoidSerpent extends Enemy {
     private attackPreparationTimer: number = 0;
     private readonly attackPreparationDuration: number = 1000;
     private visualOffsetY: number;
+    private isFinalBattleVersion: boolean;
 
-    constructor(game: Game, health: number, speedMultiplier: number) {
+    constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) {
         const hitboxHeight = 100;
         const visualHeight = 240;
         super(game, game.width / 2 - 90, -visualHeight, 180, hitboxHeight, health * 0.7, 7500, 'BOSS_VOID_SERPENT');
         this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
         this.isBoss = true; 
-        this.image = bossVoidSerpentImg; 
+        this.image = bossVoidSerpentSrc; 
         this.collisionDamage = 90; 
         this.speed = 40 * speedMultiplier; 
         this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20;
+        this.isFinalBattleVersion = isFinalBattleVersion;
     }
 
     update(dt: number): void {
@@ -2216,39 +2276,30 @@ class BossVoidSerpent extends Enemy {
     }
 
     private executeAttack(): void {
-        const x = this.pos.x, y = this.pos.y, w = this.width, h = this.height;
+        const x = this.pos.x, y = this.pos.y, w = this.width;
         const attackType = Math.random() > 0.5 ? 'SPREAD' : 'WHIP';
+
+        if (this.isFinalBattleVersion) {
+            this.game.addEntity(new VoidPool(this.game, x + w / 2, y + this.height / 2));
+        }
 
         if (attackType === 'SPREAD') {
             this.game.uiManager.soundManager.play('enemyPlasmaShoot');
             const spawnX = x + w / 2;
-            const spawnY = y + h / 2;
-            const outwardSpeed = 180;
-            const tangentialSpeed = 120;
-            const numProjectiles = 4;
-            const spreadAngle = Math.PI / 2.5;
-            const startAngle = (Math.PI / 2) - (spreadAngle / 2);
-            const angleIncrement = spreadAngle / (numProjectiles - 1);
-
-            for (let i = 0; i < numProjectiles; i++) {
-                const angle = startAngle + (i * angleIncrement);
-                const velX = Math.cos(angle) * outwardSpeed - Math.sin(angle) * tangentialSpeed;
-                const velY = Math.sin(angle) * outwardSpeed + Math.cos(angle) * tangentialSpeed;
-                this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, velX, velY, this.collisionDamage));
+            const spawnY = y + this.height / 2;
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI / 2.5) / 3 * (i - 1.5) + Math.PI / 2;
+                this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 180, Math.sin(angle) * 180, this.collisionDamage));
             }
         } 
         else { 
             if (this.game.player) {
-                const p = this.game.player;
                 for (let i = 0; i < 3; i++) {
                     setTimeout(() => {
                         if (!this.isAlive()) return; 
-                        const targetX = p.pos.x + p.width / 2;
-                        const targetY = p.pos.y + p.height / 2;
-                        const spawnX = this.pos.x + this.width / 2;
-                        const spawnY = this.pos.y + this.height;
-                        const angle = Math.atan2(targetY - spawnY, targetX - spawnX);
-                        this.game.addEntity(new PlasmaBallProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage));
+                        const p = this.game.player!;
+                        const angle = Math.atan2(p.pos.y - this.pos.y, p.pos.x - this.pos.x);
+                        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + w/2, this.pos.y + this.height, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage));
                         this.game.uiManager.soundManager.play('enemyShoot');
                     }, i * 150);
                 }
@@ -2258,7 +2309,6 @@ class BossVoidSerpent extends Enemy {
 
     draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        
         const pulse = 1 + Math.sin(Date.now() / 500) * 0.1;
         ctx.globalAlpha = 0.85;
         ctx.shadowColor = `rgba(148, 0, 211, 0.7)`;
@@ -2271,7 +2321,6 @@ class BossVoidSerpent extends Enemy {
         }
         
         ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240);
-        
         ctx.restore();
     }
 }
@@ -2282,17 +2331,13 @@ class BossOmegaNexus extends Enemy {
     private ringRotationSpeed: number = 0.4;
     private phase: number = 1;
     private attackTimer: number = 5000;
-
     private movementPattern: 'ENTERING' | 'SWOOPING' | 'DRIFTING' = 'ENTERING';
     private movementTarget: Vector2D;
     private isInvulnerable: boolean = false;
-
     private visualOffsetY: number;
-
     private isPreparingAttack: boolean = false;
     private preparationTimer: number = 0;
     private currentAttack: 'CROSSFIRE' | 'LASER_FAN' | 'NEXUS_CANNON' | 'NONE' = 'NONE';
-    
     private laserFanActive: boolean = false;
     private laserFanDuration: number = 3500;
     private laserFanAngle: number = 0;
@@ -2302,70 +2347,48 @@ class BossOmegaNexus extends Enemy {
     private cannonChargeTimer: number = 4000;
     private isFiringCannon: boolean = false;
     private cannonDurationTimer: number = 3000;
+    private isFinalBattleVersion: boolean;
 
-    constructor(game: Game, health: number, speedMultiplier: number) {
+    constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) {
         const visualWidth = 240;
         const visualHeight = 184;
         const hitboxHeight = 110;
-        
         super(game, game.width / 2 - visualWidth / 2, -visualHeight, visualWidth, hitboxHeight, health, 20000, 'BOSS_OMEGA_NEXUS');
-        
         this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
         this.isBoss = true;
         this.baseImage = bossOmegaNexusBaseImg;
         this.collisionDamage = 150;
         this.movementTarget = new Vector2D(game.width / 2, 80);
+        this.isFinalBattleVersion = isFinalBattleVersion;
     }
 
     takeHit(damage: number): void {
         if (this.isInvulnerable) return;
-
         super.takeHit(damage);
         if (!this.isAlive()) return;
-
         const healthPercentage = this.health / this.maxHealth;
-        if (this.phase === 1 && healthPercentage <= 0.70) {
-            this.startPhaseTransition(2);
-        } else if (this.phase === 2 && healthPercentage <= 0.35) {
-            this.startPhaseTransition(3);
-        }
+        if (this.phase === 1 && healthPercentage <= 0.70) this.startPhaseTransition(2);
+        else if (this.phase === 2 && healthPercentage <= 0.35) this.startPhaseTransition(3);
     }
 
     private startPhaseTransition(newPhase: number): void {
         this.phase = newPhase;
         this.isInvulnerable = true;
-        this.isPreparingAttack = false;
-        this.laserFanActive = false;
-        this.isChargingCannon = false;
-        this.isFiringCannon = false;
         this.attackTimer = 2000;
-        
         this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.visualOffsetY, '#FFFFFF'));
         this.game.uiManager.soundManager.play('nuke');
-
         this.ringRotationSpeed += 0.3;
-
-        if (newPhase === 3) {
-            this.spawnEnergyOrbs();
-        }
-
-        setTimeout(() => {
-            this.isInvulnerable = false;
-        }, 2500);
+        if (newPhase === 3) this.spawnEnergyOrbs();
+        setTimeout(() => { this.isInvulnerable = false; }, this.isFinalBattleVersion ? 1500 : 2500);
     }
 
     update(dt: number): void {
         const dt_s = dt / 1000;
-        
         this.ringAngle1 += (this.ringRotationSpeed * 1.0) * dt_s;
         this.plasmaFlicker = Math.random();
-
         this.handleMovement(dt_s);
 
-        if (this.movementPattern !== 'SWOOPING') {
-            this.attackTimer -= dt;
-        }
-
+        if (this.movementPattern !== 'SWOOPING') this.attackTimer -= dt;
         if (this.isPreparingAttack) {
             this.preparationTimer -= dt;
             if (this.preparationTimer <= 0) {
@@ -2374,7 +2397,6 @@ class BossOmegaNexus extends Enemy {
             }
             return;
         }
-
         if (this.laserFanActive) {
             this.updateLaserFan(dt_s);
             this.laserFanDuration -= dt;
@@ -2384,7 +2406,6 @@ class BossOmegaNexus extends Enemy {
                 this.selectNewDriftTarget();
             }
         }
-        
         if (this.isChargingCannon) {
             this.cannonChargeTimer -= dt;
             if(this.cannonChargeTimer <= 0) {
@@ -2403,33 +2424,21 @@ class BossOmegaNexus extends Enemy {
                 this.game.uiManager.soundManager.stopLoop('laser');
             }
         }
-
-        if (this.phase === 3) {
-            this.updateEnergyOrbs(dt_s);
-        }
-
-        if (this.attackTimer <= 0 && this.movementPattern === 'DRIFTING' && !this.isPreparingAttack && !this.laserFanActive && !this.isChargingCannon) {
-            this.prepareNextAttack();
-        }
+        if (this.phase === 3) this.updateEnergyOrbs(dt_s);
+        if (this.attackTimer <= 0 && this.movementPattern === 'DRIFTING' && !this.isPreparingAttack && !this.laserFanActive && !this.isChargingCannon) this.prepareNextAttack();
     }
 
     private handleMovement(dt_s: number): void {
         const speed = this.movementPattern === 'SWOOPING' ? 4 : 1.2;
         this.pos.x += (this.movementTarget.x - (this.pos.x + this.width / 2)) * speed * dt_s;
         this.pos.y += (this.movementTarget.y - this.pos.y) * speed * dt_s;
-        
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
-
         const dist = Math.hypot(this.movementTarget.x - (this.pos.x + this.width / 2), this.movementTarget.y - this.pos.y);
-
         if (dist < 15 && this.movementPattern !== 'DRIFTING') {
             this.movementPattern = 'DRIFTING';
             this.selectNewDriftTarget();
         }
-        
-        if (this.movementPattern === 'DRIFTING' && dist < 20) {
-            this.selectNewDriftTarget();
-        }
+        if (this.movementPattern === 'DRIFTING' && dist < 20) this.selectNewDriftTarget();
     }
     
     private selectNewDriftTarget(): void {
@@ -2442,46 +2451,33 @@ class BossOmegaNexus extends Enemy {
         this.isPreparingAttack = true;
         this.movementPattern = 'SWOOPING';
         const margin = this.width / 2;
-
+        const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin;
+        
         switch (this.phase) {
             case 1:
-                this.currentAttack = 'CROSSFIRE';
-                this.preparationTimer = 1200;
-                this.attackTimer = 4000;
+                this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1200; this.attackTimer = 4000;
                 this.movementTarget = new Vector2D(this.game.width / 2, 80);
                 break;
             case 2:
                 if (Math.random() > 0.4) {
-                    this.currentAttack = 'LASER_FAN';
-                    this.preparationTimer = 2000;
-                    this.attackTimer = 7000;
-                    const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin;
+                    this.currentAttack = 'LASER_FAN'; this.preparationTimer = 2000; this.attackTimer = 7000;
                     this.movementTarget = new Vector2D(newX, 80);
                 } else {
-                    this.currentAttack = 'CROSSFIRE';
-                    this.preparationTimer = 1200;
-                    this.attackTimer = 5000;
+                    this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1200; this.attackTimer = 5000;
                     this.movementTarget = new Vector2D(this.game.width / 2, 80);
                 }
                 break;
             case 3:
                 const roll = Math.random();
                 if (roll > 0.65) {
-                    this.currentAttack = 'NEXUS_CANNON';
-                    this.preparationTimer = 1500;
-                    this.attackTimer = 12000;
+                    this.currentAttack = 'NEXUS_CANNON'; this.preparationTimer = 1500; this.attackTimer = 12000;
                     this.movementTarget = new Vector2D(this.game.width / 2, 60);
                 } else if (roll > 0.3) {
-                    this.currentAttack = 'LASER_FAN';
-                    this.preparationTimer = 1800;
-                    this.attackTimer = 6000;
-                    const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin;
+                    this.currentAttack = 'LASER_FAN'; this.preparationTimer = 1800; this.attackTimer = 6000;
                     this.movementTarget = new Vector2D(newX, 80);
                 } else {
-                     this.currentAttack = 'CROSSFIRE';
-                    this.preparationTimer = 1000;
-                    this.attackTimer = 4000;
-                    this.movementPattern = 'DRIFTING';
+                     this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1000; this.attackTimer = 4000;
+                     this.movementPattern = 'DRIFTING';
                 }
                 break;
         }
@@ -2494,14 +2490,11 @@ class BossOmegaNexus extends Enemy {
                 if(this.phase < 3) this.movementPattern = 'DRIFTING';
                 break;
             case 'LASER_FAN':
-                this.laserFanActive = true;
-                this.laserFanDuration = 3500;
-                this.laserFanAngle = 0;
+                this.laserFanActive = true; this.laserFanDuration = 3500; this.laserFanAngle = 0;
                 this.laserFanSweepSpeed = (this.pos.x > this.game.width / 2 ? -1 : 1) * 0.3;
                 break;
             case 'NEXUS_CANNON':
-                this.isChargingCannon = true;
-                this.cannonChargeTimer = 4000;
+                this.isChargingCannon = true; this.cannonChargeTimer = 4000;
                 break;
         }
         this.currentAttack = 'NONE';
@@ -2512,13 +2505,9 @@ class BossOmegaNexus extends Enemy {
         const spawnPointLeft = new Vector2D(this.pos.x + 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
         const spawnPointRight = new Vector2D(this.pos.x + this.width - 40, this.pos.y + this.height * 0.5 + this.visualOffsetY);
         const speed = 500;
-        const projectileCount = 5;
-        const spreadAngle = Math.PI / 7;
-
-        for (let i = 0; i < projectileCount; i++) {
-            const angleLeft = (Math.PI / 4) + (i * spreadAngle) - (spreadAngle * (projectileCount - 1) / 2);
-            const angleRight = (3 * Math.PI / 4) - (i * spreadAngle) + (spreadAngle * (projectileCount - 1) / 2);
-
+        for (let i = 0; i < 5; i++) {
+            const angleLeft = (Math.PI / 4) + (i * (Math.PI / 7)) - ((Math.PI / 7) * 2);
+            const angleRight = (3 * Math.PI / 4) - (i * (Math.PI / 7)) + ((Math.PI / 7) * 2);
             setTimeout(() => {
                 if (!this.isAlive()) return;
                 this.game.addEntity(new PlasmaBallProjectile(this.game, spawnPointLeft.x, spawnPointLeft.y, Math.cos(angleLeft) * speed, Math.sin(angleLeft) * speed, 35));
@@ -2547,34 +2536,25 @@ class BossOmegaNexus extends Enemy {
     updateEnergyOrbs(dt_s: number): void {
         if (!this.game.player) return;
         const p = this.game.player;
-
         this.energyOrbs.forEach(orb => {
             const targetY = p.pos.y - 100;
             const angleToTarget = Math.atan2(targetY - orb.pos.y, p.pos.x - orb.pos.x);
             orb.pos.x += Math.cos(angleToTarget) * orb.speed * dt_s;
             orb.pos.y += Math.sin(angleToTarget) * orb.speed * dt_s;
-
             orb.fireCooldown -= dt_s * 1000;
             if (orb.fireCooldown <= 0) {
                 this.game.uiManager.soundManager.play('enemyShoot');
                 const angleToPlayer = Math.atan2(p.pos.y + p.height/2 - orb.pos.y, p.pos.x + p.width/2 - orb.pos.x);
                 this.game.addEntity(new PlasmaBallProjectile(this.game, orb.pos.x, orb.pos.y, Math.cos(angleToPlayer) * 400, Math.sin(angleToPlayer) * 400, 30));
-                orb.fireCooldown = 1500 + Math.random() * 800;
+                orb.fireCooldown = (this.isFinalBattleVersion ? 1000 : 1500) + Math.random() * 800;
             }
         });
     }
 
     private drawNexusRings(ctx: CanvasRenderingContext2D, centerX: number, centerY: number): void {
-        let primaryColor;
-        switch (this.phase) {
-            case 1: primaryColor = '#00FFFF'; break;
-            case 2: primaryColor = '#EE82EE'; break;
-            case 3: primaryColor = '#FF4136'; break;
-        }
-
+        let primaryColor = this.phase === 1 ? '#00FFFF' : this.phase === 2 ? '#EE82EE' : '#FF4136';
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-
         ctx.save();
         const corePulse = 1 + Math.sin(Date.now() / 200) * 0.15;
         const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40 * corePulse);
@@ -2586,16 +2566,14 @@ class BossOmegaNexus extends Enemy {
         ctx.arc(centerX, centerY, 40 * corePulse, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(this.ringAngle1);
         ctx.lineWidth = 2 + this.plasmaFlicker * 3;
         ctx.strokeStyle = primaryColor;
         ctx.globalAlpha = 0.4 + this.plasmaFlicker * 0.4;
-        const numTendrils = 30;
-        for (let i = 0; i < numTendrils; i++) {
-            const angle = (i / numTendrils) * Math.PI * 2;
+        for (let i = 0; i < 30; i++) {
+            const angle = (i / 30) * Math.PI * 2;
             const startRadius = 80;
             const endRadius = 100 + Math.sin(i * 5 + Date.now() / 100) * 20;
             ctx.beginPath();
@@ -2604,7 +2582,6 @@ class BossOmegaNexus extends Enemy {
             ctx.stroke();
         }
         ctx.restore();
-        
         ctx.restore();
     }
 
@@ -2629,7 +2606,6 @@ class BossOmegaNexus extends Enemy {
         this.drawNexusRings(ctx, centerX, centerY);
         
         if(this.isInvulnerable) ctx.restore();
-
 
         if (this.isChargingCannon) {
             const chargeRatio = 1 - (this.cannonChargeTimer / 4000);
@@ -2667,11 +2643,8 @@ class BossOmegaNexus extends Enemy {
         if (this.laserFanActive) {
              const laserOriginX = this.pos.x > this.game.width / 2 ? visualX + 40 : visualX + this.width - 40;
              const laserOriginY = centerY;
-             const numLasers = 7;
-             const fanSpread = Math.PI / 2;
-             
-             for (let i = 0; i < numLasers; i++) {
-                 const angle = this.laserFanAngle + (i - (numLasers - 1) / 2) * (fanSpread / (numLasers - 1));
+             for (let i = 0; i < 7; i++) {
+                 const angle = this.laserFanAngle + (i - 3) * (Math.PI / 2 / 6);
                  const endX = laserOriginX + Math.sin(angle) * this.game.height * 1.5;
                  const endY = laserOriginY + Math.cos(angle) * this.game.height * 1.5;
  
@@ -2738,59 +2711,6 @@ class NexusLanceProjectile extends EnemyProjectile {
     }
 }
 
-class NexusFragment extends Enemy {
-    private fireCooldown: number = 2000;
-    private pulse: number = 0;
-
-    constructor(game: Game, x: number, y: number) {
-        super(game, x, y, 40, 40, 150, 500, 'NEXUS_FRAGMENT');
-    }
-
-    update(dt: number): void {
-        const dt_s = dt / 1000;
-        this.pulse += dt_s * 4;
-
-        this.fireCooldown -= dt;
-        if (this.fireCooldown <= 0 && this.game.player) {
-            const p = this.game.player;
-            const pAngle = Math.atan2(p.pos.y - (this.pos.y + this.height/2), p.pos.x - (this.pos.x + this.width/2));
-            
-            this.game.uiManager.soundManager.play('enemyPlasmaShoot');
-            for(let i=0; i<3; i++) {
-                setTimeout(() => {
-                    if (this.isAlive()) {
-                        this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(pAngle) * 450, Math.sin(pAngle) * 450, 25));
-                    }
-                }, i * 120);
-            }
-            this.fireCooldown = 2800 + Math.random() * 1000;
-        }
-    }
-
-    draw(ctx: CanvasRenderingContext2D): void {
-        ctx.save();
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        const scale = 1 + Math.sin(this.pulse) * 0.1;
-        const radius = (this.width / 2) * scale;
-        
-        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-        gradient.addColorStop(0, 'rgba(255, 180, 180, 0.9)');
-        gradient.addColorStop(0.6, 'rgba(255, 0, 0, 0.7)');
-        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.1)');
-
-        ctx.fillStyle = gradient;
-        ctx.shadowColor = '#FF4136';
-        ctx.shadowBlur = 25;
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        
-        this.drawHealthBar(ctx);
-    }
-}
 
 class BossNexusPrime extends Enemy {
     private phase: number = 1;
@@ -2805,19 +2725,20 @@ class BossNexusPrime extends Enemy {
     private scythes: { angle: number, radius: number, speed: number }[] = [];
     private plasmaSweepProgress: number = -1;
     private eventHorizonCharge: number = 0;
+    private isFinalBattleVersion: boolean;
 
-    constructor(game: Game, health: number, speedMultiplier: number) {
-        super(game, game.width / 2 - 100, -200, 200, 120, health * 2.0, 60000, 'BOSS_NEXUS_PRIME');
+    constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) {
+        super(game, game.width / 2 - 100, -200, 200, 120, health * (isFinalBattleVersion ? 2.0 : 1.7), 60000, 'BOSS_NEXUS_PRIME');
         this.isBoss = true;
         this.collisionDamage = 300;
         this.movementTarget = new Vector2D(this.game.width / 2, 120);
+        this.isFinalBattleVersion = isFinalBattleVersion;
     }
 
     takeHit(damage: number): void {
         if (this.phaseTransitionTimer > 0) return;
         super.takeHit(damage);
         if (!this.isAlive()) return;
-
         const healthPercentage = this.health / this.maxHealth;
         if (this.phase === 1 && healthPercentage <= 0.66) this.transitionToPhase(2);
         else if (this.phase === 2 && healthPercentage <= 0.33) this.transitionToPhase(3);
@@ -2831,10 +2752,8 @@ class BossNexusPrime extends Enemy {
         this.attackTimer = 4000;
         this.scythes = [];
         this.game.entities.filter(e => e instanceof NexusFragment).forEach(e => e.destroy());
-
         this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FF4136'));
         this.game.uiManager.soundManager.play('nuke');
-
         if (newPhase === 2) {
             for (let i = 0; i < 6; i++) {
                  this.scythes.push({ angle: (i/6) * Math.PI * 2, radius: 150, speed: (Math.random() - 0.5) * 2 });
@@ -2846,9 +2765,7 @@ class BossNexusPrime extends Enemy {
         const speed = this.movementPattern === 'REPOSITIONING' ? 3.5 : 0.8;
         this.pos.x += (this.movementTarget.x - (this.pos.x + this.width / 2)) * speed * dt_s;
         this.pos.y += (this.movementTarget.y - (this.pos.y + this.height / 2)) * speed * dt_s;
-
         const dist = Math.hypot(this.movementTarget.x - (this.pos.x + this.width / 2), this.movementTarget.y - (this.pos.y + this.height/2));
-
         if (dist < 15) {
             if (this.movementPattern === 'ENTERING' || this.movementPattern === 'REPOSITIONING') {
                 this.movementPattern = 'DRIFTING';
@@ -2871,7 +2788,6 @@ class BossNexusPrime extends Enemy {
         const dt_s = dt / 1000;
         this.corePulse += dt_s * 5;
         this.handleMovement(dt_s);
-
         if (this.phaseTransitionTimer > 0) { this.phaseTransitionTimer -= dt; return; }
         if (this.isPreparingAttack) {
             this.preparationTimer -= dt;
@@ -2887,7 +2803,6 @@ class BossNexusPrime extends Enemy {
     private prepareNextAttack(): void {
         this.isPreparingAttack = true;
         this.movementPattern = 'REPOSITIONING';
-        
         switch (this.phase) {
             case 1:
                 this.currentAttack = Math.random() > 0.5 ? 'LANCE' : 'ORB';
@@ -2898,7 +2813,6 @@ class BossNexusPrime extends Enemy {
             case 2:
                 const attackChoices = ['SCYTHE', 'SWEEP', 'PLASMA_BURST'];
                 this.currentAttack = attackChoices[Math.floor(Math.random() * attackChoices.length)] as any;
-                
                 if (this.currentAttack === 'SWEEP') {
                     const targetX = this.game.player && this.game.player.pos.x < this.game.width / 2 ? this.game.width - 150 : 150;
                     this.movementTarget = new Vector2D(targetX, this.game.height / 3);
@@ -2909,10 +2823,11 @@ class BossNexusPrime extends Enemy {
                 this.attackTimer = 7000;
                 break;
             case 3:
-                this.currentAttack = 'HORIZON';
+                const finalAttacks = this.isFinalBattleVersion ? ['HORIZON', 'SWEEP', 'LANCE', 'PLASMA_BURST', 'SCYTHE'] : ['HORIZON'];
+                this.currentAttack = finalAttacks[Math.floor(Math.random() * finalAttacks.length)] as any;
                 this.movementTarget = new Vector2D(this.game.width/2, this.game.height/2 - 50);
-                this.preparationTimer = 8000;
-                this.attackTimer = 15000;
+                this.preparationTimer = this.currentAttack === 'HORIZON' ? 9000 : 2000;
+                this.attackTimer = this.isFinalBattleVersion ? 5000 : 15000;
                 break;
         }
     }
@@ -2920,7 +2835,6 @@ class BossNexusPrime extends Enemy {
     private executeAttack(): void {
         const centerX = this.pos.x + this.width / 2;
         const centerY = this.pos.y + this.height / 2;
-
         switch (this.currentAttack) {
             case 'LANCE':
                 this.game.uiManager.soundManager.play('bossLanceShoot');
@@ -2937,13 +2851,13 @@ class BossNexusPrime extends Enemy {
             case 'PLASMA_BURST':
                 if (this.game.player) {
                     const p = this.game.player;
-                    for (let i = 0; i < 5; i++) {
+                    const projectileCount = this.isFinalBattleVersion ? 8 : 5;
+                    for (let i = 0; i < projectileCount; i++) {
                         setTimeout(() => {
                             if (!this.isAlive()) return;
-                            const targetX = p.pos.x + p.width / 2;
-                            const targetY = p.pos.y + p.height / 2;
-                            const angle = Math.atan2(targetY - (this.pos.y + this.height/2), targetX - (this.pos.x + this.width/2));
-                            this.game.addEntity(new PlasmaBallProjectile(this.game, centerX, centerY, Math.cos(angle) * 600, Math.sin(angle) * 600, 30));
+                            const angle = Math.atan2(p.pos.y - (this.pos.y + this.height/2), p.pos.x - (this.pos.x + this.width/2));
+                            const projType = this.isFinalBattleVersion && i % 2 === 0 ? FireballProjectile : PlasmaBallProjectile;
+                            this.game.addEntity(new projType(this.game, centerX, centerY, Math.cos(angle) * 600, Math.sin(angle) * 600, 30));
                             this.game.uiManager.soundManager.play('enemyShoot');
                         }, i * 150);
                     }
@@ -2965,7 +2879,6 @@ class BossNexusPrime extends Enemy {
     
     private updateActiveMechanics(dt: number, dt_s: number): void {
         this.scythes.forEach(s => s.angle += s.speed * dt_s);
-
         if (this.plasmaSweepProgress >= 0) {
             this.plasmaSweepProgress += dt_s / 5;
             if (this.plasmaSweepProgress >= 1) {
@@ -2973,14 +2886,13 @@ class BossNexusPrime extends Enemy {
                 this.game.uiManager.soundManager.stopLoop('laser');
             }
         }
-
         if (this.eventHorizonCharge > 0) {
             this.eventHorizonCharge = Math.max(0, this.eventHorizonCharge - dt_s / 6);
             if (this.game.player) {
                 const p = this.game.player;
                 const centerX = this.pos.x + this.width / 2;
                 const centerY = this.pos.y + this.height / 2;
-                const chargeRatio = 1 - (this.preparationTimer > 0 ? this.preparationTimer / 8000 : 0);
+                const chargeRatio = 1 - (this.preparationTimer > 0 ? this.preparationTimer / 9000 : 0);
                 const safeRadius = (1 - chargeRatio) * this.game.width;
                 const dist = Math.hypot(centerX - (p.pos.x + p.width/2), centerY - (p.pos.y + p.height/2));
                 if (dist > safeRadius) {
@@ -3010,7 +2922,6 @@ class BossNexusPrime extends Enemy {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         const coreColor = this.phase === 1 ? '#00FFFF' : (this.phase === 2 ? '#FF851B' : '#FF4136');
-        
         ctx.save();
         const pulseValue = 1 + Math.sin(this.corePulse) * 0.05;
         ctx.globalAlpha = 0.7;
@@ -3019,11 +2930,9 @@ class BossNexusPrime extends Enemy {
         const ringSize = 180 + this.phase * 20;
         ctx.drawImage(bossNexusPrimeImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
         ctx.restore();
-        
-        const whipCount = 8;
-        for(let i=0; i < whipCount; i++) {
+        for(let i=0; i < 8; i++) {
             ctx.beginPath();
-            const baseAngle = (i / whipCount) * Math.PI * 2;
+            const baseAngle = (i / 8) * Math.PI * 2;
             const len = 120 + this.phase * 20 + Math.sin(this.corePulse * 1.5 + i) * 40;
             const wave = Math.sin(this.corePulse * 3 + i) * 0.6;
             ctx.moveTo(cx, cy);
@@ -3034,13 +2943,11 @@ class BossNexusPrime extends Enemy {
             ctx.shadowColor = coreColor; ctx.shadowBlur = 15;
             ctx.stroke();
         }
-
         const radius = (this.phase === 3 ? 60 : 40) + Math.sin(this.corePulse) * 10;
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
         grad.addColorStop(0.7, coreColor);
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
         ctx.fillStyle = grad; ctx.shadowColor = coreColor; ctx.shadowBlur = 30;
         ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
@@ -3057,7 +2964,6 @@ class BossNexusPrime extends Enemy {
             ctx.fill();
             ctx.restore();
         });
-
         if (this.plasmaSweepProgress >= 0) {
             const direction = this.pos.x < this.game.width/2 ? 1 : -1;
             const beamX = (this.game.width / 2) - (direction * this.game.width/2) + (direction * this.game.width * this.plasmaSweepProgress);
@@ -3068,13 +2974,11 @@ class BossNexusPrime extends Enemy {
             ctx.fillStyle = grad;
             ctx.fillRect(beamX - 60, 0, 120, this.game.height);
         }
-
         if (this.isPreparingAttack && this.currentAttack === 'HORIZON') {
-            const chargeRatio = 1 - this.preparationTimer / 8000;
+            const chargeRatio = 1 - this.preparationTimer / 9000;
             ctx.fillStyle = `rgba(0, 0, 0, ${chargeRatio * 0.9})`;
             ctx.fillRect(0,0, this.game.width, this.game.height);
             const safeRadius = (1 - chargeRatio) * this.game.width;
-            
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             ctx.strokeStyle = `rgba(255, 255, 255, ${1-chargeRatio})`;
@@ -3095,6 +2999,48 @@ class BossNexusPrime extends Enemy {
         ctx.strokeStyle = `rgba(255, 133, 27, ${alpha * 0.8})`;
         ctx.lineWidth = 15;
         ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+}
+
+class NexusFragment extends Enemy {
+    private fireCooldown: number = 3500;
+    private pulse: number = 0;
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 40, 40, 80, 500, 'NEXUS_FRAGMENT');
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.pulse += dt_s * 4;
+        this.fireCooldown -= dt;
+        if (this.fireCooldown <= 0 && this.game.player) {
+            const p = this.game.player;
+            const pAngle = Math.atan2(p.pos.y - (this.pos.y + this.height/2), p.pos.x - (this.pos.x + this.width/2));
+            this.game.uiManager.soundManager.play('enemyPlasmaShoot');
+            this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + this.width/2, this.pos.y + this.height/2, Math.cos(pAngle) * 450, Math.sin(pAngle) * 450, 25));
+            this.fireCooldown = 4000 + Math.random() * 1500;
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const scale = 1 + Math.sin(this.pulse) * 0.1;
+        const radius = (this.width / 2) * scale;
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, 'rgba(255, 180, 180, 0.9)');
+        gradient.addColorStop(0.6, 'rgba(255, 0, 0, 0.7)');
+        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.1)');
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = '#FF4136';
+        ctx.shadowBlur = 25;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        this.drawHealthBar(ctx);
     }
 }
 
@@ -4514,112 +4460,87 @@ class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0;
     public phoenixCoreUI: PhoenixCoreUI;
     public isBossSlayerActive: boolean = false;
-    
     public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN';
-    
     public isMobile: boolean = false; 
     public touchX: number | null = null; 
     public touchY: number | null = null;
-    
     private container: HTMLElement;
     public scale: number = 1;
-
     public audioNeedsUnlock: boolean = false;
-
     public isFormationActive: boolean = false;
     private activeFormationEnemies: Enemy[] = [];
     private formationMovementDirection: number = 1;
     private formationMoveTimer: number = 0;
     private formationMoveInterval: number = 1000;
     private formationVerticalStep: number = 20;
-
     public isMultiFormationWaveActive: boolean = false;
     private multiFormationStage: number = 0;
-
     private introAnimationTimer: number = 0;
+    public isFinalBattleActive: boolean = false;
+    private finalBattleStage: number = 0;
+    private finalBattleBoss: Enemy | null = null;
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
-    console.log("CACHE BUSTER 987654321");
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d')!;
-    this.width = this.baseWidth;
-    this.height = this.baseHeight;
-    this.container = document.getElementById('gameContainer')!;
-    this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    const handleResize = () => {
-        const newHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        this.container.style.height = `${newHeight}px`;
-        this.resizeGame();
-    };
-
-    handleResize();
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', handleResize);
-    } else {
-        window.addEventListener('resize', handleResize);
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d')!;
+        this.width = this.baseWidth;
+        this.height = this.baseHeight;
+        this.container = document.getElementById('gameContainer')!;
+        this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const handleResize = () => {
+            const newHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            this.container.style.height = `${newHeight}px`;
+            this.resizeGame();
+        };
+        handleResize();
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+        } else {
+            window.addEventListener('resize', handleResize);
+        }
+        this.shopManager = new ShopManager(this);
+        this.uiManager = new UIManager(this, ui);
+        this.piManager = new PiManager();
+        this.piManager.setGame(this);
+        this.phoenixCoreUI = new PhoenixCoreUI(this);
+        this.loadGameData();
+        this.initEventListeners();
+        this.createParallaxStarfield();
+        this.uiManager.populateAllTranslatedContent();
+        if (localStorage.getItem('galaxyFallLanguage')) {
+            this.changeState('INTRO');
+            this.piManager.authenticate(); 
+        } else {
+            document.getElementById('language-select-screen')!.style.display = 'flex';
+        }
     }
-
-    this.shopManager = new ShopManager(this);
-    this.uiManager = new UIManager(this, ui);
-    this.piManager = new PiManager();
-    this.piManager.setGame(this);
-    this.phoenixCoreUI = new PhoenixCoreUI(this);
-
-    this.loadGameData();
-    this.initEventListeners();
-    this.createParallaxStarfield();
-    this.uiManager.populateAllTranslatedContent();
-
-    if (localStorage.getItem('galaxyFallLanguage')) {
-        this.changeState('INTRO');
-        this.piManager.authenticate(); 
-    } else {
-        document.getElementById('language-select-screen')!.style.display = 'flex';
-    }
-}
 
     public async loadPlayerDataFromServer(): Promise<void> {
-    if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`);
-        
-        if (response.ok) {
-            // FALL 1: Spielstand auf Server GEFUNDEN
-            const data = await response.json();
-            this.coins = data.coins;
-            this.shopManager.playerUpgrades = data.upgrades;
-            this.shopManager.playerCosmetics = data.cosmetics;
-            
-            this.shopManager.saveUpgrades(); // Lokalen Speicher synchronisieren
-            this.shopManager.saveCosmetics();
-            console.log("Spielstand vom Server geladen.", data);
-
-        } else if (response.status === 404) {
-            // FALL 2: Kein Spielstand auf Server gefunden (NEUER SPIELER)
-            console.log("Kein Spielstand auf dem Server gefunden. Erstelle neuen lokalen Spielstand und speichere ihn.");
-            // Lade Standardwerte aus dem lokalen Speicher (oder setze sie neu)
-            this.loadGameData(); 
-            this.shopManager.playerUpgrades = this.shopManager.loadUpgrades();
-            this.shopManager.playerCosmetics = this.shopManager.loadCosmetics();
-            // Speichere diesen neuen "leeren" Spielstand sofort auf dem Server
-            await this.savePlayerDataToServer();
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`);
+            if (response.ok) {
+                const data = await response.json();
+                this.coins = data.coins;
+                this.shopManager.playerUpgrades = data.upgrades;
+                this.shopManager.playerCosmetics = data.cosmetics;
+                this.shopManager.saveUpgrades();
+                this.shopManager.saveCosmetics();
+            } else if (response.status === 404) {
+                this.loadGameData(); 
+                this.shopManager.playerUpgrades = this.shopManager.loadUpgrades();
+                this.shopManager.playerCosmetics = this.shopManager.loadCosmetics();
+                await this.savePlayerDataToServer();
+            }
+            this.saveGameData(); 
+            this.uiManager.update();
+        } catch (error) {
+            console.error("Fehler beim Laden/Erstellen des Spielstands:", error);
         }
-        
-        // UI und lokale Daten in beiden Fällen aktualisieren
-        this.saveGameData(); 
-        this.uiManager.update();
-
-    } catch (error) {
-        console.error("Fehler beim Laden/Erstellen des Spielstands:", error);
     }
-}
 
     public async savePlayerDataToServer(): Promise<void> {
         if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
-        
         const playerData = {
             pi_uid: this.piManager.uid,
             username: this.piManager.username,
@@ -4627,14 +4548,12 @@ class Game {
             upgrades: this.shopManager.playerUpgrades,
             cosmetics: this.shopManager.playerCosmetics
         };
-
         try {
             await fetch(`${API_BASE_URL}/save-data`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(playerData)
             });
-            console.log("Spielstand auf dem Server gespeichert.");
         } catch (error) {
             console.error("Fehler beim Speichern des Spielstands auf dem Server:", error);
         }
@@ -4648,34 +4567,14 @@ class Game {
     public resizeGame(): void {
         const screenWidth = window.innerWidth;
         const screenHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-        // --- START DER ÄNDERUNG: devicePixelRatio Berücksichtigung ---
-
-        // 1. Geräte-Pixel-Verhältnis abrufen (z.B. 2 für Retina-Displays)
         const ratio = window.devicePixelRatio || 1;
-
-        // 2. Die tatsächliche Zeichenfläche des Canvas auf die volle Geräteauflösung einstellen.
-        //    Der Canvas hat jetzt MEHR Pixel als sichtbar sind.
         this.canvas.width = screenWidth * ratio;
         this.canvas.height = (screenHeight - 90) * ratio;
-
-        // 3. Den Canvas per CSS auf die sichtbare Größe herunterskalieren.
-        //    Der Browser komprimiert nun die hochauflösende Zeichenfläche in den kleineren Bereich,
-        //    was zu einem gestochen scharfen Bild führt.
         this.canvas.style.width = `${screenWidth}px`;
         this.canvas.style.height = `${screenHeight - 90}px`;
-
-        // 4. Den gesamten Zeichenkontext (ctx) skalieren.
-        //    Alle zukünftigen Zeichenbefehle (z.B. fillRect, drawImage) werden jetzt
-        //    automatisch an die höhere Auflösung angepasst.
         this.ctx.scale(ratio, ratio);
-
-        // --- ENDE DER ÄNDERUNG ---
-
-        // Die logische Breite und Höhe für die Spielmechanik bleiben gleich
         this.width = screenWidth;
         this.height = screenHeight - 90;
-    
         this.createParallaxStarfield();
     }
     
@@ -4684,42 +4583,29 @@ class Game {
             this.updateContainerSize();
             this.resizeGame();
         };
-
         window.addEventListener('resize', resizeHandler);
-
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', resizeHandler);
         }
-
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                if (this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
-                    this.audioNeedsUnlock = true;
-                }
+            if (document.visibilityState === 'visible' && this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
+                this.audioNeedsUnlock = true;
             }
         });
-
         const unlockAudioHandler = () => {
             if (this.audioNeedsUnlock && this.uiManager.soundManager.audioCtx) {
-                this.uiManager.soundManager.audioCtx.resume().then(() => {
-                    this.audioNeedsUnlock = false;
-                });
+                this.uiManager.soundManager.audioCtx.resume().then(() => { this.audioNeedsUnlock = false; });
             }
         };
-
         const tapToStartHandler = (e: Event) => {
             unlockAudioHandler();
-            
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
                  e.preventDefault();
                  this.uiManager.soundManager.initAudio();
                  if(this.gameState === 'INTRO') this.changeState('MENU');
-                 else if (this.gameState === 'MENU' && e.target === this.canvas) {
-                    this.changeState('MODE_SELECT');
-                 }
+                 else if (this.gameState === 'MENU' && e.target === this.canvas) this.changeState('MODE_SELECT');
             }
         };
-
         if (this.isMobile) {
             this.initMobileControls();
             this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
@@ -4756,68 +4642,38 @@ class Game {
     initMobileControls(): void {
         const specialInventoryEl = document.getElementById('special-inventory');
         const ultraInventoryEl = document.getElementById('ultra-inventory');
-
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.canvas.getBoundingClientRect();
             const touch = e.changedTouches[0];
             if (!touch) return null;
-    
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            return { x, y };
+            return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
         };
-    
         this.canvas.addEventListener('touchstart', (e) => {
-            if (this.audioNeedsUnlock) {
-                this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
-            }
-            
+            if (this.audioNeedsUnlock) this.uiManager.soundManager.audioCtx?.resume().then(() => { this.audioNeedsUnlock = false; });
             this.uiManager.soundManager.initAudio();
-
-            if (this.gameState !== 'PLAYING' || this.isPaused) {
-                return;
-            }
-            
+            if (this.gameState !== 'PLAYING' || this.isPaused) return;
             const touch = e.changedTouches[0];
             if (!touch || !specialInventoryEl || !ultraInventoryEl) return;
-
             const inv1Rect = specialInventoryEl.getBoundingClientRect();
             const inv2Rect = ultraInventoryEl.getBoundingClientRect();
-            
-            const isOnInventory = 
-                (touch.clientX >= inv1Rect.left && touch.clientX <= inv1Rect.right && touch.clientY >= inv1Rect.top && touch.clientY <= inv1Rect.bottom) ||
-                (touch.clientX >= inv2Rect.left && touch.clientX <= inv2Rect.right && touch.clientY >= inv2Rect.top && touch.clientY <= inv2Rect.bottom);
-
+            const isOnInventory = (touch.clientX >= inv1Rect.left && touch.clientX <= inv1Rect.right && touch.clientY >= inv1Rect.top && touch.clientY <= inv1Rect.bottom) || (touch.clientX >= inv2Rect.left && touch.clientX <= inv2Rect.right && touch.clientY >= inv2Rect.top && touch.clientY <= inv2Rect.bottom);
             if (!isOnInventory) {
                 e.preventDefault(); 
-                
                 const pos = getTouchPos(e);
-                if (pos) {
-                    this.touchX = pos.x;
-                    this.touchY = pos.y;
-                }
+                if (pos) { this.touchX = pos.x; this.touchY = pos.y; }
             }
         }, { passive: false });
-    
         this.canvas.addEventListener('touchmove', (e) => {
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
-    
             if (this.touchX !== null && this.touchY !== null) {
                 e.preventDefault();
                 const pos = getTouchPos(e);
-                if (pos) {
-                    this.touchX = pos.x;
-                    this.touchY = pos.y;
-                }
+                if (pos) { this.touchX = pos.x; this.touchY = pos.y; }
             }
         }, { passive: false });
-    
         this.canvas.addEventListener('touchend', (e) => {
             const stillOnCanvas = Array.from(e.touches).some(t => (t.target as HTMLElement) === this.canvas);
-            if (!stillOnCanvas) {
-                this.touchX = null;
-                this.touchY = null;
-            }
+            if (!stillOnCanvas) { this.touchX = null; this.touchY = null; }
         });
     }
 
@@ -4832,15 +4688,9 @@ class Game {
             if (e.code === 'Escape' && (this.gameState === 'PLAYING' || this.isPaused)) this.togglePause();
             if (e.code === 'Enter') {
                 e.preventDefault();
-                if (this.gameState === 'INTRO') {
-                    this.uiManager.soundManager.initAudio();
-                    this.changeState('MENU');
-                } else if (this.gameState === 'MENU') {
-                    this.uiManager.soundManager.initAudio();
-                    this.changeState('MODE_SELECT');
-                } else if (['WIN'].includes(this.gameState)) {
-                    this.changeState('MENU');
-                }
+                if (this.gameState === 'INTRO') { this.uiManager.soundManager.initAudio(); this.changeState('MENU'); } 
+                else if (this.gameState === 'MENU') { this.uiManager.soundManager.initAudio(); this.changeState('MODE_SELECT'); } 
+                else if (['WIN'].includes(this.gameState)) this.changeState('MENU');
             }
             if (this.gameState === 'PLAYING' && this.player && !this.isPaused && !this.player.isChargingBlackHole) {
                 const mapping = keyMap[e.code];
@@ -4887,29 +4737,21 @@ class Game {
     
     public startReviveSequence(player: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE'): void {
         this.changeState('REVIVING');
-        
         const level = this.shopManager.getUpgradeLevel('revive_chance');
         let index = 0;
         if(crystalType === 'BLUE') index = 0;
         if(crystalType === 'YELLOW') index = level > 1 ? 1 : 0;
         if(crystalType === 'PURPLE') index = level > 2 ? 2 : (level > 1 ? 1 : 0);
-        
         const startX = this.width - 160 + (index * 45) + 20;
         const startY = 10 + 20;
-
         this.addEntity(new ReviveCrystalAnimation(this, startX, startY, player, crystalType));
     }
 
     changeState(newState: string, forceReset: boolean = false): void {
         if (newState === this.gameState && !forceReset) return;
-
         const mobilePauseButton = document.getElementById('mobile-pause-button')!;
         if (this.isMobile) {
-            if (newState === 'PLAYING') {
-                mobilePauseButton.style.display = 'block';
-            } else {
-                mobilePauseButton.style.display = 'none';
-            }
+            mobilePauseButton.style.display = newState === 'PLAYING' ? 'block' : 'none';
         }
 
         this.uiManager.toggleMainMenu(false);
@@ -4918,12 +4760,9 @@ class Game {
         this.uiManager.toggleShopScreen(false);
         this.uiManager.toggleModeSelectScreen(false);
 
-        if (newState === 'PAUSED') {
-            this.isPaused = true;
-        } else if (this.gameState === 'PAUSED' && newState !== 'PAUSED') {
-            this.isPaused = false;
-        }
-
+        if (newState === 'PAUSED') this.isPaused = true;
+        else if (this.gameState === 'PAUSED') this.isPaused = false;
+        
         const oldState = this.gameState;
         this.gameState = newState;
 
@@ -4932,8 +4771,7 @@ class Game {
                 this.introAnimationTimer = 0;
                 break;
             case 'MENU':
-                this.entities = [];
-                this.player = null;
+                this.entities = []; this.player = null;
                 this.uiManager.toggleMainMenu(true);
                 this.uiManager.soundManager.setTrack('menu');
                 break;
@@ -4946,53 +4784,41 @@ class Game {
                 break;
             case 'PLAYING':
                 if (oldState === 'PAUSED' || oldState === 'REVIVING') {
-                    if (this.isBossActive) {
-                        this.uiManager.soundManager.setTrack('boss');
-                    } else {
-                        this.uiManager.soundManager.setTrack('normal');
-                    }
+                    if (this.isBossActive) this.uiManager.soundManager.setTrack('boss');
+                    else this.uiManager.soundManager.setTrack('normal');
                 }
                 break;
             case 'LEVEL_START':
                 const isNewGame = forceReset || !this.player || !this.player.isAlive();
-
                 if (isNewGame) {
-                    this.level = 5;
-                    this.score = 0;
-                    this.entities = [];
-                    this.isBossSlayerActive = false;
+                    this.level = 1; this.score = 0; this.entities = []; this.isBossSlayerActive = false;
                     const initialStats = this.shopManager.getInitialPlayerStats();
                     this.player = new Player(this, initialStats);
                     this.addEntity(this.player);
-
                     const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge');
-
                     if (specialChargeLevel > 0) {
                         const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
                         for (let i = 0; i < specialChargeLevel; i++) {
                             if (availablePowerUps.length === 0) break;
                             const randomIndex = Math.floor(Math.random() * availablePowerUps.length);
-                            const chosenPowerUp = availablePowerUps[randomIndex];
-                            this.player.powerUpManager.collectSpecial(chosenPowerUp!);
-                            availablePowerUps.splice(randomIndex, 1);
+                            const chosenPowerUp = availablePowerUps.splice(randomIndex, 1)[0]!;
+                            this.player.powerUpManager.collectSpecial(chosenPowerUp);
                         }
                     }
                 } else {
                     this.level++;
                     this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
                 }
-
                 if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
                     this.changeState('WIN');
                     return;
                 }
-
                 this.isBossActive = false;
+                this.isFinalBattleActive = false;
                 this.isFormationActive = false;
                 this.isMultiFormationWaveActive = false;
                 this.activeFormationEnemies = [];
                 this.scoreEarnedThisLevel = 0;
-                
                 this.configureLevel();
                 this.changeState('PLAYING_TRANSITION');
                 break;
@@ -5000,20 +4826,15 @@ class Game {
                 setTimeout(() => this.changeState('PLAYING'), 3000);
                 break;
             case 'GAME_OVER':
-                if (this.score > this.highscore) {
-                    this.highscore = this.score;
-                }
+                if (this.score > this.highscore) this.highscore = this.score;
                 this.saveGameData();
                 this.submitScoreToServer();
                 this.uiManager.soundManager.setTrack('menu');
                 this.uiManager.toggleGameOverScreen(true);
-                // HINZUGEFÜGT: Werbeanzeige beim Game Over aufrufen
                 this.piManager.showAd();
                 break;
             case 'WIN':
-                if (this.score > this.highscore) {
-                    this.highscore = this.score;
-                }
+                if (this.score > this.highscore) this.highscore = this.score;
                 this.saveGameData();
                 this.submitScoreToServer();
                 this.uiManager.soundManager.setTrack('menu');
@@ -5022,56 +4843,34 @@ class Game {
     }
 
     private async submitScoreToServer(): Promise<void> {
-    if (!this.piManager.isAuthenticated || !this.piManager.uid) {
-        console.log("Spieler nicht via Pi authentifiziert. Score wird nicht übermittelt.");
-        return;
-    }
-
-    const scoreData = {
-        pi_uid: this.piManager.uid,
-        username: this.piManager.username,
-        score: this.score,
-        waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
-        mode: this.gameMode.toLowerCase() 
-    };
-
-    console.log("Versuche, Score an den Server zu senden:", scoreData);
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/submit-score`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(scoreData)
-        });
-
-        if (response.ok) {
-            console.log("Score erfolgreich an den Server übermittelt.");
-        } else {
-            console.error("Server meldet Fehler beim Speichern des Scores:", response.statusText);
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) return;
+        const scoreData = {
+            pi_uid: this.piManager.uid,
+            username: this.piManager.username,
+            score: this.score,
+            waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
+            mode: this.gameMode.toLowerCase() 
+        };
+        try {
+            await fetch(`${API_BASE_URL}/submit-score`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(scoreData)
+            });
+        } catch (error) {
+            console.error("Netzwerkfehler beim Übermitteln des Scores:", error);
         }
-    } catch (error) {
-        console.error("Netzwerkfehler beim Übermitteln des Scores:", error);
     }
-}
 
     update(deltaTime: number): void { 
         if (this.gameState === 'REVIVING') {
             this.updateParallaxStarfield(deltaTime);
-            this.entities.forEach(e => {
-                if(e.family === 'effect' || e instanceof Player) {
-                    e.update(deltaTime);
-                }
-            });
+            this.entities.forEach(e => { if(e.family === 'effect' || e instanceof Player) e.update(deltaTime); });
             this.cleanupEntities();
             return;
         }
-        
         if (this.isPaused) return; 
-        
-        if (this.gameState === 'INTRO') {
-            this.introAnimationTimer += deltaTime;
-        }
-
+        if (this.gameState === 'INTRO') this.introAnimationTimer += deltaTime;
         if (this.gameState !== 'PLAYING') { 
             if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); 
             return; 
@@ -5082,11 +4881,15 @@ class Game {
         this.phoenixCoreUI.update(deltaTime);
         this.enemySpawnTimer += deltaTime; 
         
-        if (this.isMultiFormationWaveActive) {
+        if (this.isFinalBattleActive) {
+            if (this.finalBattleBoss && !this.finalBattleBoss.isAlive()) {
+                this.advanceFinalBattle();
+            }
+        }
+        else if (this.isMultiFormationWaveActive) {
             if (this.activeFormationEnemies.length > 0 && this.activeFormationEnemies.every(e => !e.isAlive())) {
                 this.multiFormationStage++;
                 this.activeFormationEnemies = [];
-    
                 if (this.multiFormationStage > 3) {
                     this.isMultiFormationWaveActive = false;
                     this.changeState('LEVEL_START');
@@ -5134,87 +4937,42 @@ class Game {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawParallaxStarfield();
 
-        if (this.gameState === 'PLAYING' || this.gameState === 'PLAYING_TRANSITION' || this.gameState === 'PAUSED' || this.gameState === 'REVIVING') {
-            
-            this.entities.forEach(e => {
-                if (e.family === 'projectile') {
-                    e.draw(this.ctx);
-                }
-            });
-
-            this.entities.forEach(e => {
-                if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') {
-                    e.draw(this.ctx);
-                }
-            });
-                
-            this.entities.forEach(e => {
-                if (e.family === 'player') {
-                    e.draw(this.ctx);
-                }
-            });
-
+        if (['PLAYING', 'PLAYING_TRANSITION', 'PAUSED', 'REVIVING'].includes(this.gameState)) {
+            this.entities.forEach(e => { if (e.family === 'projectile') e.draw(this.ctx); });
+            this.entities.forEach(e => { if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') e.draw(this.ctx); });
+            this.entities.forEach(e => { if (e.family === 'player') e.draw(this.ctx); });
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'lighter';
-            this.entities.forEach(e => {
-                if (e.family === 'effect') {
-                    e.draw(this.ctx);
-                }
-            });
+            this.entities.forEach(e => { if (e.family === 'effect') e.draw(this.ctx); });
             this.ctx.restore();
-            
             this.phoenixCoreUI.draw(this.ctx);
         }
         
         this.uiManager.drawOverlay();
 
         switch (this.gameState) {
-            case 'INTRO':
-            case 'MENU':
-                this.drawProfessionalIntro();
-                break;
-            case 'PLAYING_TRANSITION':
-                this.uiManager.drawLevelMessage();
-                break;
-            case 'GAME_OVER':
-                this.uiManager.drawGameOver();
-                break;
-            case 'WIN':
-                this.uiManager.drawWinScreen();
-                break;
+            case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break;
+            case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break;
+            case 'GAME_OVER': this.uiManager.drawGameOver(); break;
+            case 'WIN': this.uiManager.drawWinScreen(); break;
         }
     }
 
     private generateEndlessWave(waveNumber: number): ILevelDefinition {
         const t = (key: string) => this.uiManager.localizationManager.translate(key);
-
         const isBreatherWave = (waveNumber > 0 && waveNumber % 4 === 0);
-
         let healthMultiplier = 1 + (waveNumber * 0.02);
         let speedMultiplier = 1 + (waveNumber * 0.015);
-        
         let budget = 8 + Math.pow(waveNumber, 1.25);
-        if (isBreatherWave) {
-            budget *= 0.6; 
-        }
-
+        if (isBreatherWave) budget *= 0.6; 
         const enemyCosts = { 'GRUNT': 1, 'WEAVER': 2, 'TANK': 3, 'SHOOTER': 4, 'TELEPORTER': 6 };
-        const weightedEnemyTypes = [
-            { type: 'GRUNT', weight: 5 },
-            { type: 'WEAVER', weight: 4 },
-            { type: 'TANK', weight: 3 },
-            { type: 'SHOOTER', weight: 3 },
-            { type: 'TELEPORTER', weight: 2 },
-        ];
-        
+        const weightedEnemyTypes = [ { type: 'GRUNT', weight: 5 }, { type: 'WEAVER', weight: 4 }, { type: 'TANK', weight: 3 }, { type: 'SHOOTER', weight: 3 }, { type: 'TELEPORTER', weight: 2 }, ];
         const enemyPool: string[] = [];
         let totalPointsInPool = 0;
         let tempBudget = budget;
-
         while (tempBudget > 0) {
             const totalWeight = weightedEnemyTypes.reduce((sum, e) => sum + e.weight, 0);
             let randomWeight = Math.random() * totalWeight;
-            
             let chosenEnemyType = 'GRUNT';
             for (const enemy of weightedEnemyTypes) {
                 randomWeight -= enemy.weight;
@@ -5223,7 +4981,6 @@ class Game {
                     break;
                 }
             }
-            
             const cost = enemyCosts[chosenEnemyType as keyof typeof enemyCosts];
             if (tempBudget - cost >= 0) {
                 enemyPool.push(chosenEnemyType);
@@ -5234,80 +4991,55 @@ class Game {
                     enemyPool.push('GRUNT');
                     tempBudget -= enemyCosts['GRUNT'];
                     totalPointsInPool += (this.createEnemyByType('GRUNT')?.pointsValue || 10);
-                } else {
-                    break; 
-                }
+                } else break; 
             }
         }
         if (enemyPool.length === 0) enemyPool.push('GRUNT');
-
         let spawnInterval = Math.max(200, 800 - waveNumber * 10);
-        if (isBreatherWave) {
-            spawnInterval *= 1.5;
-        }
-
-        let affix = 'none';
+        if (isBreatherWave) spawnInterval *= 1.5;
         let msgKey = isBreatherWave ? t('endless_wave_breather') : `${t('endless_wave')} ${waveNumber}`;
-        
         if (!isBreatherWave && Math.random() < 0.25) {
-            const possibleAffixes = ['Frenzy', 'Thick Skins', 'Bullet Hell', 'Blink Storm'];
-            affix = possibleAffixes[Math.floor(Math.random() * possibleAffixes.length)]!;
-            
+            const affix = ['Frenzy', 'Thick Skins', 'Bullet Hell', 'Blink Storm'][Math.floor(Math.random() * 4)]!;
             switch(affix) {
                 case 'Frenzy':
-                    speedMultiplier *= 1.3;
-                    spawnInterval *= 0.7;
+                    speedMultiplier *= 1.3; spawnInterval *= 0.7;
                     msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_frenzy')}`;
                     break;
                 case 'Thick Skins':
                     healthMultiplier *= 1.5;
-                    for(let i = 0; i < Math.ceil(enemyPool.length / 4); i++) {
-                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'TANK';
-                    }
+                    for(let i=0; i<Math.ceil(enemyPool.length/4); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'TANK';
                     msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_thick_skins')}`;
                     break;
                 case 'Bullet Hell':
-                    for(let i = 0; i < Math.ceil(enemyPool.length / 2); i++) {
-                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'SHOOTER';
-                    }
+                    for(let i=0; i<Math.ceil(enemyPool.length/2); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'SHOOTER';
                     msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_bullet_hell')}`;
                     break;
                 case 'Blink Storm':
-                    for(let i = 0; i < Math.ceil(enemyPool.length / 2); i++) {
-                         enemyPool[Math.floor(Math.random() * enemyPool.length)] = 'TELEPORTER';
-                    }
+                    for(let i=0; i<Math.ceil(enemyPool.length/2); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'TELEPORTER';
                     msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_blink_storm')}`;
                     break;
             }
         }
-        
-        const waveDurationSeconds = 35;
-        const expectedSpawns = (waveDurationSeconds * 1000) / spawnInterval;
+        const expectedSpawns = (35 * 1000) / spawnInterval;
         const avgPoints = totalPointsInPool / enemyPool.length;
         const scoreToEarn = Math.floor(expectedSpawns * avgPoints * waveNumber * 0.8);
-
-        return {
-            wave: waveNumber,
-            scoreToEarn: scoreToEarn,
-            enemies: enemyPool,
-            msgKey: msgKey,
-            s: spawnInterval,
-            m: speedMultiplier,
-            h: healthMultiplier,
-        };
+        return { wave: waveNumber, scoreToEarn, enemies: enemyPool, msgKey, s: spawnInterval, m: speedMultiplier, h: healthMultiplier };
     }
 
     configureLevel(): void { 
         let levelData: ILevelDefinition;
-
         if (this.gameMode === 'CAMPAIGN') {
-            if (this.level > LEVELS.length) { 
-                this.changeState('WIN');
-                return;
-            }
+            if (this.level > LEVELS.length) { this.changeState('WIN'); return; }
             levelData = LEVELS[this.level - 1]!;
         } else {
             levelData = this.generateEndlessWave(this.level);
+        }
+        
+        if (this.gameMode === 'CAMPAIGN' && this.level === 50) {
+            this.isFinalBattleActive = true;
+            this.finalBattleStage = 0;
+            this.advanceFinalBattle();
+            return;
         }
 
         this.enemySpawnTypes = levelData.enemies; 
@@ -5336,6 +5068,46 @@ class Game {
             if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
         } 
     }
+    
+    private advanceFinalBattle(): void {
+        this.finalBattleStage++;
+        this.finalBattleBoss = null;
+        this.entities.filter(e => e.family === 'enemy').forEach(e => e.destroy());
+    
+        let bossToSpawn: Enemy | null = null;
+        let messageKey: string = '';
+    
+        switch(this.finalBattleStage) {
+            case 1:
+                messageKey = 'final_battle_msg_1';
+                bossToSpawn = new BossSentinelPrime(this, 10 * (1 + this.level/5), 1.2 + this.level/10, true);
+                break;
+            case 2:
+                messageKey = 'final_battle_msg_2';
+                bossToSpawn = new BossVoidSerpent(this, 11 * (1 + this.level/5), 1.3 + this.level/10, true);
+                break;
+            case 3:
+                messageKey = 'final_battle_msg_3';
+                bossToSpawn = new BossOmegaNexus(this, 12 * (1 + this.level/5), 1.4 + this.level/10, true);
+                break;
+            case 4:
+                messageKey = 'final_battle_msg_4';
+                bossToSpawn = new BossNexusPrime(this, 15 * (1 + this.level/5), 1.5 + this.level/10, true);
+                break;
+            case 5:
+                this.changeState('WIN');
+                return;
+        }
+    
+        if (bossToSpawn) {
+            this.isBossActive = true;
+            this.levelMessage = this.uiManager.localizationManager.translate(messageKey);
+            this.finalBattleBoss = bossToSpawn;
+            this.addEntity(this.finalBattleBoss);
+            this.uiManager.soundManager.setTrack('boss');
+            this.addEntity(new ShockwaveEffect(this, this.width/2, this.height/2, '#FFD700'));
+        }
+    }
 
     private spawnNextFormationStage(): void {
         const levelData = LEVELS[this.level - 1]!;
@@ -5343,82 +5115,138 @@ class Game {
         this.uiManager.update();
         
         setTimeout(() => {
-            switch(this.multiFormationStage) {
-                case 1: this.spawnFormation_Stage1(); break;
-                case 2: this.spawnFormation_Stage2(); break;
-                case 3: this.spawnFormation_Stage3(); break;
+            if (this.level === 5) {
+                switch(this.multiFormationStage) {
+                    case 1: this.spawnFormation_Wave5_Stage1(); break;
+                    case 2: this.spawnFormation_Wave5_Stage2(); break;
+                    case 3: this.spawnFormation_Wave5_Stage3(); break;
+                }
+            } else if (this.level >= 15) {
+                switch(this.multiFormationStage) {
+                    case 1: this.spawnFormation_Wave15_Stage1(); break;
+                    case 2: this.spawnFormation_Wave15_Stage2(); break;
+                    case 3: this.spawnFormation_Wave15_Stage3(); break;
+                }
             }
         }, 2000);
     }
 
     updateActiveFormation(dt: number): void {
         const dt_s = dt / 1000;
+        const livingEnemies = this.activeFormationEnemies.filter(e => e.isAlive());
+
+        if (livingEnemies.length === 0) return;
+    
         let highestY = this.height;
-        this.activeFormationEnemies.forEach(e => { if (e.isAlive()) highestY = Math.min(highestY, e.pos.y); });
-        
+        livingEnemies.forEach(e => { highestY = Math.min(highestY, e.pos.y); });
+    
         if (highestY < 50) {
-            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.y += 120 * dt_s; });
+            livingEnemies.forEach(e => { e.pos.y += 120 * dt_s; });
             return;
         }
-
+    
         this.formationMoveTimer += dt;
-        if(this.formationMoveTimer < this.formationMoveInterval) return;
-
+        if (this.formationMoveTimer < this.formationMoveInterval) return;
+    
         this.formationMoveTimer = 0;
-        let wallHit = false;
-        for(const enemy of this.activeFormationEnemies) {
-            if(!enemy.isAlive()) continue;
-            const nextX = enemy.pos.x + 10 * this.formationMovementDirection;
-            if (nextX <= 0 || nextX + enemy.width >= this.width) {
-                wallHit = true;
-                break;
-            }
-        }
-        
+    
+        let minX = this.width, maxX = 0;
+        livingEnemies.forEach(e => {
+            minX = Math.min(minX, e.pos.x);
+            maxX = Math.max(maxX, e.pos.x + e.width);
+        });
+    
+        const stepX = 15;
+        let wallHit = (this.formationMovementDirection > 0 && maxX + stepX > this.width) || (this.formationMovementDirection < 0 && minX - stepX < 0);
+    
         if (wallHit) {
             this.formationMovementDirection *= -1;
-            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.y += this.formationVerticalStep; });
+            let lowestY = 0;
+            livingEnemies.forEach(e => {
+                e.pos.y += this.formationVerticalStep;
+                lowestY = Math.max(lowestY, e.pos.y);
+            });
+            if (lowestY > this.height) {
+                livingEnemies.forEach(e => e.destroy());
+                return;
+            }
         } else {
-            this.activeFormationEnemies.forEach(e => { if(e.isAlive()) e.pos.x += 10 * this.formationMovementDirection; });
+            livingEnemies.forEach(e => {
+                e.pos.x += stepX * this.formationMovementDirection;
+            });
         }
     }
     
     private addEnemyToFormation(enemy: Enemy | null, x: number, y: number) {
         if(enemy) {
             enemy.pos.x = x;
-            enemy.pos.y
+            enemy.pos.y = y;
             enemy.speed = 0;
             enemy.inFormation = true;
             this.activeFormationEnemies.push(enemy);
             this.addEntity(enemy);
         }
     }
-
-    spawnFormation_Stage1(): void {
-        const d = { r: 4, c: 8, hS: 60, vS: 50, sX: (this.width - (8 * 60)) / 2, sY: -250 };
+    
+    spawnFormation_Wave5_Stage1(): void {
+        const d = { r: 4, c: 4, hS: 110, vS: 55, sX: (this.width - (4 * 110)) / 2, sY: -300 };
         for (let r = 0; r < d.r; r++) {
             for (let c = 0; c < d.c; c++) {
-                const type = r < 1 ? 'TANK' : (r < 2 ? 'WEAVER' : 'GRUNT');
+                const type = r < 1 ? 'WEAVER' : 'GRUNT';
                 this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
             }
         }
     }
-
-    spawnFormation_Stage2(): void {
+    
+    spawnFormation_Wave5_Stage2(): void {
         const d = { c: 5, hS: 80, vS: 60, sX: this.width / 2, sY: -200 };
         for (let r = 0; r < d.c; r++) {
-            const type = r < 2 ? 'SHOOTER' : (r < 4 ? 'WEAVER' : 'GRUNT');
+            const type = r < 2 ? 'WEAVER' : 'GRUNT';
             this.addEnemyToFormation(this.createEnemyByType(type), d.sX - (r * d.hS / 2), d.sY + r * d.vS);
             if (r > 0) this.addEnemyToFormation(this.createEnemyByType(type), d.sX + (r * d.hS / 2), d.sY + r * d.vS);
         }
     }
 
-    spawnFormation_Stage3(): void {
-        const d = { r: 5, c: 8, hS: 60, vS: 50, sX: (this.width - (8 * 60)) / 2, sY: -250 };
-        const types = ['GRUNT', 'WEAVER', 'SHOOTER', 'TANK'];
+    spawnFormation_Wave5_Stage3(): void {
+        const d = { rows: 4, hS: 100, vS: 60, sY: -250 };
+        for (let r = 0; r < d.rows; r++) {
+            const numEnemiesInRow = r + 1;
+            const rowWidth = (numEnemiesInRow - 1) * d.hS;
+            const startX = (this.width - rowWidth) / 2;
+            for (let c = 0; c < numEnemiesInRow; c++) {
+                const type = r < 2 ? 'GRUNT' : 'WEAVER';
+                this.addEnemyToFormation(this.createEnemyByType(type), startX + c * d.hS, d.sY + r * d.vS);
+            }
+        }
+    }
+
+    spawnFormation_Wave15_Stage1(): void { 
+        const d = { size: 5, hS: 90, vS: 60, sY: -250 };
+        for (let i = 0; i < d.size; i++) {
+            const type = i < 2 ? 'SHOOTER' : 'WEAVER';
+            const xOffset = i * d.hS;
+            const yOffset = i * d.vS;
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width / 2 - xOffset, d.sY + yOffset);
+            if (i > 0) {
+                this.addEnemyToFormation(this.createEnemyByType(type), this.width / 2 + xOffset, d.sY + yOffset);
+            }
+        }
+    }
+
+    spawnFormation_Wave15_Stage2(): void {
+        const d = { rows: 5, hPos: 100, vS: 60, sY: -300 };
+        for (let r = 0; r < d.rows; r++) {
+            const type = r === 0 ? 'TANK' : 'SHOOTER';
+            this.addEnemyToFormation(this.createEnemyByType(type), d.hPos, d.sY + r * d.vS);
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width - d.hPos - 100, d.sY + r * d.vS);
+        }
+    }
+
+    spawnFormation_Wave15_Stage3(): void {
+        const d = { r: 4, c: 5, hS: 110, vS: 55, sX: (this.width - (5 * 110)) / 2, sY: -300 };
         for (let r = 0; r < d.r; r++) {
             for (let c = 0; c < d.c; c++) {
-                const type = types[Math.floor(Math.random() * types.length)]!;
+                const type = r < 2 ? 'TANK' : 'SHOOTER';
                 this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
             }
         }
@@ -5484,7 +5312,6 @@ class Game {
     
     spawnEnemy(isBossAdd: boolean = false, fixedType?: string): void {
         let type: string;
-
         if (fixedType) {
             type = fixedType;
         } else if (isBossAdd) {
@@ -5493,7 +5320,6 @@ class Game {
         } else {
             type = this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!;
         }
-        
         const enemy = this.createEnemyByType(type);
         if (enemy) {
             if (isBossAdd) {
@@ -5513,12 +5339,10 @@ class Game {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = 1;
-        
         const scaleFactor = Math.min(1.0, w / this.baseWidth);
         const titleSize = Math.max(28, 60 * scaleFactor);
         const subtitleSize = Math.max(32, 80 * scaleFactor);
         const promptSize = Math.max(14, 20 * scaleFactor);
-
         const alpha1 = Math.min(1, t / 2000);
         ctx.globalAlpha = alpha1;
         ctx.font = `${titleSize}px 'Press Start 2P'`;
@@ -5528,25 +5352,21 @@ class Game {
         ctx.shadowBlur = pulse;
         ctx.fillText("GALAXY FALL", w / 2, h / 2 - (subtitleSize / 2));
         ctx.shadowBlur = 0;
-    
         if (t > 1500) {
             const t2 = t - 1500;
             const alpha2 = Math.min(1, t2 / 2000);
             const scale = 1 + Math.max(0, 1 - t2 / 500) * 0.2;
-            
             ctx.save();
             ctx.globalAlpha = alpha2;
             ctx.font = `${subtitleSize}px 'Press Start 2P'`;
             ctx.fillStyle = '#FFD700';
             ctx.shadowColor = '#FFA500';
             ctx.shadowBlur = 20;
-            
             ctx.translate(w / 2, h / 2 + (titleSize / 1.5));
             ctx.scale(scale, scale);
             ctx.fillText("PI EDITION", 0, 0);
             ctx.restore();
         }
-    
         if (this.gameState === 'INTRO' && t > 3500) {
             const t3 = t - 3500;
             const alpha3 = Math.sin(t3 / 500) * 0.4 + 0.6;
@@ -5564,12 +5384,8 @@ class Game {
     handleCollisions(): void { const projectiles = this.entities.filter(e => e.family === 'projectile'); const enemies = this.entities.filter(e => e.family === 'enemy') as Enemy[]; const player = this.player; if (!player || !player.isAlive()) return; if (player.laser && player.laser.isAlive()) { for (const enemy of enemies) { if (!player.laser) break; if (this.isColliding(player.laser, enemy)) { let damage = player.laser.damage; if (this.isBossSlayerActive && enemy.isBoss) damage *= 1.5; enemy.takeHit(damage); if (this.uiManager.settings.particles > 0 && player.laser) this.addEntity(new Particle(this, player.laser.pos.x + player.laser.width / 2, enemy.pos.y, '#FF8C00')); } } } projectiles.forEach(p => { if (p instanceof Projectile && p.type !== 'ENEMY_PROJECTILE') { for (const e of enemies) { if (p.isAlive() && e.isAlive() && this.isColliding(p, e)) { if (p instanceof PiercingProjectile) { if (!p.hasHit(e)) { p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; e.takeHit(damage); } continue; } p.onHit(e); let damage = p.damage; if (this.isBossSlayerActive && e.isBoss) damage *= 1.5; if (!(p instanceof BlackHoleProjectile)) e.takeHit(damage); break; } } } }); const pickups = this.entities.filter(e => e.family === 'pickup'); pickups.forEach(p => { if (p.isAlive() && this.isColliding(player, p)) { (p as PowerUp | Coin).onCollect(); } }); if (!player.isGhosted()) { enemies.forEach(e => { if (e.isAlive() && this.isColliding(player, e)) { e.takeHit(e.isBoss ? 10 : 999); player.takeHit(e.collisionDamage); } }); this.entities.filter(e => e.type === 'ENEMY_PROJECTILE').forEach(p => { const proj = p as EnemyProjectile; if (proj.isAlive() && this.isColliding(player, proj)) { proj.destroy(); player.takeHit(proj.playerDamage); } }); } }
 }
 
-// --- SECTION 8: INITIALISIERUNG (NEUE ASYNCHRONE VERSION) ---
-window.addEventListener('load', async function () { // Machen Sie diese Funktion async
-    // Zuerst die Bilder laden und skalieren
+window.addEventListener('load', async function () {
     await initializeImages();
-
-    // Sobald die Bilder fertig sind, das Spiel wie gewohnt starten
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     const uiElements: IUIElements = { 
         score: document.getElementById('score')!, 
