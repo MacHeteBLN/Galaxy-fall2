@@ -72,7 +72,7 @@ import nukeSoundSrc from './assets/audio/nuke.mp3';
 import missileLaunchSoundSrc from './assets/audio/missile_launch.mp3';
 import menuMusicSrc from './assets/audio/menu_music.mp3';
 
-// --- START: NEUE HILFSFUNKTION FÜR HOCHWERTIGE SKALIERUNG ---
+
 const createScaledImage = (src: string, targetWidth: number, targetHeight: number): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
         const originalImg = new Image();
@@ -4462,6 +4462,7 @@ class UIManager {
     public drawLevelMessage(): void { 
         const ctx = this.ctx; 
         const scaleFactor = this.game.width / this.game.baseWidth;
+
         const fontSize = Math.max(16, 30 * scaleFactor);
         
         ctx.textAlign = 'center'; 
@@ -4562,6 +4563,7 @@ class Game {
     private introAnimationTimer: number = 0;
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
+    console.log("CACHE BUSTER 987654321");
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.width = this.baseWidth;

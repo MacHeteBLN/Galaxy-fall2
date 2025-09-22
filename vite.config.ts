@@ -1,10 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  // ÄNDERE DIESE ZEILE:
-  base: '/', 
-
   plugins: [react()],
+  
+  build: {
+    rollupOptions: {
+      output: {
+        // Diese Zeilen sorgen für einzigartige Dateinamen bei jedem Build
+        entryFileNames: `assets/[name].[hash].js`,
+        chunkFileNames: `assets/[name].[hash].js`,
+        assetFileNames: `assets/[name].[hash].[ext]`
+      }
+    }
+  }
 })
