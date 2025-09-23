@@ -736,6 +736,122 @@ class ReviveEffect extends Entity {
     }
 }
 
+// --- START: NEUE EPISCHE EFFEKT-KLASSEN ---
+
+class FinalBossExplosion extends EntityFamily {
+    private particles: IParticle[] = [];
+    private shockwaves: { radius: number, life: number }[] = [];
+    private life: number = 4000; // Längere Gesamtdauer des Effekts
+
+    constructor(game: Game, x: number, y: number) {
+        super(game, x, y, 0, 0, 'effect', 'FINAL_BOSS_EXPLOSION');
+        const count = 500; // Viel mehr Partikel für eine gewaltige Explosion
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 800 + 200;
+            this.particles.push({
+                pos: new Vector2D(x, y),
+                vel: new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed),
+                size: Math.random() * 5 + 2,
+                life: 2 + Math.random() * 2, // Längere Lebensdauer der Partikel
+                color: Math.random() > 0.3 ? '#FFD700' : '#FFFFFF' // Gold & Weiß
+            });
+        }
+        // Erzeugt mehrere, zeitversetzte Schockwellen
+        this.shockwaves.push({ radius: 0, life: 1.5 });
+        setTimeout(() => this.shockwaves.push({ radius: 0, life: 1.2 }), 500);
+        setTimeout(() => this.shockwaves.push({ radius: 0, life: 1.0 }), 1000);
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.life -= dt;
+        if (this.life <= 0 && this.particles.length === 0) {
+            this.destroy();
+            return;
+        }
+
+        this.particles.forEach(p => {
+            p.pos.x += p.vel.x * dt_s;
+            p.pos.y += p.vel.y * dt_s;
+            p.vel.x *= 0.98; // Verlangsamen der Partikel über Zeit
+            p.vel.y *= 0.98;
+            p.life -= dt_s;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+
+        this.shockwaves.forEach(sw => {
+            sw.radius += 1000 * dt_s;
+            sw.life -= dt_s;
+        });
+        this.shockwaves = this.shockwaves.filter(sw => sw.life > 0);
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        this.particles.forEach(p => {
+            ctx.globalAlpha = Math.min(1, p.life);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        this.shockwaves.forEach(sw => {
+            ctx.globalAlpha = sw.life;
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(this.pos.x, this.pos.y, sw.radius, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+}
+
+class LightRay extends Entity {
+    private angle: number;
+    private length: number;
+    private life: number = 3000; // Wie lange der Strahl sichtbar ist
+    private fadeInTime: number = 1000;
+    private rotationSpeed: number;
+
+    constructor(game: Game) {
+        super(game, game.width / 2, game.height / 2, 0, 0);
+        this.family = 'effect';
+        this.angle = Math.random() * Math.PI * 2;
+        this.length = game.height * 1.5;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+    }
+
+    update(dt: number): void {
+        this.life -= dt;
+        if (this.life <= 0) this.destroy();
+        this.angle += this.rotationSpeed * (dt / 1000);
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        const alpha = Math.min(1, (3000 - this.life) / this.fadeInTime) * 0.3;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(this.angle);
+
+        const gradient = ctx.createLinearGradient(0, -this.length / 2, 0, this.length / 2);
+        gradient.addColorStop(0, 'rgba(255, 223, 186, 0)');
+        gradient.addColorStop(0.5, 'rgba(255, 223, 186, 0.5)');
+        gradient.addColorStop(1, 'rgba(255, 223, 186, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-50, -this.length / 2, 100, this.length);
+        ctx.restore();
+    }
+}
+
+// --- ENDE: NEUE EPISCHE EFFEKT-KLASSEN ---
+
 class PhoenixCoreUI extends Entity {
     private pulseTimer: number = 0;
 
@@ -2749,7 +2865,14 @@ class BossNexusPrime extends Enemy {
     takeHit(damage: number): void {
         if (this.phaseTransitionTimer > 0) return;
         super.takeHit(damage);
-        if (!this.isAlive()) return;
+        if (!this.isAlive()) {
+            // Wenn der finale Boss besiegt ist, löse die Explosion aus
+            if (this.game.gameMode === 'CAMPAIGN' && this.game.level === 50) {
+                 this.game.addEntity(new FinalBossExplosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2));
+                 this.game.uiManager.soundManager.play('nuke');
+            }
+            return;
+        }
         const healthPercentage = this.health / this.maxHealth;
         if (this.phase === 1 && healthPercentage <= 0.66) this.transitionToPhase(2);
         else if (this.phase === 2 && healthPercentage <= 0.33) this.transitionToPhase(3);
@@ -3997,10 +4120,12 @@ class UIManager {
             this.toggleShopScreen(true);
         });
 
+        // ... vorheriger Code ...
+
         setupButton(shopBackButton, () => {
             this.toggleShopScreen(false);
             if (this.game.isPaused) {
-                            this.togglePauseMenu(true);
+                this.togglePauseMenu(true);
             } else {
                 this.toggleMainMenu(true);
             }
@@ -4371,7 +4496,33 @@ class UIManager {
         const ctx = this.ctx; 
         ctx.fillStyle = 'rgba(0,0,0,0.7)';         ctx.fillRect(0, 0, this.game.width, this.game.height); 
     }
-    public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.fillStyle = '#39FF14'; ctx.font = "50px 'Press Start 2P'"; ctx.fillText(t('victory title'), this.game.width / 2, this.game.height / 2 - 50); ctx.fillStyle = '#FFF'; ctx.font = "24px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2 + 20); ctx.font = "20px 'Press Start 2P'"; ctx.fillText(t('victory_prompt'), this.game.width / 2, this.game.height / 2 + 80); }
+    public drawWinScreen(): void {
+        const ctx = this.ctx;
+        const t = (key: string) => this.localizationManager.translate(key);
+    
+        // Zeichne einen halbtransparenten Hintergrund, aber lasse Sterne und Effekte durchscheinen
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, this.game.width, this.game.height);
+    
+        ctx.textAlign = 'center';
+        
+        // Finaler Text
+        ctx.fillStyle = '#FFD700';
+        ctx.font = "50px 'Press Start 2P'";
+        ctx.shadowColor = '#FFA500';
+        ctx.shadowBlur = 15;
+        ctx.fillText(t('victory_title_epic'), this.game.width / 2, this.game.height / 2 - 100);
+        ctx.shadowBlur = 0;
+    
+        ctx.fillStyle = '#FFF';
+        ctx.font = "28px 'Press Start 2P'";
+        ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2);
+    
+        ctx.fillStyle = '#FFF';
+        ctx.font = "20px 'Press Start 2P'";
+        const promptKey = this.game.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
+        ctx.fillText(t(promptKey), this.game.width / 2, this.game.height / 2 + 120);
+    }
     public drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
@@ -4452,6 +4603,7 @@ class Game {
     public isFinalBattleActive: boolean = false;
     private finalBattleStage: number = 0;
     private finalBattleBoss: Enemy | null = null;
+    private victoryTimer: number = 0;
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) {
         this.canvas = canvas;
@@ -4807,6 +4959,11 @@ class Game {
                 this.uiManager.toggleGameOverScreen(true);
                 this.piManager.showAd();
                 break;
+            case 'VICTORY_SEQUENCE':
+                this.victoryTimer = 0;
+                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'effect');
+                this.uiManager.soundManager.setTrack('menu');
+                break;
             case 'WIN':
                 if (this.score > this.highscore) this.highscore = this.score;
                 this.saveGameData();
@@ -4844,11 +5001,17 @@ class Game {
             return;
         }
         if (this.isPaused) return; 
-        if (this.gameState === 'INTRO') this.introAnimationTimer += deltaTime;
-        if (this.gameState !== 'PLAYING') { 
+        
+        switch (this.gameState) {
+            case 'INTRO': this.introAnimationTimer += deltaTime; break;
+            case 'VICTORY_SEQUENCE': this.updateVictorySequence(deltaTime); break;
+        }
+
+        if (!['PLAYING', 'VICTORY_SEQUENCE'].includes(this.gameState)) { 
             if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); 
             return; 
         } 
+        if(this.gameState !== 'PLAYING') return;
         
         this.updateParallaxStarfield(deltaTime); 
         this.entities.forEach(e => e.update(deltaTime)); 
@@ -4911,7 +5074,7 @@ class Game {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawParallaxStarfield();
 
-        if (['PLAYING', 'PLAYING_TRANSITION', 'PAUSED', 'REVIVING'].includes(this.gameState)) {
+        if (['PLAYING', 'PLAYING_TRANSITION', 'PAUSED', 'REVIVING', 'VICTORY_SEQUENCE'].includes(this.gameState)) {
             this.entities.forEach(e => { if (e.family === 'projectile') e.draw(this.ctx); });
             this.entities.forEach(e => { if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') e.draw(this.ctx); });
             this.entities.forEach(e => { if (e.family === 'player') e.draw(this.ctx); });
@@ -4928,7 +5091,112 @@ class Game {
             case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break;
             case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break;
             case 'GAME_OVER': this.uiManager.drawGameOver(); break;
+            case 'VICTORY_SEQUENCE': this.drawVictorySequence(); break;
             case 'WIN': this.uiManager.drawWinScreen(); break;
+        }
+    }
+
+    updateVictorySequence(deltaTime: number): void {
+        this.victoryTimer += deltaTime;
+
+        // Phase 1: Slow-Motion Explosion
+        if (this.victoryTimer < 4000) {
+            const slowMoFactor = 0.1;
+            this.updateParallaxStarfield(deltaTime * slowMoFactor);
+            this.entities.forEach(e => {
+                // Nur Effekte und der Spieler werden (langsam) aktualisiert
+                if (e.family === 'effect' || e.family === 'player') {
+                    e.update(deltaTime * slowMoFactor);
+                }
+            });
+        }
+        // Phase 2: Warp-Speed Flucht
+        else if (this.victoryTimer >= 4000 && this.victoryTimer < 7000) {
+            // Spieler beschleunigt nach oben
+            if (this.player) {
+                this.player.pos.y -= 1200 * (deltaTime / 1000);
+            }
+            // Sterne beschleunigen extrem
+            this.updateParallaxStarfield(deltaTime * 8);
+        }
+        // Phase 3: Ruhiger Triumph
+        else {
+            this.updateParallaxStarfield(deltaTime * 0.5); // Langsames Driften
+            // Füge periodisch neue Lichtstrahlen hinzu
+            if (Math.random() < 0.05) {
+                this.addEntity(new LightRay(this));
+            }
+        }
+
+        // Aktualisiere immer alle Effekte
+        this.entities.forEach(e => {
+            if (e.family === 'effect') e.update(deltaTime);
+        });
+        this.cleanupEntities();
+    }
+
+    drawVictorySequence(): void {
+        const t = this.uiManager.localizationManager.translate;
+        const timer = this.victoryTimer;
+
+        // Zeichne immer die Sterne und die Effekte
+        this.drawParallaxStarfield();
+        if (this.player) this.player.draw(this.ctx);
+        this.entities.forEach(e => e.draw(this.ctx));
+        
+
+        // Phase 1: Flash-Effekt der Explosion
+        if (timer > 800 && timer < 1500) {
+            const flashAlpha = 1 - Math.abs(1150 - timer) / 350;
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+            this.ctx.fillRect(0, 0, this.width, this.height);
+        }
+        
+        // Phase 3: Text-Enthüllung
+        if (timer > 7500) {
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            // Titel "VICTORY"
+            const titleTime = timer - 7500;
+            const titleAlpha = Math.min(1, titleTime / 2000);
+            const titleScale = 1 + Math.max(0, 1 - titleTime / 500) * 0.1;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = titleAlpha;
+            this.ctx.font = "80px 'Press Start 2P'";
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.shadowColor = '#FFA500';
+            this.ctx.shadowBlur = 30;
+            this.ctx.translate(this.width / 2, this.height / 2 - 80);
+            this.ctx.scale(titleScale, titleScale);
+            this.ctx.fillText(t('victory_title_epic'), 0, 0);
+            this.ctx.restore();
+        }
+
+        if (timer > 9000) {
+            // "Final Score"
+            const scoreTime = timer - 9000;
+            const scoreAlpha = Math.min(1, scoreTime / 1000);
+            this.ctx.globalAlpha = scoreAlpha;
+            this.ctx.font = "32px 'Press Start 2P'";
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.fillText(`${t('victory_final_score')}: ${this.score}`, this.width / 2, this.height / 2 + 20);
+        }
+
+        if (timer > 10000) {
+            // "Campaign Completed"
+            const subTime = timer - 10000;
+            const subAlpha = Math.min(1, subTime / 1000);
+            this.ctx.globalAlpha = subAlpha;
+            this.ctx.font = "24px 'Press Start 2P'";
+            this.ctx.fillStyle = '#00FFFF';
+            this.ctx.fillText(t('victory_subtitle_campaign'), this.width / 2, this.height / 2 + 80);
+        }
+
+        // Nach der Sequenz zum finalen, statischen Bildschirm wechseln
+        if (timer > 12000) {
+            this.changeState('WIN');
         }
     }
 
@@ -5034,10 +5302,6 @@ class Game {
             this.isBossActive = true; 
             this.spawnEnemy(false, levelData.boss); 
             this.uiManager.soundManager.setTrack('boss'); 
-        } else if (levelData.formation && levelData.formation !== 'random') {
-            this.isFormationActive = true;
-            this.spawnFormation(levelData.formation);
-            if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
         } else { 
             if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal');
         } 
@@ -5069,7 +5333,7 @@ class Game {
                 bossToSpawn = new BossNexusPrime(this, 15 * (1 + this.level/5), 1.5 + this.level/10, true);
                 break;
             case 5:
-                this.changeState('WIN');
+                this.changeState('VICTORY_SEQUENCE');
                 return;
         }
     
@@ -5093,13 +5357,31 @@ class Game {
                 switch(this.multiFormationStage) {
                     case 1: this.spawnFormation_Wave5_Stage1(); break;
                     case 2: this.spawnFormation_Wave5_Stage2(); break;
-                    case 3: this.spawnFormation_Wave5_Stage3(); break;
+                    case 3: this.spawnFormation_Wave5_Stage3(); break; 
                 }
-            } else if (this.level >= 15) {
+            } else if (this.level === 15) {
                 switch(this.multiFormationStage) {
                     case 1: this.spawnFormation_Wave15_Stage1(); break;
                     case 2: this.spawnFormation_Wave15_Stage2(); break;
                     case 3: this.spawnFormation_Wave15_Stage3(); break;
+                }
+            } else if (this.level === 25) {
+                switch(this.multiFormationStage) {
+                    case 1: this.spawnFormation_Wave25_Stage1(); break;
+                    case 2: this.spawnFormation_Wave25_Stage2(); break;
+                    case 3: this.spawnFormation_Wave25_Stage3(); break;
+                }
+            } else if (this.level === 35) {
+                switch(this.multiFormationStage) {
+                    case 1: this.spawnFormation_Wave35_Stage1(); break;
+                    case 2: this.spawnFormation_Wave35_Stage2(); break;
+                    case 3: this.spawnFormation_Wave35_Stage3(); break;
+                }
+            } else if (this.level === 45) {
+                 switch(this.multiFormationStage) {
+                    case 1: this.spawnFormation_Wave45_Stage1(); break;
+                    case 2: this.spawnFormation_Wave45_Stage2(); break;
+                    case 3: this.spawnFormation_Wave45_Stage3(); break;
                 }
             }
         }, 2000);
@@ -5161,106 +5443,294 @@ class Game {
         this.addEntity(enemy);
     }
 }
-    
-    spawnFormation_Wave5_Stage1(): void {
-        const d = { r: 4, c: 4, hS: 110, vS: 55, sX: (this.width - (4 * 110)) / 2, sY: -300 };
-        for (let r = 0; r < d.r; r++) {
-            for (let c = 0; c < d.c; c++) {
-                const type = r < 1 ? 'WEAVER' : 'GRUNT';
-                this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
+  
+spawnFormation_Wave5_Stage1(): void {
+        // Stufe 1: Eine klassische, gestaffelte Formation
+        const rows = 4;
+        const cols = 5;
+        const hSpacing = Math.min(100, (this.width - 40) / cols);
+        const vSpacing = 80;
+        const startX = (this.width - (cols - 1) * hSpacing) / 2;
+        const startY = -300;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const type = r < 2 ? 'GRUNT' : 'WEAVER';
+                const enemy = this.createEnemyByType(type);
+                if (enemy) {
+                    this.addEnemyToFormation(enemy, startX + c * hSpacing - (enemy.width / 2), startY + r * vSpacing);
+                }
             }
         }
     }
-    
+
     spawnFormation_Wave5_Stage2(): void {
-        const d = { c: 5, hS: 80, vS: 60, sX: this.width / 2, sY: -200 };
-        for (let r = 0; r < d.c; r++) {
-            const type = r < 2 ? 'WEAVER' : 'GRUNT';
-            this.addEnemyToFormation(this.createEnemyByType(type), d.sX - (r * d.hS / 2), d.sY + r * d.vS);
-            if (r > 0) this.addEnemyToFormation(this.createEnemyByType(type), d.sX + (r * d.hS / 2), d.sY + r * d.vS);
+        // Stufe 2: Eine V-Formation ("Chevron")
+        const size = 4;
+        const hSpacing = 80;
+        const vSpacing = 80;
+        const startY = -250;
+
+        for (let i = 0; i < size; i++) {
+            const type = 'GRUNT';
+            const y = startY + i * vSpacing;
+            if (i === 0) {
+                const enemy = this.createEnemyByType(type);
+                if (enemy) this.addEnemyToFormation(enemy, this.width / 2 - (enemy.width / 2), y);
+            } else {
+                const enemyL = this.createEnemyByType(type);
+                if (enemyL) this.addEnemyToFormation(enemyL, this.width / 2 - (i * hSpacing), y);
+                const enemyR = this.createEnemyByType(type);
+                if (enemyR) this.addEnemyToFormation(enemyR, this.width / 2 + (i * hSpacing), y);
+            }
         }
     }
 
     spawnFormation_Wave5_Stage3(): void {
-        const d = { rows: 4, hS: 100, vS: 60, sY: -250 };
-        for (let r = 0; r < d.rows; r++) {
-            const numEnemiesInRow = r + 1;
-            const rowWidth = (numEnemiesInRow - 1) * d.hS;
-            const startX = (this.width - rowWidth) / 2;
-            for (let c = 0; c < numEnemiesInRow; c++) {
-                const type = r < 2 ? 'GRUNT' : 'WEAVER';
-                this.addEnemyToFormation(this.createEnemyByType(type), startX + c * d.hS, d.sY + r * d.vS);
-            }
+        // Stufe 3: Zwei schützende Säulen
+        const rows = 5;
+        const vSpacing = 90;
+        const startY = -300;
+        const xPosLeft = this.width * 0.25;
+        const xPosRight = this.width * 0.75;
+
+        for (let r = 0; r < rows; r++) {
+            const type = r === 0 ? 'WEAVER' : 'GRUNT';
+            const enemyLeft = this.createEnemyByType(type);
+            if (enemyLeft) this.addEnemyToFormation(enemyLeft, xPosLeft - (enemyLeft.width / 2), startY + r * vSpacing);
+            const enemyRight = this.createEnemyByType(type);
+            if (enemyRight) this.addEnemyToFormation(enemyRight, xPosRight - (enemyRight.width / 2), startY + r * vSpacing);
         }
     }
+    // --- WELLE 15: "Der Vorstoß" ---
+    spawnFormation_Wave15_Stage1(): void {
+        // Stufe 1: "Gepanzerte Reihe" - Eine einfache, aber robuste Reihe.
+        // KORREKTUR: Diese Logik ist jetzt absolut sicher für alle Bildschirmgrößen.
+        const enemyTypes = ['SHOOTER', 'WEAVER', 'TANK', 'WEAVER', 'SHOOTER'];
+        const numEnemies = enemyTypes.length;
+        const hSpacing = Math.min(120, (this.width - 40) / numEnemies);
+        const startX = (this.width - (numEnemies - 1) * hSpacing) / 2;
+        const startY = -200;
 
-    spawnFormation_Wave15_Stage1(): void { 
-        const d = { size: 5, hS: 90, vS: 60, sY: -250 };
-        for (let i = 0; i < d.size; i++) {
-            const type = i < 2 ? 'SHOOTER' : 'WEAVER';
-            const xOffset = i * d.hS;
-            const yOffset = i * d.vS;
-            this.addEnemyToFormation(this.createEnemyByType(type), this.width / 2 - xOffset, d.sY + yOffset);
-            if (i > 0) {
-                this.addEnemyToFormation(this.createEnemyByType(type), this.width / 2 + xOffset, d.sY + yOffset);
+        for (let i = 0; i < numEnemies; i++) {
+            const enemy = this.createEnemyByType(enemyTypes[i]!);
+            if (enemy) {
+                this.addEnemyToFormation(enemy, startX + i * hSpacing - (enemy.width / 2), startY);
             }
         }
     }
 
     spawnFormation_Wave15_Stage2(): void {
-        const d = { rows: 5, hPos: 100, vS: 60, sY: -300 };
-        for (let r = 0; r < d.rows; r++) {
+        // Stufe 2: "Flankenschutz" - Zwei Spalten, die den Spieler in der Mitte halten.
+        const rows = 5;
+        const vSpacing = 110;
+        const startY = -300;
+        const xPosLeft = this.width * 0.2;
+        const xPosRight = this.width * 0.8;
+
+        for (let r = 0; r < rows; r++) {
             const type = r === 0 ? 'TANK' : 'SHOOTER';
-            this.addEnemyToFormation(this.createEnemyByType(type), d.hPos, d.sY + r * d.vS);
-            this.addEnemyToFormation(this.createEnemyByType(type), this.width - d.hPos - 100, d.sY + r * d.vS);
+            const enemyLeft = this.createEnemyByType(type);
+            if (enemyLeft) this.addEnemyToFormation(enemyLeft, xPosLeft - (enemyLeft.width / 2), startY + r * vSpacing);
+            const enemyRight = this.createEnemyByType(type);
+            if (enemyRight) this.addEnemyToFormation(enemyRight, xPosRight - (enemyRight.width / 2), startY + r * vSpacing);
         }
     }
 
     spawnFormation_Wave15_Stage3(): void {
-        const d = { r: 4, c: 5, hS: 110, vS: 55, sX: (this.width - (5 * 110)) / 2, sY: -300 };
-        for (let r = 0; r < d.r; r++) {
-            for (let c = 0; c < d.c; c++) {
-                const type = r < 2 ? 'TANK' : 'SHOOTER';
-                this.addEnemyToFormation(this.createEnemyByType(type), d.sX + c * d.hS, d.sY + r * d.vS);
+        // Stufe 3: "Durchbruch" - Eine Pfeilformation, die in die Mitte zielt.
+        const size = 4;
+        const hSpacing = 100;
+        const vSpacing = 90;
+        const startY = -250;
+
+        for (let i = 0; i < size; i++) {
+            const type = i < 2 ? 'TANK' : 'SHOOTER';
+            const y = startY + i * vSpacing;
+            if (i === 0) { // Spitze des Pfeils
+                const enemy = this.createEnemyByType(type);
+                if (enemy) this.addEnemyToFormation(enemy, this.width / 2 - (enemy.width / 2), y);
+            } else {
+                const enemyL = this.createEnemyByType(type);
+                if (enemyL) this.addEnemyToFormation(enemyL, this.width / 2 - (i * hSpacing / 2) - (enemyL.width / 2), y);
+                const enemyR = this.createEnemyByType(type);
+                if (enemyR) this.addEnemyToFormation(enemyR, this.width / 2 + (i * hSpacing / 2) - (enemyR.width / 2), y);
             }
         }
     }
-    
-    spawnFormation(type: string): void {
-        this.activeFormationEnemies = [];
-        const formationData = { rows: 5, cols: 8, hSpacing: 60, vSpacing: 50, startX: (this.width - (8 * 60)) / 2, startY: -250 };
-        for (let r = 0; r < formationData.rows; r++) {
-            for (let c = 0; c < formationData.cols; c++) {
-                let enemy: Enemy | null = null;
-                switch (type) {
-                    case 'V_SHAPE':
-                        if(c === r || c === (formationData.cols -1 -r)) {
-                           enemy = this.createEnemyByType(this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!);
-                        }
-                        break;
-                     case 'CIRCLE':
-                        const angle = (c / formationData.cols) * 2 * Math.PI;
-                        const radius = 150 + r * 30;
-                        const x = this.width / 2 + Math.cos(angle) * radius;
-                        const y = -200 + Math.sin(angle) * radius + r * 50;
-                        enemy = this.createEnemyByType(this.enemySpawnTypes[Math.floor(Math.random() * this.enemySpawnTypes.length)]!);
-                        if (enemy) { enemy.pos = new Vector2D(x, y); }
-                        break;
-                    default:
-                        const enemyType = r < 1 ? 'TANK' : (r < 3 ? 'WEAVER' : 'GRUNT');
-                        enemy = this.createEnemyByType(enemyType);
-                        break;
-                }
-                if (enemy) {
-                    if(!enemy.pos.x && !enemy.pos.y){
-                        enemy.pos.x = formationData.startX + c * formationData.hSpacing;
-                        enemy.pos.y = formationData.startY + r * formationData.vSpacing;
-                    }
-                    enemy.speed = 0;
-                    enemy.inFormation = true;
-                    this.activeFormationEnemies.push(enemy);
-                    this.addEntity(enemy);
-                }
+
+    // --- WELLE 25: "Die Zange" ---
+    spawnFormation_Wave25_Stage1(): void {
+        // Stufe 1: "Die Zangenbewegung" - Gegner an den Seiten zwingen den Spieler in die Mitte.
+        const rows = 4;
+        const vSpacing = 100;
+        const startY = -400;
+
+        for (let r = 0; r < rows; r++) {
+            const type = r < 2 ? 'WEAVER' : 'SHOOTER';
+            // Linke Zange
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width * 0.15, startY + r * vSpacing);
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width * 0.30, startY + r * vSpacing);
+            // Rechte Zange
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width * 0.70, startY + r * vSpacing);
+            this.addEnemyToFormation(this.createEnemyByType(type), this.width * 0.85, startY + r * vSpacing);
+        }
+    }
+
+    spawnFormation_Wave25_Stage2(): void {
+        // Stufe 2: "Das Kreuz" - Eine faire Formation mit klaren Schussbahnen und Ausweichrouten.
+        const length = 5;
+        const hSpacing = 100;
+        const vSpacing = 100;
+        const centerX = this.width / 2;
+        const centerY = -250;
+
+        for (let i = 0; i < length; i++) {
+            const type = i === 2 ? 'TANK' : 'SHOOTER'; // Starkes Zentrum
+            // Horizontale Linie
+            const enemyH = this.createEnemyByType(type);
+            if (enemyH) this.addEnemyToFormation(enemyH, centerX + (i - 2) * hSpacing - (enemyH.width / 2), centerY);
+            // Vertikale Linie (außer Mitte)
+            if (i !== 2) {
+                const enemyV = this.createEnemyByType('WEAVER');
+                if (enemyV) this.addEnemyToFormation(enemyV, centerX - (enemyV.width / 2), centerY + (i - 2) * vSpacing);
+            }
+        }
+    }
+
+    spawnFormation_Wave25_Stage3(): void {
+        // Stufe 3: "Der Hinterhalt" - Eine vordere Linie lenkt ab, während Teleporter hinten erscheinen.
+        // BESONDERHEIT: Verzögertes Spawnen für einen Überraschungseffekt!
+        const frontTypes = ['TANK', 'WEAVER', 'TANK', 'WEAVER', 'TANK'];
+        const numFront = frontTypes.length;
+        const hSpacing = Math.min(130, (this.width - 40) / numFront);
+        const startX = (this.width - (numFront - 1) * hSpacing) / 2;
+        
+        // Vordere Ablenkungslinie
+        for (let i = 0; i < numFront; i++) {
+            const enemy = this.createEnemyByType(frontTypes[i]!);
+            if (enemy) this.addEnemyToFormation(enemy, startX + i * hSpacing - (enemy.width / 2), -200);
+        }
+        
+        // Verzögerte Teleporter
+        setTimeout(() => {
+            if (!this.isFormationActive) return; // Nur spawnen, wenn die Welle noch aktiv ist
+            const enemyL = this.createEnemyByType('TELEPORTER');
+            if (enemyL) this.addEnemyToFormation(enemyL, this.width * 0.2, -100);
+            const enemyR = this.createEnemyByType('TELEPORTER');
+            if (enemyR) this.addEnemyToFormation(enemyR, this.width * 0.8, -100);
+        }, 2500); // 2.5 Sekunden Verzögerung
+    }
+
+    // --- WELLE 35: "Das Bombardement" ---
+    spawnFormation_Wave35_Stage1(): void {
+        // Stufe 1: "Artillerielinien" - Gestaffelte Reihen von Shootern mit Panzerschutz.
+        const rows = 3;
+        const vSpacing = 120;
+        const startY = -300;
+
+        for (let r = 0; r < rows; r++) {
+            const isTankRow = r === 0;
+            const numEnemies = isTankRow ? 4 : 5;
+            const hSpacing = this.width / (numEnemies + 1);
+            for (let c = 0; c < numEnemies; c++) {
+                const enemy = this.createEnemyByType(isTankRow ? 'TANK' : 'SHOOTER');
+                if (enemy) this.addEnemyToFormation(enemy, (c + 1) * hSpacing, startY + r * vSpacing);
+            }
+        }
+    }
+
+    spawnFormation_Wave35_Stage2(): void {
+        // Stufe 2: "Das Labyrinth" - Eine Formation, die präzises Fliegen erfordert.
+        const rows = 4;
+        const cols = 7;
+        const hSpacing = Math.min(100, (this.width - 40) / cols);
+        const vSpacing = 100;
+        const startX = (this.width - (cols - 1) * hSpacing) / 2;
+        const startY = -400;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Lässt in der Mitte eine sichere Gasse frei
+                if (c === 3) continue;
+                const type = (c === 0 || c === cols - 1) ? 'WEAVER' : 'SHOOTER';
+                const enemy = this.createEnemyByType(type);
+                if (enemy) this.addEnemyToFormation(enemy, startX + c * hSpacing - (enemy.width / 2), startY + r * vSpacing);
+            }
+        }
+    }
+
+    spawnFormation_Wave35_Stage3(): void {
+         // Stufe 3: "Die Elite" - Weniger Gegner, aber nur die gefährlichsten.
+        const enemyTypes = ['TELEPORTER', 'TANK', 'SHOOTER', 'TANK', 'TELEPORTER'];
+        const numEnemies = enemyTypes.length;
+        const hSpacing = Math.min(150, (this.width - 40) / numEnemies);
+        const startX = (this.width - (numEnemies - 1) * hSpacing) / 2;
+        
+        for (let i = 0; i < numEnemies; i++) {
+            const enemy = this.createEnemyByType(enemyTypes[i]!);
+            // Leichte V-Formation für einen aggressiven Look
+            const yPos = -200 - (2 - Math.abs(2 - i)) * 40; 
+            if (enemy) this.addEnemyToFormation(enemy, startX + i * hSpacing - (enemy.width / 2), yPos);
+        }
+    }
+
+    // --- WELLE 45: "Der Endanflug" ---
+    spawnFormation_Wave45_Stage1(): void {
+        // Stufe 1: "Todesmauer" - Eine dichte, aber durchbrechbare Wand.
+        const rows = 4;
+        const cols = 8;
+        const hSpacing = Math.min(100, (this.width - 40) / cols);
+        const vSpacing = 90;
+        const startX = (this.width - (cols - 1) * hSpacing) / 2;
+        const startY = -450;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Die hinteren Reihen haben Lücken
+                if (r > 1 && c % 2 !== 0) continue;
+                const type = r === 0 ? 'TANK' : (c % 2 === 0 ? 'SHOOTER' : 'TELEPORTER');
+                const enemy = this.createEnemyByType(type);
+                if (enemy) this.addEnemyToFormation(enemy, startX + c * hSpacing - (enemy.width / 2), startY + r * vSpacing);
+            }
+        }
+    }
+
+    spawnFormation_Wave45_Stage2(): void {
+        // Stufe 2: "Der Schwarm" - Eine große Anzahl schwächerer Gegner als Abwechslung.
+        const rows = 6;
+        const cols = 10;
+        const hSpacing = Math.min(80, (this.width - 40) / cols);
+        const vSpacing = 70;
+        const startX = (this.width - (cols - 1) * hSpacing) / 2;
+        const startY = -500;
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if ((r + c) % 2 !== 0) continue; // Schachbrettmuster für Lücken
+                const type = r < 3 ? 'GRUNT' : 'WEAVER';
+                const enemy = this.createEnemyByType(type);
+                if (enemy) this.addEnemyToFormation(enemy, startX + c * hSpacing - (enemy.width/2), startY + r * vSpacing);
+            }
+        }
+    }
+
+    spawnFormation_Wave45_Stage3(): void {
+        // Stufe 3: "Das Exekutionskommando" - Eine einzelne, extrem gefährliche Reihe.
+        // BESONDERHEIT: Die Gegner haben mehr Leben!
+        const enemyTypes = ['TELEPORTER', 'TANK', 'SHOOTER', 'TANK', 'SHOOTER', 'TANK', 'TELEPORTER'];
+        const numEnemies = enemyTypes.length;
+        const hSpacing = Math.min(110, (this.width - 40) / numEnemies);
+        const startX = (this.width - (numEnemies - 1) * hSpacing) / 2;
+        const startY = -200;
+
+        for (let i = 0; i < numEnemies; i++) {
+            const enemy = this.createEnemyByType(enemyTypes[i]!);
+            if (enemy) {
+                // Macht sie 50% widerstandsfähiger
+                enemy.health *= 1.5;
+                enemy.maxHealth *= 1.5;
+                this.addEnemyToFormation(enemy, startX + i * hSpacing - (enemy.width / 2), startY);
             }
         }
     }
