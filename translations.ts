@@ -1,3 +1,4 @@
+
 const en = {
   lang_native_name: 'English',
   score: 'Score', level: 'Level', lives: 'Lives', highscore: 'Highscore',
@@ -13,8 +14,8 @@ const en = {
   btn_back: 'Back',
   btn_shop: 'Shop',
   btn_buy: 'Buy',
-  btn_upgrade: 'Upgrade', // VERBESSERT
-  btn_unlock: 'Unlock', // VERBESSERT
+  btn_upgrade: 'Upgrade',
+  btn_unlock: 'Unlock',
   btn_equip: 'Equip',
   btn_equipped: 'Equipped',
   btn_max_level: 'Max Level',
@@ -22,6 +23,7 @@ const en = {
   gallery_skins_header: 'Player Skins',
   gallery_projectiles_header: 'Projectile Styles',
   gallery_trails_header: 'Engine Trails',
+  gallery_collectibles_header: 'Exclusive Collectibles',
   proj_default_name: 'Default Projectile',
   trail_default_name: 'Standard Trail',
 
@@ -51,6 +53,7 @@ const en = {
   shop_tab_cosmetic: 'Cosmetics',
   shop_tab_pi_bundle: 'Pi Coins',
   shop_tab_ultimate: 'Ultimate',
+  shop_tab_collectibles: 'Collectibles',
   shop_your_coins: 'Your Coins',
   shop_category_permanent: 'Permanent Upgrades',
   shop_category_consumable: 'Consumables',
@@ -58,6 +61,13 @@ const en = {
   shop_category_pi_bundles: 'Pi Coin Bundles',
   shop_category_ultimate: 'Ultimate Prestige Upgrades',
   shop_upgrade_active_next_round: '(Active on next run)',
+
+  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+  nft_info_title: "About Your Collectibles",
+  nft_phase1_title: "Phase 1: Pre-Minting Phase",
+  nft_phase1_desc: "Currently, the Pi Network is preparing for full smart contract capabilities. Your acquired collectibles are securely registered to your account within the game, guaranteeing you the right to mint this item as a true NFT on the Pi Blockchain as soon as the technology is enabled by network updates like the upcoming Protocol 23.",
+  nft_phase2_title: "Phase 2: True Ownership on the Blockchain",
+  nft_phase2_desc: "Once smart contracts are fully active on the Pi Mainnet, your collectibles will be minted as NFTs. This will give you true, verifiable ownership of your digital item on the public ledger, allowing you to trade it on Pi-powered marketplaces and beyond.",
 
   shop_pi_bundle_1_name: 'Coin Pouch',
   shop_pi_bundle_1_desc: 'A small pouch of 1,000 in-game coins.',
@@ -151,12 +161,21 @@ const en = {
   shop_proj_fireball_desc: 'A cosmetic style that makes your projectiles look like fireballs.',
   shop_proj_purple_name: 'Void Bolts',
   shop_proj_purple_desc: 'A cosmetic style that changes your projectile color to dark purple.',
-  // HINZUGEFÜGT
   shop_proj_rainbow_name: 'Chroma Bolts',
   shop_proj_rainbow_desc: 'A cosmetic style that makes your projectiles cycle through all colors of the rainbow.',
   
   shop_trail_rainbow_name: 'Rainbow Trail',
   shop_trail_rainbow_desc: 'A cosmetic engine trail that leaves a vibrant rainbow in your wake.',
+
+  collectible_paradise_name: '"Paradise" Island Glider',
+  collectible_paradise_story: 'Legend says this ship wasn\'t built in a shipyard, but in a hidden cove by a legendary pilot in retirement. Powered by geothermal energy and cooled by eternal waterfalls, "Paradise" is a masterpiece of harmony between nature and technology.',
+  collectible_paradise_bonus_desc: 'Each collected coin is worth one additional coin (+1).',
+  collectible_sporestrike_name: '"Sporestrike" Mycelium Cruiser',
+  collectible_sporestrike_story: 'Deep in the misty forests of a forgotten planet, these ships grow instead of being built. The pilot merges mentally with the ship, navigating space like a spore on the wind. The glowing mushrooms on its wings pulse with mysterious energy.',
+  collectible_sporestrike_bonus_desc: 'Increases the drop chance of coins and power-ups by a flat 25%.',
+  collectible_potassium_name: '"Potassium Command" Banana Bomber',
+  collectible_potassium_story: 'An eccentric engineer believed the ultimate power source lay within the perfect fruit: the banana. Through a daring bio-mechanical fusion, he created the Banana Bomber. Its armor is a hardened, ripe peel, and its engines are powered by an overloaded potassium reactor.',
+  collectible_potassium_bonus_desc: 'Increases the duration of all timed power-ups by 20%.',
 
   arsenal_cat_weapon_upgrade: 'Weapon Upgrade', arsenal_cat_weapon_mod: 'Weapon Mod', arsenal_cat_ultra_weapon: 'Ultra Weapons (Inventory)', arsenal_cat_defense: 'Defense', arsenal_cat_special: 'Specials (Inventory)',
   powerup_wup_name: 'Weapon Tier Up (W+)', powerup_wup_desc: 'Increases weapon tier. Tier 2 (90s), 3 (60s) & 4 (30s) are timed and downgrade on expiration. Lose a tier on any hit (min. Tier 1).',
@@ -235,9 +254,14 @@ const en = {
   wave_msg_48_maelstrom: "Wave 48: Maelstrom",
   wave_msg_49_critical_mass: "Wave 49: Critical Mass",
   wave_msg_50_final: "WAVE 50: FINAL BOSS - NEXUS PRIME",
+  final_battle_msg_1: "Final Battle: Sentinel Prime",
+  final_battle_msg_2: "Final Battle: Void Serpent",
+  final_battle_msg_3: "Final Battle: Omega Nexus",
+  final_battle_msg_4: "Final Battle: Nexus Prime",
   
   game_over_title: "GAME OVER", game_over_final_score: "Final Score",
-  victory_title: "VICTORY!", victory_final_score: "Final Score", victory_prompt: "Press ENTER to return to Menu",
+  victory_title: "VICTORY!", victory_title_epic: "GALAXY SAVED", victory_subtitle_campaign: "Campaign Completed",
+  victory_prompt: "Press ENTER to return to Menu",
   intro_prompt: "Press ENTER to Begin",
   intro_prompt_mobile: "Tap to Start Game",
   lang_select_title: "SELECT LANGUAGE",
@@ -267,8 +291,8 @@ const de = {
   btn_back: 'Zurück',
   btn_shop: "Shop",
   btn_buy: "Kaufen",
-  btn_upgrade: 'Upgraden', // VERBESSERT
-  btn_unlock: 'Freischalten', // VERBESSERT
+  btn_upgrade: 'Upgraden',
+  btn_unlock: 'Freischalten',
   btn_equip: 'Ausrüsten',
   btn_equipped: 'Ausgerüstet',
   btn_max_level: "Max. Stufe",
@@ -276,6 +300,7 @@ const de = {
   gallery_skins_header: 'Spieler-Skins',
   gallery_projectiles_header: 'Projektilstile',
   gallery_trails_header: 'Antriebsspuren',
+  gallery_collectibles_header: 'Exklusive Sammlerstücke',
   proj_default_name: 'Standard-Projektil',
   trail_default_name: 'Standard-Spur',
 
@@ -305,6 +330,7 @@ const de = {
   shop_tab_cosmetic: 'Optik',
   shop_tab_pi_bundle: 'Pi Münzen',
   shop_tab_ultimate: 'Ultimativ',
+  shop_tab_collectibles: 'Sammlerstücke',
   shop_your_coins: "Deine Münzen",
   shop_category_permanent: "Permanente Upgrades",
   shop_category_consumable: "Verbrauchsgegenstände",
@@ -312,6 +338,13 @@ const de = {
   shop_category_pi_bundles: 'Pi-Münzpakete',
   shop_category_ultimate: 'Ultimative Prestige-Upgrades',
   shop_upgrade_active_next_round: '(Aktiv ab nächstem Versuch)',
+
+  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+  nft_info_title: "Über deine Sammlerstücke",
+  nft_phase1_title: "Phase 1: Vor-Prägephase",
+  nft_phase1_desc: "Aktuell bereitet sich das Pi Network auf die volle Smart-Contract-Funktionalität vor. Deine erworbenen Sammlerstücke sind sicher in deinem Account im Spiel registriert. Dies sichert dir das Anrecht, diesen Gegenstand als echtes NFT auf der Pi-Blockchain zu prägen, sobald die Technologie durch Netzwerk-Updates wie das kommende Protokoll 23 aktiviert wird.",
+  nft_phase2_title: "Phase 2: Echtes Eigentum auf der Blockchain",
+  nft_phase2_desc: "Sobald Smart Contracts auf dem Pi Mainnet vollständig aktiv sind, werden deine Sammlerstücke als NFTs geprägt. Dies gibt dir echtes, nachweisbares Eigentum an deinem digitalen Gegenstand auf der öffentlichen Blockchain, was dir den Handel auf Pi-basierten Marktplätzen und darüber hinaus ermöglicht.",
 
   shop_pi_bundle_1_name: 'Münzbeutel',
   shop_pi_bundle_1_desc: 'Ein kleiner Beutel mit 1.000 Spielmünzen.',
@@ -353,11 +386,11 @@ const de = {
   shop_consume_shield_desc: 'Aktiviert sofort einen Schild.',
   shop_consume_nuke_name: 'Notfall-Nuke',
   shop_consume_nuke_desc: 'Fügt deinem Inventar sofort eine Nuke hinzu.',
-  shop_consume_extralife_name: 'Letztes Gefecht', // VERBESSERT
+  shop_consume_extralife_name: 'Letztes Gefecht',
   shop_consume_extralife_desc: 'Gewährt sofort ein zusätzliches Leben für den aktuellen Lauf.',
-  shop_consume_ghost_name: 'Phasenserum', // VERBESSERT
+  shop_consume_ghost_name: 'Phasenserum',
   shop_consume_ghost_desc: 'Aktiviert sofort einen 30-sekündigen Geist-Protokoll-Effekt.',
-  shop_consume_boss_slayer_name: 'Bossjäger-Munition', // VERBESSERT
+  shop_consume_boss_slayer_name: 'Bossjäger-Munition',
   shop_consume_boss_slayer_desc: 'Deine Waffen verursachen für den aktuellen Lauf 25% mehr Schaden gegen Bosse.',
   shop_consume_black_hole_name: "Taschen-Singularität",
   shop_consume_black_hole_desc: "Fügt deinem Inventar sofort ein Schwarzes Loch hinzu.",
@@ -405,12 +438,21 @@ const de = {
   shop_proj_fireball_desc: 'Ein kosmetischer Stil, der deine Projektile wie Feuerbälle aussehen lässt.',
   shop_proj_purple_name: 'Leeren-Bolzen',
   shop_proj_purple_desc: 'Ein kosmetischer Stil, der die Farbe deiner Projektile in Dunkelviolett ändert.',
-  // HINZUGEFÜGT
   shop_proj_rainbow_name: 'Chroma-Bolzen',
   shop_proj_rainbow_desc: 'Ein kosmetischer Stil, der deine Projektile alle Farben des Regenbogens durchlaufen lässt.',
 
   shop_trail_rainbow_name: 'Regenbogenspur',
   shop_trail_rainbow_desc: 'Eine kosmetische Antriebsspur, die einen leuchtenden Regenbogen hinterlässt.',
+
+  collectible_paradise_name: 'Insel-Gleiter "Paradies"',
+  collectible_paradise_story: 'Die Legende besagt, dass dieses Schiff nicht in einer Werft, sondern in einer versteckten Bucht von einem legendären Piloten im Ruhestand gebaut wurde. Angetrieben von geothermaler Energie und gekühlt von ewigen Wasserfällen, ist das "Paradies" ein Meisterwerk der Harmonie zwischen Natur und Technik.',
+  collectible_paradise_bonus_desc: 'Jede eingesammelte Münze ist eine zusätzliche Münze wert (+1).',
+  collectible_sporestrike_name: 'Myzel-Kreuzer "Sporenschlag"',
+  collectible_sporestrike_story: 'Tief in den nebligen Wäldern eines vergessenen Planeten wachsen diese Schiffe, anstatt gebaut zu werden. Der Pilot verschmilzt mental mit dem Schiff und navigiert durch das All wie eine Spore durch den Wind. Die leuchtenden Pilze an den Flügeln pulsieren mit geheimnisvoller Energie.',
+  collectible_sporestrike_bonus_desc: 'Erhöht die Drop-Chance von Münzen und Power-Ups pauschal um 25%.',
+  collectible_potassium_name: 'Bananen-Bomber "Kalium-Kommando"',
+  collectible_potassium_story: 'Ein exzentrischer Ingenieur war davon überzeugt, dass die ultimative Energiequelle in der perfekten Frucht liegt: der Banane. Durch eine waghalsige bio-mechanische Fusion erschuf er den Bananen-Bomber. Seine Panzerung besteht aus einer gehärteten, reifen Schale, und die Triebwerke werden von einem überladenen Kalium-Reaktor angetrieben.',
+  collectible_potassium_bonus_desc: 'Erhöht die Dauer aller zeitlich begrenzter Power-Ups um 20%.',
 
   arsenal_cat_weapon_upgrade: 'Waffen-Upgrade', arsenal_cat_weapon_mod: 'Waffen-Mod', arsenal_cat_ultra_weapon: 'Ultra-Waffen (Inventar)', arsenal_cat_defense: 'Verteidigung', arsenal_cat_special: 'Spezial (Inventar)',
   powerup_wup_name: 'Waffenstufe Up (W+)', powerup_wup_desc: 'Erhöht die Waffenstufe. Stufe 2 (90s), 3 (60s) & 4 (30s) sind zeitlich begrenzt und fallen bei Ablauf ab. Bei jedem Treffer wird eine Stufe verloren (min. Stufe 1).',
@@ -435,7 +477,7 @@ const de = {
   gegner_sentinel_prime_name: 'Sentinel Prime', gegner_sentinel_prime_desc: 'Ein Patrouillenschiff mit vielfältigen Angriffen, darunter Fächer, Spiralen und ein gefährlicher Sturzangriff.',
   gegner_void_serpent_name: 'Leeren-Serpent', gegner_void_serpent_desc: 'Ein massiver Leviathan, der sich in weiten Schlangenlinien bewegt und breite Salven sowie gezielte Peitschenhiebe abfeuert.',
   gegner_omega_nexus_name: 'Omega Nexus', gegner_omega_nexus_desc: 'Eine festungsartige Kriegsmaschine. Seine Angriffsmuster ändern sich mit dem erlittenen Schaden und gipfeln in einem mächtigen Laserstrahl.',
-  gegner_nexus_prime_name: 'Nexus Prime (Finale)', // VERBESSERT
+  gegner_nexus_prime_name: 'Nexus Prime (Finale)',
   gegner_nexus_prime_desc: 'Die ultimative Form des Nexus. Verfügt über einen fegenden Laser, unzerstörbare Drohnen und einen unerbittlichen Kugelhagel.',
   strength_low: 'Niedrig', strength_medium: 'Mittel', strength_high: 'Hoch', strength_extreme: 'Extrem', strength_apocalyptic: 'Apokalyptisch', strength_final: 'FINAL',
   
@@ -487,12 +529,17 @@ const de = {
   wave_msg_45_multi_formation_final: "Welle 45: Die Finale Formation",
   wave_msg_46_anvil: "Welle 46: Der Amboss",
   wave_msg_47_circle_strike: "Welle 47: Zirkelschlag",
-  wave_msg_48_maelstrom: "Welle 48: Mahlstrom", // VERBESSERT
+  wave_msg_48_maelstrom: "Welle 48: Mahlstrom",
   wave_msg_49_critical_mass: "Welle 49: Kritische Masse",
   wave_msg_50_final: "WELLE 50: FINALER BOSS - NEXUS PRIME",
+  final_battle_msg_1: "Finaler Kampf: Sentinel Prime",
+  final_battle_msg_2: "Finaler Kampf: Leeren-Serpent",
+  final_battle_msg_3: "Finaler Kampf: Omega Nexus",
+  final_battle_msg_4: "Finaler Kampf: Nexus Prime",
 
   game_over_title: "SPIEL VORBEI", game_over_final_score: "Endstand",
-  victory_title: "SIEG!", victory_final_score: "Endstand", victory_prompt: "ENTER drücken, um zum Menü zurückzukehren",
+  victory_title: "SIEG!", victory_title_epic: "GALAXIE GERETTET", victory_subtitle_campaign: "Kampagne abgeschlossen",
+  victory_prompt: "ENTER drücken, um zum Menü zurückzukehren",
   intro_prompt: "ENTER drücken zum Starten",
   intro_prompt_mobile: "Tippen zum Starten",
   lang_select_title: "SPRACHE WÄHLEN",
@@ -522,8 +569,8 @@ const es = {
   btn_back: 'Volver',
   btn_shop: "Tienda",
   btn_buy: "Comprar",
-  btn_upgrade: 'Mejorar', // VERBESSERT
-  btn_unlock: 'Desbloquear', // VERBESSERT
+  btn_upgrade: 'Mejorar',
+  btn_unlock: 'Desbloquear',
   btn_equip: 'Equipar',
   btn_equipped: 'Equipado',
   btn_max_level: "Nivel Máx.",
@@ -531,6 +578,7 @@ const es = {
   gallery_skins_header: 'Diseños de Nave',
   gallery_projectiles_header: 'Estilos de Proyectil',
   gallery_trails_header: 'Estelas de Motor',
+  gallery_collectibles_header: 'Coleccionables Exclusivos',
   proj_default_name: 'Proyectil Estándar',
   trail_default_name: 'Estela Estándar',
 
@@ -544,7 +592,7 @@ const es = {
   affix_bullet_hell: 'Infierno de Balas',
   affix_blink_storm: 'Tormenta de Destellos',
 
-  connected_as: 'Conectado como', // HINZUGEFÜGT
+  connected_as: 'Conectado como',
 
   settings_language_label: 'Idioma', settings_language_desc: 'Cambia el idioma de visualización del juego.',
   settings_volume_label: 'Volumen Principal', settings_volume_desc: 'Controla el volumen general del juego.',
@@ -560,6 +608,7 @@ const es = {
   shop_tab_cosmetic: 'Cosméticos',
   shop_tab_pi_bundle: 'Monedas Pi',
   shop_tab_ultimate: 'Supremo',
+  shop_tab_collectibles: 'Coleccionables',
   shop_your_coins: "Tus Monedas",
   shop_category_permanent: "Mejoras Permanentes",
   shop_category_consumable: "Consumibles",
@@ -567,6 +616,13 @@ const es = {
   shop_category_pi_bundles: 'Paquetes de Monedas Pi',
   shop_category_ultimate: 'Mejoras de Prestigio Supremo',
   shop_upgrade_active_next_round: '(Activo en la próxima partida)',
+
+  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+  nft_info_title: "Sobre tus Coleccionables",
+  nft_phase1_title: "Fase 1: Fase de Pre-Acuñación",
+  nft_phase1_desc: "Actualmente, la Red Pi se está preparando para la plena funcionalidad de los contratos inteligentes. Tus coleccionables adquiridos están registrados de forma segura en tu cuenta dentro del juego, garantizándote el derecho a acuñar este objeto como un verdadero NFT en la Blockchain de Pi tan pronto como la tecnología sea habilitada por actualizaciones de la red como el próximo Protocolo 23.",
+  nft_phase2_title: "Fase 2: Propiedad Verdadera en la Blockchain",
+  nft_phase2_desc: "Una vez que los contratos inteligentes estén totalmente activos en la Mainnet de Pi, tus coleccionables serán acuñados como NFTs. Esto te dará una propiedad verdadera y verificable de tu objeto digital en el registro público, permitiéndote comerciar con él en mercados impulsados por Pi y más allá.",
 
   shop_pi_bundle_1_name: 'Bolsa de Monedas',
   shop_pi_bundle_1_desc: 'Una pequeña bolsa con 1.000 monedas del juego.',
@@ -660,12 +716,21 @@ const es = {
   shop_proj_fireball_desc: 'Un estilo cosmético que hace que tus proyectiles parezcan bolas de fuego.',
   shop_proj_purple_name: 'Virotes del Vacío',
   shop_proj_purple_desc: 'Un estilo cosmético que cambia el color de tus proyectiles a púrpura oscuro.',
-  // HINZUGEFÜGT
   shop_proj_rainbow_name: 'Virotes Cromáticos',
   shop_proj_rainbow_desc: 'Un estilo cosmético que hace que tus proyectiles recorran todos los colores del arcoíris.',
   
   shop_trail_rainbow_name: 'Estela Arcoíris',
   shop_trail_rainbow_desc: 'Una estela de motor cosmética que deja un vibrante arcoíris a tu paso.',
+
+  collectible_paradise_name: 'Deslizador Insular "Paraíso"',
+  collectible_paradise_story: 'La leyenda dice que esta nave no fue construida en un astillero, sino en una cala oculta por un legendario piloto retirado. Impulsada por energía geotérmica y enfriada por cascadas eternas, "Paraíso" es una obra maestra de armonía entre naturaleza y tecnología.',
+  collectible_paradise_bonus_desc: 'Cada moneda recogida vale una moneda adicional (+1).',
+  collectible_sporestrike_name: 'Crucero de Micelio "Golpe de Espora"',
+  collectible_sporestrike_story: 'En lo profundo de los bosques neblinosos de un planeta olvidado, estas naves crecen en lugar de ser construidas. El piloto se fusiona mentalmente con la nave, navegando por el espacio como una espora en el viento. Los hongos brillantes en sus alas pulsan con una energía misteriosa.',
+  collectible_sporestrike_bonus_desc: 'Aumenta la probabilidad de obtener monedas y potenciadores en un 25% fijo.',
+  collectible_potassium_name: 'Bombardero Banana "Comando Potasio"',
+  collectible_potassium_story: 'Un ingeniero excéntrico creía que la fuente de energía definitiva residía en la fruta perfecta: el plátano. Mediante una audaz fusión biomecánica, creó el Bombardero Banana. Su blindaje es una cáscara madura y endurecida, y sus motores son alimentados por un reactor de potasio sobrecargado.',
+  collectible_potassium_bonus_desc: 'Aumenta la duración de todos los potenciadores de tiempo limitado en un 20%.',
   
   arsenal_cat_weapon_upgrade: 'Mejora de Arma', arsenal_cat_weapon_mod: 'Mod de Arma', arsenal_cat_ultra_weapon: 'Ultra Armas (Inventario)', arsenal_cat_defense: 'Defensa', arsenal_cat_special: 'Especiales (Inventario)',
   powerup_wup_name: 'Subir Nivel de Arma (W+)', powerup_wup_desc: 'Aumenta el nivel del arma. Nivel 2 (90s), 3 (60s) y 4 (30s) son temporales y bajan al expirar. Se pierde un nivel al recibir un impacto (mín. Nivel 1).',
@@ -744,9 +809,14 @@ const es = {
   wave_msg_48_maelstrom: "Oleada 48: Maelstrom",
   wave_msg_49_critical_mass: "Oleada 49: Masa Crítica",
   wave_msg_50_final: "OLEADA 50: JEFE FINAL - NEXUS PRIME",
+  final_battle_msg_1: "Batalla Final: Sentinel Prime",
+  final_battle_msg_2: "Batalla Final: Serpiente del Vacío",
+  final_battle_msg_3: "Batalla Final: Omega Nexus",
+  final_battle_msg_4: "Batalla Final: Nexus Prime",
 
   game_over_title: "FIN DEL JUEGO", game_over_final_score: "Puntuación Final",
-  victory_title: "¡VICTORIA!", victory_final_score: "Puntuación Final", victory_prompt: "Presiona ENTER para volver al Menú",
+  victory_title: "¡VICTORIA!", victory_title_epic: "GALAXIA SALVADA", victory_subtitle_campaign: "Campaña Completada",
+  victory_prompt: "Presiona ENTER para volver al Menú",
   intro_prompt: "Presiona ENTER para Empezar",
   intro_prompt_mobile: "Toca para Empezar",
   lang_select_title: "SELECCIONAR IDIOMA",
@@ -776,8 +846,8 @@ const zh = {
     btn_back: '返回',
     btn_shop: "商店",
     btn_buy: "购买",
-    btn_upgrade: '升级', // VERBESSERT
-    btn_unlock: '解锁', // VERBESSERT
+    btn_upgrade: '升级',
+    btn_unlock: '解锁',
     btn_equip: '装备',
     btn_equipped: '已装备',
     btn_max_level: "已满级",
@@ -785,6 +855,7 @@ const zh = {
     gallery_skins_header: '玩家皮肤',
     gallery_projectiles_header: '投射物样式',
     gallery_trails_header: '引擎尾迹',
+    gallery_collectibles_header: '独家收藏品',
     proj_default_name: '默认投射物',
     trail_default_name: '标准尾迹',
 
@@ -798,7 +869,7 @@ const zh = {
     affix_bullet_hell: '弹幕地狱',
     affix_blink_storm: '闪烁风暴',
 
-    connected_as: '已连接为', // HINZUGEFÜGT
+    connected_as: '已连接为',
 
     settings_language_label: '语言', settings_language_desc: '更改游戏的显示语言。',
     settings_volume_label: '主音量', settings_volume_desc: '控制游戏的整体音量。',
@@ -814,6 +885,7 @@ const zh = {
     shop_tab_cosmetic: '外观',
     shop_tab_pi_bundle: 'Pi币',
     shop_tab_ultimate: '终极',
+    shop_tab_collectibles: '收藏品',
     shop_your_coins: "你的硬币",
     shop_category_permanent: "永久升级",
     shop_category_consumable: "消耗品",
@@ -821,6 +893,13 @@ const zh = {
     shop_category_pi_bundles: 'Pi 币捆绑包',
     shop_category_ultimate: '终极声望升级',
     shop_upgrade_active_next_round: '（下次运行时生效）',
+
+    // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+    nft_info_title: "关于您的收藏品",
+    nft_phase1_title: "第1阶段：预铸造阶段",
+    nft_phase1_desc: "目前，Pi网络正在为全面的智能合约功能做准备。您获得的收藏品已安全地注册到您在游戏中的账户，保证您有权在网络更新（如即将到来的协议23）启用该技术后，立即将此物品作为真正的NFT在Pi区块链上进行铸造。",
+    nft_phase2_title: "第2阶段：区块链上的真正所有权",
+    nft_phase2_desc: "一旦智能合约在Pi主网上完全激活，您的收藏品将被铸造为NFT。这将使您在公共分类账上拥有对您数字物品的真实、可验证的所有权，从而允许您在Pi驱动的市场及其他地方进行交易。",
 
     shop_pi_bundle_1_name: '硬币袋',
     shop_pi_bundle_1_desc: '一个装有 1,000 游戏币的小袋子。',
@@ -914,12 +993,21 @@ const zh = {
     shop_proj_fireball_desc: '一种让你的投射物看起来像火球的外观风格。',
     shop_proj_purple_name: '虚空箭',
     shop_proj_purple_desc: '一种将你的投射物颜色变为深紫色的外观风格。',
-    // HINZUGEFÜGT
     shop_proj_rainbow_name: '炫彩箭',
     shop_proj_rainbow_desc: '一种让你的投射物循环显示彩虹所有颜色的外观风格。',
     
     shop_trail_rainbow_name: '彩虹尾迹',
     shop_trail_rainbow_desc: '一种在身后留下鲜艳彩虹的引擎尾迹外观。',
+
+    collectible_paradise_name: '“天堂”岛屿滑翔机',
+    collectible_paradise_story: '传说这艘飞船并非在船厂建造，而是在一个隐秘的海湾由一位退役的传奇飞行员打造。由地热能驱动，由永恒的瀑布冷却，“天堂”号是大自然与科技和谐的杰作。',
+    collectible_paradise_bonus_desc: '每收集一枚硬币，额外获得一枚硬币（+1）。',
+    collectible_sporestrike_name: '“孢子打击”菌丝巡洋舰',
+    collectible_sporestrike_story: '在一个被遗忘的星球的迷雾森林深处，这些飞船是生长出来的，而不是建造出来的。飞行员与飞船心意相通，像风中的孢子一样在太空中航行。其机翼上发光的蘑菇脉动着神秘的能量。',
+    collectible_sporestrike_bonus_desc: '硬币和道具的掉落几率固定增加25%。',
+    collectible_potassium_name: '“钾之指令”香蕉轰炸机',
+    collectible_potassium_story: '一位古怪的工程师相信，终极能源蕴藏在完美的水果中：香蕉。通过一次大胆的生物机械融合，他创造了香蕉轰炸机。它的装甲是坚硬的熟皮，引擎由一个超载的钾反应堆提供动力。',
+    collectible_potassium_bonus_desc: '所有限时道具的持续时间增加20%。',
 
     arsenal_cat_weapon_upgrade: '武器升级', arsenal_cat_weapon_mod: '武器模组', arsenal_cat_ultra_weapon: '超级武器（库存）', arsenal_cat_defense: '防御', arsenal_cat_special: '特殊技能（库存）',
     powerup_wup_name: '武器等级提升 (W+)', powerup_wup_desc: '提升武器等级。等级2（90秒）、3（60秒）和4（30秒）有时间限制，到期后降级。受到任何攻击都会降低一级（最低为1级）。',
@@ -998,9 +1086,14 @@ const zh = {
     wave_msg_48_maelstrom: "第48波: 大漩涡",
     wave_msg_49_critical_mass: "第49波: 临界质量",
     wave_msg_50_final: "第50波: 最终BOSS - 核心PRIME",
+    final_battle_msg_1: "最终战：哨兵Prime",
+    final_battle_msg_2: "最终战：虚空之蛇",
+    final_battle_msg_3: "最终战：欧米茄核心",
+    final_battle_msg_4: "最终战：核心Prime",
     
     game_over_title: "游戏结束", game_over_final_score: "最终分数",
-    victory_title: "胜利！", victory_final_score: "最终分数", victory_prompt: "按 ENTER 返回菜单",
+    victory_title: "胜利！", victory_title_epic: "银河已救", victory_subtitle_campaign: "战役完成",
+    victory_prompt: "按 ENTER 返回菜单",
     intro_prompt: "按 ENTER 开始",
     intro_prompt_mobile: "点击开始",
     lang_select_title: "选择语言",
@@ -1030,8 +1123,8 @@ const ja = {
   btn_back: '戻る',
   btn_shop: "ショップ",
   btn_buy: "購入",
-  btn_upgrade: 'アップグレード', // VERBESSERT
-  btn_unlock: 'アンロック', // VERBESSERT
+  btn_upgrade: 'アップグレード',
+  btn_unlock: 'アンロック',
   btn_equip: '装備',
   btn_equipped: '装備中',
   btn_max_level: "最大レベル",
@@ -1039,6 +1132,7 @@ const ja = {
   gallery_skins_header: 'プレイヤースキン',
   gallery_projectiles_header: '弾のスタイル',
   gallery_trails_header: 'エンジン軌跡',
+  gallery_collectibles_header: '限定コレクション',
   proj_default_name: 'デフォルトの弾',
   trail_default_name: '標準の軌跡',
 
@@ -1052,7 +1146,7 @@ const ja = {
   affix_bullet_hell: '弾幕地獄',
   affix_blink_storm: 'ブリンクストーム',
 
-  connected_as: '接続中:', // HINZUGEFÜGT
+  connected_as: '接続中:',
 
   settings_language_label: '言語', settings_language_desc: 'ゲームの表示言語を変更します。',
   settings_volume_label: 'マスター音量', settings_volume_desc: 'ゲーム全体の音量を調整します。',
@@ -1068,6 +1162,7 @@ const ja = {
   shop_tab_cosmetic: '外観',
   shop_tab_pi_bundle: 'Piコイン',
   shop_tab_ultimate: 'アルティメット',
+  shop_tab_collectibles: 'コレクション',
   shop_your_coins: "所持コイン",
   shop_category_permanent: "永続アップグレード",
   shop_category_consumable: "消耗品",
@@ -1075,6 +1170,13 @@ const ja = {
   shop_category_pi_bundles: 'パイコインバンドル',
   shop_category_ultimate: 'アルティメット・プレステージ',
   shop_upgrade_active_next_round: '（次のランで有効）',
+
+  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+  nft_info_title: "コレクションについて",
+  nft_phase1_title: "フェーズ1：プレミント（鋳造準備）段階",
+  nft_phase1_desc: "現在、Piネットワークは完全なスマートコントラクト機能の準備を進めています。取得したコレクションはゲーム内のアカウントに安全に登録され、今後のプロトコル23などのネットワーク更新によって技術が有効になり次第、Piブロックチェーン上で真のNFTとして鋳造する権利が保証されます。",
+  nft_phase2_title: "フェーズ2：ブロックチェーン上での真の所有権",
+  nft_phase2_desc: "スマートコントラクトがPiメインネットで完全に有効になると、コレクションはNFTとして鋳造されます。これにより、公開台帳上でデジタルアイテムの真の検証可能な所有権が得られ、Piを利用したマーケットプレイスなどで取引できるようになります。",
 
   shop_pi_bundle_1_name: 'コインポーチ',
   shop_pi_bundle_1_desc: 'ゲーム内コイン1,000枚入りの小さなポーチ。',
@@ -1158,7 +1260,7 @@ const ja = {
   shop_skin_goliath_name: 'ゴライアススキン',
   shop_skin_goliath_desc: '純粋な質量と威圧感を投影するために設計されたデザイン。機敏さが増すわけではないが、その外観だけで小規模な戦闘機を引き返させるには十分だ。',
   shop_skin_juggernaut_name: 'ジャガーノートスキン',
-  shop_skin_juggernaut_desc: 'このデザインのブルータリズム的な美学は、それ自体が宣戦布告である。巨大な装甲は純粋に視覚的なものだが、「私は止められない」と叫んでいる。',
+  shop_skin_juggernaut_desc: 'このデザインのブルータリズム的な美学は、それ自体が宣戦布告である。巨大的な装甲は純粋に視覚的なものだが、「私は止められない」と叫んでいる。',
   shop_skin_leviathan_name: 'リヴァイアサンスキン',
   shop_skin_leviathan_desc: 'ガス星雲に潜む生体力学的な巨人に触発された。この巨大なデザインは、船を虚空から生まれた獣のように見せる。',
   
@@ -1168,12 +1270,21 @@ const ja = {
   shop_proj_fireball_desc: '弾が火の玉のように見えるコスメティックスタイル。',
   shop_proj_purple_name: 'ヴォイドボルト',
   shop_proj_purple_desc: '弾の色をダークパープルに変えるコスメティックスタイル。',
-  // HINZUGEFÜGT
   shop_proj_rainbow_name: 'クロマボルト',
   shop_proj_rainbow_desc: '弾が虹のすべての色を循環するコスメティックスタイル。',
   
   shop_trail_rainbow_name: 'レインボートレイル',
   shop_trail_rainbow_desc: '船尾に鮮やかな虹を残す、コスメティックなエンジントレイル。',
+
+  collectible_paradise_name: '「パラダイス」アイランドグライダー',
+  collectible_paradise_story: '伝説によると、この船は造船所ではなく、引退した伝説のパイロットが隠れた入り江で建造したという。地熱エネルギーを動力源とし、永遠の滝で冷却される「パラダイス」は、自然と技術の調和が生んだ傑作だ。',
+  collectible_paradise_bonus_desc: '収集した各コインが追加で1コインの価値を持つ（+1）。',
+  collectible_sporestrike_name: '「胞子撃」菌糸クルーザー',
+  collectible_sporestrike_story: '忘れ去られた惑星の霧深い森の奥深くで、これらの船は建造されるのではなく、成長する。パイロットは船と精神的に融合し、風に乗る胞子のように宇宙を航行する。翼に生えた光るキノコは神秘的なエネルギーで脈動している。',
+  collectible_sporestrike_bonus_desc: 'コインとパワーアップのドロップ確率が25%固定で増加する。',
+  collectible_potassium_name: '「カリウムコマンド」バナナボンバー',
+  collectible_potassium_story: 'ある風変わりなエンジニアは、究極の動力源は完璧な果物、つまりバナナにあると信じていた。大胆な生体力学的融合により、彼はバナナボンバーを創り出した。その装甲は硬化した熟した皮であり、エンジンは過負荷のカリウム反応炉によって駆動される。',
+  collectible_potassium_bonus_desc: 'すべての時間制限付きパワーアップの効果時間が20%増加する。',
 
   arsenal_cat_weapon_upgrade: '武器アップグレード', arsenal_cat_weapon_mod: '武器MOD', arsenal_cat_ultra_weapon: 'ウルトラウェポン（インベントリ）', arsenal_cat_defense: '防御', arsenal_cat_special: 'スペシャル（インベントリ）',
   powerup_wup_name: '武器ティアアップ (W+)', powerup_wup_desc: '武器のティアを上げます。ティア2（90秒）、3（60秒）、4（30秒）は時間制で、時間切れでダウングレードします。被弾するとティアが1つ下がります（最低ティア1）。',
@@ -1252,9 +1363,14 @@ const ja = {
   wave_msg_48_maelstrom: "ウェーブ48：大渦",
   wave_msg_49_critical_mass: "ウェーブ49：臨界質量",
   wave_msg_50_final: "ウェーブ50：最終ボス - ネクサス・プライム",
+  final_battle_msg_1: "最終決戦：センティネル・プライム",
+  final_battle_msg_2: "最終決戦：ヴォイド・サーペント",
+  final_battle_msg_3: "最終決戦：オメガ・ネクサス",
+  final_battle_msg_4: "最終決戦：ネクサス・プライム",
   
   game_over_title: "ゲームオーバー", game_over_final_score: "最終スコア",
-  victory_title: "勝利！", victory_final_score: "最終スコア", victory_prompt: "ENTERキーでメニューに戻ります",
+  victory_title: "勝利！", victory_title_epic: "銀河は救われた", victory_subtitle_campaign: "キャンペーン完了",
+  victory_prompt: "ENTERキーでメニューに戻ります",
   intro_prompt: "ENTERキーで開始",
   intro_prompt_mobile: "タップして開始",
   lang_select_title: "言語を選択",
@@ -1284,8 +1400,8 @@ const it = {
   btn_back: 'Indietro',
   btn_shop: "Negozio",
   btn_buy: "Compra",
-  btn_upgrade: 'Potenzia', // VERBESSERT
-  btn_unlock: 'Sblocca', // VERBESSERT
+  btn_upgrade: 'Potenzia',
+  btn_unlock: 'Sblocca',
   btn_equip: 'Equipaggia',
   btn_equipped: 'Equipaggiato',
   btn_max_level: "Liv. Max",
@@ -1293,6 +1409,7 @@ const it = {
   gallery_skins_header: 'Skin Navicella',
   gallery_projectiles_header: 'Stili Proiettile',
   gallery_trails_header: 'Scie Motore',
+  gallery_collectibles_header: 'Collezionabili Esclusivi',
   proj_default_name: 'Proiettile Standard',
   trail_default_name: 'Scia Standard',
 
@@ -1306,7 +1423,7 @@ const it = {
   affix_bullet_hell: 'Inferno di Proiettili',
   affix_blink_storm: 'Tempesta di Teletrasporti',
 
-  connected_as: 'Connesso come', // HINZUGEFÜGT
+  connected_as: 'Connesso come',
 
   settings_language_label: 'Lingua', settings_language_desc: 'Cambia la lingua di visualizzazione del gioco.',
   settings_volume_label: 'Volume Principale', settings_volume_desc: 'Controlla il volume generale del gioco.',
@@ -1322,6 +1439,7 @@ const it = {
   shop_tab_cosmetic: 'Estetica',
   shop_tab_pi_bundle: 'Monete Pi',
   shop_tab_ultimate: 'Supremo',
+  shop_tab_collectibles: 'Collezionabili',
   shop_your_coins: "Le tue Monete",
   shop_category_permanent: "Potenziamenti Permanenti",
   shop_category_consumable: "Consumabili",
@@ -1329,6 +1447,13 @@ const it = {
   shop_category_pi_bundles: 'Pacchetti Monete Pi',
   shop_category_ultimate: 'Potenziamenti di Prestigio Supremi',
   shop_upgrade_active_next_round: '(Attivo alla prossima partita)',
+
+  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
+  nft_info_title: "Riguardo ai Tuoi Collezionabili",
+  nft_phase1_title: "Fase 1: Fase di Pre-Conio",
+  nft_phase1_desc: "Attualmente, la Rete Pi si sta preparando per la piena funzionalità degli smart contract. I tuoi collezionabili acquisiti sono registrati in modo sicuro al tuo account all'interno del gioco, garantendoti il diritto di coniare questo oggetto come un vero NFT sulla Blockchain di Pi non appena la tecnologia sarà abilitata da aggiornamenti della rete come il prossimo Protocollo 23.",
+  nft_phase2_title: "Fase 2: Vera Proprietà sulla Blockchain",
+  nft_phase2_desc: "Una volta che gli smart contract saranno pienamente attivi sulla Mainnet di Pi, i tuoi collezionabili saranno coniati come NFT. Questo ti darà una proprietà vera e verificabile del tuo oggetto digitale sul registro pubblico, permettendoti di scambiarlo su marketplace basati su Pi e oltre.",
 
   shop_pi_bundle_1_name: 'Sacca di Monete',
   shop_pi_bundle_1_desc: 'Una piccola sacca con 1.000 monete di gioco.',
@@ -1422,12 +1547,21 @@ const it = {
   shop_proj_fireball_desc: 'Uno stile cosmetico che fa sembrare i tuoi proiettili delle palle di fuoco.',
   shop_proj_purple_name: 'Dardi del Vuoto',
   shop_proj_purple_desc: 'Uno stile cosmetico che cambia il colore dei tuoi proiettili in viola scuro.',
-  // HINZUGEFÜGT
   shop_proj_rainbow_name: 'Dardi Cromatici',
   shop_proj_rainbow_desc: 'Uno stile cosmetico che fa sì che i tuoi proiettili passino attraverso tutti i colori dell\'arcobaleno.',
   
   shop_trail_rainbow_name: 'Scia Arcobaleno',
   shop_trail_rainbow_desc: 'Una scia motore cosmetica che lascia un vibrante arcobaleno al tuo passaggio.',
+
+  collectible_paradise_name: 'Aliante Insulare "Paradiso"',
+  collectible_paradise_story: 'La leggenda narra che questa nave non sia stata costruita in un cantiere navale, ma in un\'insenatura nascosta da un leggendario pilota in pensione. Alimentata da energia geotermica e raffreddata da cascate eterne, "Paradiso" è un capolavoro di armonia tra natura e tecnologia.',
+  collectible_paradise_bonus_desc: 'Ogni moneta raccolta vale una moneta aggiuntiva (+1).',
+  collectible_sporestrike_name: 'Incrociatore Miceliare "Colpo di Spora"',
+  collectible_sporestrike_story: 'Nelle profondità delle foreste nebbiose di un pianeta dimenticato, queste navi crescono invece di essere costruite. Il pilota si fonde mentalmente con la nave, navigando nello spazio come una spora nel vento. I funghi luminosi sulle sue ali pulsano di un\'energia misteriosa.',
+  collectible_sporestrike_bonus_desc: 'Aumenta la probabilità di rilascio di monete e potenziamenti di un 25% fisso.',
+  collectible_potassium_name: 'Bombardiere Banana "Comando Potassio"',
+  collectible_potassium_story: 'Un ingegnere eccentrico credeva che la fonte di energia definitiva si trovasse nel frutto perfetto: la banana. Attraverso un\'audace fusione bio-meccanica, ha creato il Bombardiere Banana. La sua corazza è una buccia matura e indurita, e i suoi motori sono alimentati da un reattore al potassio sovraccarico.',
+  collectible_potassium_bonus_desc: 'Aumenta la durata di tutti i potenziamenti a tempo del 20%.',
 
   arsenal_cat_weapon_upgrade: 'Potenziamento Arma', arsenal_cat_weapon_mod: 'Mod Arma', arsenal_cat_ultra_weapon: 'Ultra Armi (Inventario)', arsenal_cat_defense: 'Difesa', arsenal_cat_special: 'Speciali (Inventario)',
   powerup_wup_name: 'Aumento Livello Arma (W+)', powerup_wup_desc: 'Aumenta il livello dell\'arma. Livello 2 (90s), 3 (60s) e 4 (30s) sono a tempo e si riducono alla scadenza. Perdi un livello a ogni colpo subito (min. Livello 1).',
@@ -1506,9 +1640,14 @@ const it = {
   wave_msg_48_maelstrom: "Ondata 48: Maelstrom",
   wave_msg_49_critical_mass: "Ondata 49: Massa Critica",
   wave_msg_50_final: "ONDATA 50: BOSS FINALE - NEXUS PRIME",
+  final_battle_msg_1: "Battaglia Finale: Sentinel Prime",
+  final_battle_msg_2: "Battaglia Finale: Serpente del Vuoto",
+  final_battle_msg_3: "Battaglia Finale: Omega Nexus",
+  final_battle_msg_4: "Battaglia Finale: Nexus Prime",
 
   game_over_title: "FINE PARTITA", game_over_final_score: "Punteggio Finale",
-  victory_title: "VITTORIA!", victory_final_score: "Punteggio Finale", victory_prompt: "Premi INVIO per tornare al Menu",
+  victory_title: "VITTORIA!", victory_title_epic: "GALASSIA SALVATA", victory_subtitle_campaign: "Campagna Completata",
+  victory_prompt: "Premi INVIO per tornare al Menu",
   intro_prompt: "Premi INVIO per Iniziare",
   intro_prompt_mobile: "Tocca per Iniziare",
   lang_select_title: "SELEZIONA LINGUA",

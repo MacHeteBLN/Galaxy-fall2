@@ -11,11 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-    <!-- ====================================================================== -->
-    <!-- HINZUGEFÜGT: Diese zwei Zeilen aktivieren die mobile Fehlerkonsole -->
     <script src="//cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
-    <!-- ====================================================================== -->
 
 </head>
 <body>
@@ -75,7 +72,6 @@
     </div>
     
     <div id="level-display-container">
-        <!-- Dieser Container wird nicht mehr verwendet, aber aus Kompatibilitätsgründen beibehalten -->
     </div>
 
     <div id="weapon-status"></div>
@@ -105,7 +101,6 @@
             </div>
             <div id="galerie-view" class="tab-pane">
                  <div class="info-panel" id="galerie-list">
-                    <!-- Inhalt wird dynamisch von populateGalerie() in index.tsx gefüllt -->
                  </div>
             </div>
             <div id="arsenal-view" class="tab-pane">
@@ -116,7 +111,6 @@
             </div>
             <div id="rangliste-view" class="tab-pane">
                  <div class="info-panel" id="leaderboard-content">
-                    <!-- Inhalt wird per JavaScript geladen -->
                  </div>
             </div>
             <div id="einstellungen-view" class="tab-pane">
@@ -182,7 +176,6 @@
     <!-- ÜBERARBEITETER SHOP-CONTAINER -->
     <div id="shop-container" style="display: none;">
         <div class="shop-menu">
-            <!-- Header mit Titel, Münzen und Pi-Anzeige -->
             <div class="shop-header">
                 <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
                 <div id="shop-coin-display">
@@ -194,13 +187,13 @@
                 </div>
             </div>
 
-            <!-- Tab-Navigation für die Shop-Kategorien -->
             <div id="shop-tabs" class="menu-tabs">
                 <button class="tab-button active" data-tab="permanent" data-translate-key="shop_tab_permanent">Upgrades</button>
                 <button class="tab-button" data-tab="consumable" data-translate-key="shop_tab_consumable">Verbrauch</button>
                 <button class="tab-button" data-tab="skin" data-translate-key="shop_tab_skins">Skins</button>
                 <button class="tab-button" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">Optik</button>
                 <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
+                <button class="tab-button" data-tab="collectible" data-translate-key="shop_tab_collectibles">NFT-Hangar</button>
             </div>
 
             <div id="shop-content" class="menu-content">
@@ -219,14 +212,23 @@
 
 </div>
 
+<!-- NEU: Modal-Container für die vergrößerte Ansicht der Sammlerstücke -->
+<div id="collectible-modal">
+    <div class="modal-content">
+        <img id="modal-img" src="" alt="Collectible Artwork" />
+        <h2 id="modal-title"></h2>
+        <p id="modal-story"></p>
+        <p id="modal-bonus"></p>
+    </div>
+</div>
+
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>
-    
     Pi.init({ version: "2.0", sandbox: false });
 </script>
 
 
-<script type="module" src="./index.js?v=77"></script>
+<script type="module" src="./index.js?v=79"></script>
 
 </body>
 </html>
