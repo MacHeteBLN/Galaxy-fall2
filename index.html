@@ -93,6 +93,7 @@
                  <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
                  <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
                  <button class="menu-button" id="restart-button" data-translate-key="btn_start_game">Spiel starten</button>
+                 <button class="menu-button ad-boost-button" id="boost-button" data-translate-key="btn_request_boost">Boost anfordern</button>
                  <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
                  <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
                  <div id="menu-highscore">
@@ -172,6 +173,16 @@
             <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
         </div>
     </div>
+    
+    <!-- NEU: Container für das Notsignal -->
+    <div id="distress-signal-container" style="display: none;">
+        <div class="menu">
+            <h1 data-translate-key="distress_signal_title">Notsignal...</h1>
+            <p data-translate-key="distress_signal_desc">Hilfe annehmen, um den Kampf fortzusetzen. (Einmal pro Runde)</p>
+            <button class="menu-button ad-boost-button" id="accept-aid-button" data-translate-key="btn_accept_aid">Hilfe annehmen (Werbung)</button>
+            <button class="menu-button" id="surrender-button" data-translate-key="btn_surrender">Aufgeben</button>
+        </div>
+    </div>
 
     <!-- ÜBERARBEITETER SHOP-CONTAINER -->
     <div id="shop-container" style="display: none;">
@@ -228,7 +239,7 @@
 </script>
 
 
-<script type="module" src="./index.js?v=79"></script>
+<script type="module" src="./index.js?v=80"></script>
 
 </body>
 </html>
