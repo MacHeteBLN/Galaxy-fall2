@@ -911,14 +911,15 @@ class UIManager {
         });
 
         for (const key in this.tabButtons) {
-            this.tabButtons[key]!.addEventListener('click', () => {
-                this.soundManager.play('uiClick');
-                this.showTab(key);
-                if (key === 'rangliste') {
-                    this.populateLeaderboard('campaign');
-                }
-            });
+    this.tabButtons[key]!.addEventListener('click', () => {
+        this.soundManager.play('uiClick');
+        this.showTab(key);
+        if (key === 'rangliste') {
+            // Lade die Kampagnen-Rangliste als Standard beim Öffnen
+            this.populateLeaderboard('campaign'); 
         }
+    });
+}
         
         const volSlider = document.getElementById('volume-master') as HTMLInputElement;
         if (volSlider) { volSlider.addEventListener('input', (e: any) => { this.settings.masterVolume = parseFloat(e.target.value); this.applySettings(); this.saveSettings(); }); volSlider.value = this.settings.masterVolume.toString(); }
@@ -1055,8 +1056,75 @@ class UIManager {
     public hideCollectibleModal(): void { this.collectibleModalEl.classList.remove('active'); }
     
     public populateGegner(): void { const enemyList = [ { nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low', image: gruntImg }, { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low', image: weaverImg }, { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium', image: tankImg }, { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium', image: shooterImg }, { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high', image: teleporterImg }, { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high', image: bossSentinelPrimeImg }, { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme', image: bossVoidSerpentSrc }, { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic', image: bossOmegaNexusBaseImg }, { nameKey: "gegner_nexus_prime_name", descKey: "gegner_nexus_prime_desc", type: 'BOSS_NEXUS_PRIME', strengthKey: 'strength_final', image: bossNexusPrimeImg }, ]; const t = (key: string) => this.localizationManager.translate(key); const listEl = document.getElementById('gegner-list')!; listEl.innerHTML = `<h3>- ${t('gegner_header')} -</h3>`; enemyList.forEach(e => { const iconSrc = this.createEnemyIcon(e.type, e.image); const strengthClass = e.strengthKey.split('_')[1]; listEl.innerHTML += `<div class="powerup-entry"> <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/><div class="powerup-info"> <div class="powerup-title"> <span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div>`; }); }
-    public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise<void> { const t = (key: string) => this.localizationManager.translate(key); const contentEl = document.getElementById('leaderboard-content')!; contentEl.innerHTML = `<div class="leaderboard-controls"><button class="menu-button ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button><button class="menu-button ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button></div><div id="leaderboard-status"><p>${t('leaderboard_loading')}...</p></div><div id="leaderboard-table-container"></div>`; this.attachLeaderboardControlEvents(); const statusEl = document.getElementById('leaderboard-status')!; const tableContainerEl = document.getElementById('leaderboard-table-container')!; try { const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&metric=score`); if (!response.ok) { throw new Error(`Server responded with status: ${response.status}`); } const data: ILeaderboardEntry[] = await response.json(); if (!data || data.length === 0) { statusEl.innerHTML = `<p>${t('leaderboard_no_entries')}</p>`; return; } statusEl.innerHTML = ''; let tableHTML = `<div class="leaderboard-table"><div class="leaderboard-header"><div class="rank">#</div><div class="username">${t('leaderboard_player')}</div><div class="score">${t('score')}</div><div class="waves">${t('waves')}</div></div>`; data.forEach(entry => { tableHTML += `<div class="leaderboard-row"><div class="rank">${entry.rank}</div><div class="username">${entry.username}</div><div class="score">${entry.score.toLocaleString()}</div><div class="waves">${entry.waves}</div></div>`; }); tableHTML += '</div>'; tableContainerEl.innerHTML = tableHTML; } catch (error) { console.error("Fehler beim Laden der Rangliste:", error); statusEl.innerHTML = `<p class="leaderboard-error">${t('leaderboard_error')}</p>`; } }
-    private attachLeaderboardControlEvents(): void { document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign')); document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless')); }
+public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise<void> {
+    const t = (key: string) => this.localizationManager.translate(key);
+    const contentEl = document.getElementById('leaderboard-content')!;
+
+    // 1. Erstelle die HTML-Struktur mit den Umschalt-Buttons
+    contentEl.innerHTML = `
+        <div class="leaderboard-controls">
+            <button class="menu-button ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
+            <button class="menu-button ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button>
+        </div>
+        <div id="leaderboard-status"><p>${t('leaderboard_loading')}...</p></div>
+        <div id="leaderboard-table-container"></div>
+    `;
+    
+    // 2. Füge die Event-Listener für die neuen Buttons hinzu
+    this.attachLeaderboardControlEvents();
+
+    const statusEl = document.getElementById('leaderboard-status')!;
+    const tableContainerEl = document.getElementById('leaderboard-table-container')!;
+
+    try {
+        // 3. Rufe die API mit dem richtigen Modus auf
+        const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}`);
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        const data: ILeaderboardEntry[] = await response.json();
+
+        if (!data || data.length === 0) {
+            statusEl.innerHTML = `<p>${t('leaderboard_no_entries')}</p>`;
+            return;
+        }
+
+        statusEl.innerHTML = '';
+        
+        // 4. Baue die Tabelle genau wie vorher (ohne die "Modus"-Spalte)
+        let tableHTML = `
+            <div class="leaderboard-table">
+                <div class="leaderboard-header">
+                    <div class="rank">#</div>
+                    <div class="username">${t('leaderboard_player')}</div>
+                    <div class="score">${t('score')}</div>
+                    <div class="waves">${t('waves')}</div>
+                </div>`;
+
+        data.forEach(entry => {
+            tableHTML += `
+                <div class="leaderboard-row">
+                    <div class="rank">${entry.rank}</div>
+                    <div class="username">${entry.username}</div>
+                    <div class="score">${entry.score.toLocaleString()}</div>
+                    <div class="waves">${entry.waves}</div>
+                </div>`;
+        });
+
+        tableHTML += '</div>';
+        tableContainerEl.innerHTML = tableHTML;
+
+    } catch (error) {
+        console.error("Fehler beim Laden der Rangliste:", error);
+        statusEl.innerHTML = `<p class="leaderboard-error">${t('leaderboard_error')}</p>`;
+    }
+}
+
+// Diese Funktion fügt die Klick-Events zu den Buttons hinzu
+private attachLeaderboardControlEvents(): void {
+    document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign'));
+    document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless'));
+}
     public drawLevelMessage(): void { const ctx = this.ctx; const scaleFactor = this.game.width / this.game.baseWidth; const fontSize = Math.max(16, 30 * scaleFactor); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = `${fontSize}px 'Press Start 2P'`; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10, this.game.width * 0.95); }
     public drawGameOver(): void { const ctx = this.ctx; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); }
     public drawWinScreen(): void { const ctx = this.ctx; const t = (key: string) => this.localizationManager.translate(key); ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; ctx.fillRect(0, 0, this.game.width, this.game.height); ctx.textAlign = 'center'; ctx.fillStyle = '#FFD700'; ctx.font = "50px 'Press Start 2P'"; ctx.shadowColor = '#FFA500'; ctx.shadowBlur = 15; ctx.fillText(t('victory_title_epic'), this.game.width / 2, this.game.height / 2 - 100); ctx.shadowBlur = 0; ctx.fillStyle = '#FFF'; ctx.font = "28px 'Press Start 2P'"; ctx.fillText(`${t('victory_final_score')}: ${this.game.score}`, this.game.width / 2, this.game.height / 2); ctx.fillStyle = '#FFF'; ctx.font = "20px 'Press Start 2P'"; const promptKey = this.game.isMobile ? 'intro_prompt_mobile' : 'intro_prompt'; ctx.fillText(t(promptKey), this.game.width / 2, this.game.height / 2 + 120); }
