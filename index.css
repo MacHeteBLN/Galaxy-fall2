@@ -261,3 +261,23 @@ canvas { display: block; position: absolute; top: 90px; left: 0; background-colo
     #mobile-pause-button { display: block; }
     .slot-key { display: none; }
 }
+
+.final-rank {
+    margin: 20px 0;
+    font-size: 1.2em;
+    color: #00FFFF;
+    min-height: 25px; /* Platzhalter während des Ladens */
+    font-family: 'Press Start 2P', cursive;
+}
+
+.final-rank.error {
+    color: #FF4136;
+    font-size: 0.9em;
+}
+
+.leaderboard-row.highlighted-player {
+    background-color: rgba(0, 255, 255, 0.15);
+    border: 1px solid #00FFFF;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    transform: scale(1.02);
+}
