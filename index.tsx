@@ -714,7 +714,7 @@ class LocalizationManager {
 }
 
 class UIManager {
-    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; private specialInventoryEl: HTMLElement; private ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
+    public game: Game; private ctx: CanvasRenderingContext2D; private scoreEl: HTMLElement; private coinsEl: HTMLElement; private levelEl: HTMLElement; private highscoreEl: HTMLElement; public specialInventoryEl: HTMLElement; public ultraInventoryEl: HTMLElement; private livesDisplay: HTMLElement; private weaponStatusEl: HTMLElement; private energyBarEl: HTMLElement; private weaponTierDisplayEl: HTMLElement; private menuContainer: HTMLElement;
     private levelDisplayContainer: HTMLElement; 
     private gameOverContainer: HTMLElement;
     private modeSelectContainer: HTMLElement;
@@ -1134,29 +1134,16 @@ class Game {
             window.visualViewport.addEventListener('resize', resizeHandler);
         }
 
-        // --- NEU & ANGEPASST: Listener für die Sichtbarkeit der Seite ---
-        // Dieser Event Listener wird ausgelöst, wenn der Benutzer den Tab wechselt,
-        // die App minimiert oder ein Anruf eingeht.
         document.addEventListener('visibilitychange', () => {
-            // 1. Logik für das automatische Pausieren
-            // Wenn der Tab unsichtbar wird UND das Spiel gerade läuft...
             if (document.visibilityState === 'hidden' && this.gameState === 'PLAYING' && !this.isPaused) {
-                // ...pausiere das Spiel automatisch.
                 this.togglePause();
             }
-
-            // 2. Logik für die Audio-Wiederherstellung
-            // Wenn der Tab wieder sichtbar wird und der Audio-Kontext vom Browser "eingeschläfert" wurde...
             if (document.visibilityState === 'visible' && this.uiManager.soundManager.audioCtx && this.uiManager.soundManager.audioCtx.state === 'suspended') {
-                // ...setzen wir ein Flag, dass der Ton beim nächsten Klick wieder aktiviert werden muss.
-                // Die initAudio() Methode kümmert sich um das Aufwecken (resume).
                 this.audioNeedsUnlock = true;
             }
         });
 
-        // Dieser Handler wird für den Start des Spiels verwendet
         const tapToStartHandler = (e: Event) => {
-            // Initialisiert und/oder entsperrt den Sound beim allerersten Klick
             this.uiManager.soundManager.initAudio();
 
             if (this.gameState === 'INTRO' || this.gameState === 'MENU') {
@@ -1166,12 +1153,43 @@ class Game {
             }
         };
 
+        const inventoryTapHandler = (e: MouseEvent | TouchEvent) => {
+            if (!this.player || this.gameState !== 'PLAYING' || this.isPaused) return;
+
+            const target = e.target as HTMLElement;
+            const slot = target.closest('.inventory-slot');
+            if (!slot) return;
+            
+            e.preventDefault();
+            this.uiManager.soundManager.initAudio();
+
+            const type = slot.getAttribute('data-inventory-type');
+            const indexStr = slot.getAttribute('data-slot-index');
+            
+            if (type && indexStr) {
+                const index = parseInt(indexStr, 10);
+                if (type === 'special') {
+                    const item = this.player.powerUpManager.specialInventory[index];
+                    if (item && item.type === 'BLACK_HOLE') {
+                        // Mobile Black Hole logic: tap to activate directly
+                        this.player.powerUpManager.activateSpecial(index);
+                    } else if (item) {
+                        this.player.powerUpManager.activateSpecial(index);
+                    }
+                } else if (type === 'ultra') {
+                    this.player.powerUpManager.activateUltra(index);
+                }
+            }
+        };
+        
+        this.uiManager.specialInventoryEl.addEventListener('click', inventoryTapHandler);
+        this.uiManager.ultraInventoryEl.addEventListener('click', inventoryTapHandler);
+
         if (this.isMobile) {
             this.initMobileControls();
             this.canvas.addEventListener('touchstart', tapToStartHandler, { passive: false });
         } else {
             this.initDesktopControls();
-            // Fallback für Klicks außerhalb des Canvas, z.B. auf UI-Buttons
             window.addEventListener('click', () => this.uiManager.soundManager.initAudio());
         }
     }
@@ -1181,8 +1199,6 @@ class Game {
     public awardPiCoinBundle(bundle: IShopItem) { if (bundle.coin_reward) { this.coins += bundle.coin_reward; this.saveGameData(); this.uiManager.renderShop(); } }
 
     initMobileControls(): void {
-        const specialInventoryEl = document.getElementById('special-inventory');
-        const ultraInventoryEl = document.getElementById('ultra-inventory');
         const getTouchPos = (e: TouchEvent) => {
             const rect = this.canvas.getBoundingClientRect();
             const touch = e.changedTouches[0];
@@ -1190,23 +1206,19 @@ class Game {
             return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
         };
         this.canvas.addEventListener('touchstart', (e) => {
-            // ANGEPASST: Stellt sicher, dass der Sound bei jeder Interaktion reaktiviert wird.
             this.uiManager.soundManager.initAudio();
 
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
             const touch = e.changedTouches[0];
-            if (!touch || !specialInventoryEl || !ultraInventoryEl) return;
-            const inv1Rect = specialInventoryEl.getBoundingClientRect();
-            const inv2Rect = ultraInventoryEl.getBoundingClientRect();
-            const isOnInventory = (touch.clientX >= inv1Rect.left && touch.clientX <= inv1Rect.right && touch.clientY >= inv1Rect.top && touch.clientY <= inv1Rect.bottom) || (touch.clientX >= inv2Rect.left && touch.clientX <= inv2Rect.right && touch.clientY >= inv2Rect.top && touch.clientY <= inv2Rect.bottom);
-            if (!isOnInventory) {
-                e.preventDefault();
-                const pos = getTouchPos(e);
-                if (pos) {
-                    this.touchX = pos.x;
-                    this.touchY = pos.y;
-                }
+            if (!touch) return;
+            
+            e.preventDefault();
+            const pos = getTouchPos(e);
+            if (pos) {
+                this.touchX = pos.x;
+                this.touchY = pos.y;
             }
+            
         }, { passive: false });
         this.canvas.addEventListener('touchmove', (e) => {
             if (this.gameState !== 'PLAYING' || this.isPaused) return;
@@ -1237,7 +1249,6 @@ class Game {
             'Digit5': { type: 'ultra', index: 1 },
         };
         window.addEventListener('keydown', (e) => {
-            // ANGEPASST: Stellt sicher, dass der Sound bei jeder Interaktion reaktiviert wird.
             this.uiManager.soundManager.initAudio();
 
             this.keys[e.code] = true;
