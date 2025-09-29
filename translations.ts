@@ -61,7 +61,6 @@ const en = {
   shop_category_ultimate: 'Ultimate Prestige Upgrades',
   shop_upgrade_active_next_round: '(Active on next run)',
 
-  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
   nft_info_title: "About Your Collectibles",
   nft_phase1_title: "Phase 1: Pre-Minting Phase",
   nft_phase1_desc: "Currently, the Pi Network is preparing for full smart contract capabilities. Your acquired collectibles are securely registered to your account within the game, guaranteeing you the right to mint this item as a true NFT on the Pi Blockchain as soon as the technology is enabled by network updates like the upcoming Protocol 23.",
@@ -267,8 +266,12 @@ const en = {
   final_battle_msg_3: "Final Battle: Omega Nexus",
   final_battle_msg_4: "Final Battle: Nexus Prime",
   
-  game_over_title: "GAME OVER", game_over_final_score: "Final Score",
-  victory_title: "VICTORY!", victory_title_epic: "GALAXY SAVED", victory_subtitle_campaign: "Campaign Completed",
+  game_over_title: "GAME OVER",
+  game_over_final_score: "Final Score",
+  victory_title: "VICTORY!",
+  victory_title_epic: "GALAXY SAVED",
+  victory_subtitle_campaign: "Campaign Completed",
+  victory_final_score: "Final Score",
   victory_prompt: "Press ENTER to return to Menu",
   intro_prompt: "Press ENTER to Begin",
   intro_prompt_mobile: "Tap to Start Game",
@@ -282,6 +285,8 @@ const en = {
   leaderboard_no_entries: 'No entries found. Be the first!',
   leaderboard_player: 'Player',
   waves: 'Waves',
+  leaderboard_rank_label: 'Your Rank',
+  leaderboard_fetching_rank: 'Fetching rank...',
 };
 
 const de = {
@@ -347,7 +352,6 @@ const de = {
   shop_category_ultimate: 'Ultimative Prestige-Upgrades',
   shop_upgrade_active_next_round: '(Aktiv ab nächstem Versuch)',
 
-  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
   nft_info_title: "Über deine Sammlerstücke",
   nft_phase1_title: "Phase 1: Vor-Prägephase",
   nft_phase1_desc: "Aktuell bereitet sich das Pi Network auf die volle Smart-Contract-Funktionalität vor. Deine erworbenen Sammlerstücke sind sicher in deinem Account im Spiel registriert. Dies sichert dir das Anrecht, diesen Gegenstand als echtes NFT auf der Pi-Blockchain zu prägen, sobald die Technologie durch Netzwerk-Updates wie das kommende Protokoll 23 aktiviert wird.",
@@ -554,8 +558,12 @@ const de = {
   final_battle_msg_3: "Finaler Kampf: Omega Nexus",
   final_battle_msg_4: "Finaler Kampf: Nexus Prime",
 
-  game_over_title: "SPIEL VORBEI", game_over_final_score: "Endstand",
-  victory_title: "SIEG!", victory_title_epic: "GALAXIE GERETTET", victory_subtitle_campaign: "Kampagne abgeschlossen",
+  game_over_title: "SPIEL VORBEI",
+  game_over_final_score: "Endstand",
+  victory_title: "SIEG!",
+  victory_title_epic: "GALAXIE GERETTET",
+  victory_subtitle_campaign: "Kampagne abgeschlossen",
+  victory_final_score: "Endstand",
   victory_prompt: "ENTER drücken, um zum Menü zurückzukehren",
   intro_prompt: "ENTER drücken zum Starten",
   intro_prompt_mobile: "Tippen zum Starten",
@@ -569,6 +577,8 @@ const de = {
   leaderboard_no_entries: 'Keine Einträge gefunden. Sei der Erste!',
   leaderboard_player: 'Spieler',
   waves: 'Wellen',
+  leaderboard_rank_label: 'Dein Rang',
+  leaderboard_fetching_rank: 'Lade Rang...',
 };
 
 const es = {
@@ -634,7 +644,6 @@ const es = {
   shop_category_ultimate: 'Mejoras de Prestigio Supremo',
   shop_upgrade_active_next_round: '(Activo en la próxima partida)',
 
-  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
   nft_info_title: "Sobre tus Coleccionables",
   nft_phase1_title: "Fase 1: Fase de Pre-Acuñación",
   nft_phase1_desc: "Actualmente, la Red Pi se está preparando para la plena funcionalidad de los contratos inteligentes. Tus coleccionables adquiridos están registrados de forma segura en tu cuenta dentro del juego, garantizándote el derecho a acuñar este objeto como un verdadero NFT en la Blockchain de Pi tan pronto como la tecnología sea habilitada por actualizaciones de la red como el próximo Protocolo 23.",
@@ -840,8 +849,12 @@ const es = {
   final_battle_msg_3: "Batalla Final: Omega Nexus",
   final_battle_msg_4: "Batalla Final: Nexus Prime",
 
-  game_over_title: "FIN DEL JUEGO", game_over_final_score: "Puntuación Final",
-  victory_title: "¡VICTORIA!", victory_title_epic: "GALAXIA SALVADA", victory_subtitle_campaign: "Campaña Completada",
+  game_over_title: "FIN DEL JUEGO",
+  game_over_final_score: "Puntuación Final",
+  victory_title: "¡VICTORIA!",
+  victory_title_epic: "GALAXIA SALVADA",
+  victory_subtitle_campaign: "Campaña Completada",
+  victory_final_score: "Puntuación Final",
   victory_prompt: "Presiona ENTER para volver al Menú",
   intro_prompt: "Presiona ENTER para Empezar",
   intro_prompt_mobile: "Toca para Empezar",
@@ -855,6 +868,8 @@ const es = {
   leaderboard_no_entries: 'No se encontraron entradas. ¡Sé el primero!',
   leaderboard_player: 'Jugador',
   waves: 'Oleadas',
+  leaderboard_rank_label: 'Tu Rango',
+  leaderboard_fetching_rank: 'Obteniendo rango...',
 };
 
 const zh = {
@@ -920,7 +935,6 @@ const zh = {
     shop_category_ultimate: '终极声望升级',
     shop_upgrade_active_next_round: '（下次运行时生效）',
 
-    // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
     nft_info_title: "关于您的收藏品",
     nft_phase1_title: "第1阶段：预铸造阶段",
     nft_phase1_desc: "目前，Pi网络正在为全面的智能合约功能做准备。您获得的收藏品已安全地注册到您在游戏中的账户，保证您有权在网络更新（如即将到来的协议23）启用该技术后，立即将此物品作为真正的NFT在Pi区块链上进行铸造。",
@@ -1126,8 +1140,12 @@ const zh = {
     final_battle_msg_3: "最终战：欧米茄核心",
     final_battle_msg_4: "最终战：核心Prime",
     
-    game_over_title: "游戏结束", game_over_final_score: "最终分数",
-    victory_title: "胜利！", victory_title_epic: "银河已救", victory_subtitle_campaign: "战役完成",
+    game_over_title: "游戏结束",
+    game_over_final_score: "最终分数",
+    victory_title: "胜利！",
+    victory_title_epic: "银河已救",
+    victory_subtitle_campaign: "战役完成",
+    victory_final_score: "最终分数",
     victory_prompt: "按 ENTER 返回菜单",
     intro_prompt: "按 ENTER 开始",
     intro_prompt_mobile: "点击开始",
@@ -1141,6 +1159,8 @@ const zh = {
     leaderboard_no_entries: '未找到条目。成为第一人！',
     leaderboard_player: '玩家',
     waves: '波数',
+    leaderboard_rank_label: '你的排名',
+    leaderboard_fetching_rank: '正在获取排名...',
 };
 
 const ja = {
@@ -1206,7 +1226,6 @@ const ja = {
   shop_category_ultimate: 'アルティメット・プレステージ',
   shop_upgrade_active_next_round: '（次のランで有効）',
 
-  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
   nft_info_title: "コレクションについて",
   nft_phase1_title: "フェーズ1：プレミント（鋳造準備）段階",
   nft_phase1_desc: "現在、Piネットワークは完全なスマートコントラクト機能の準備を進めています。取得したコレクションはゲーム内のアカウントに安全に登録され、今後のプロトコル23などのネットワーク更新によって技術が有効になり次第、Piブロックチェーン上で真のNFTとして鋳造する権利が保証されます。",
@@ -1412,8 +1431,12 @@ const ja = {
   final_battle_msg_3: "最終決戦：オメガ・ネクサス",
   final_battle_msg_4: "最終決戦：ネクサス・プライム",
   
-  game_over_title: "ゲームオーバー", game_over_final_score: "最終スコア",
-  victory_title: "勝利！", victory_title_epic: "銀河は救われた", victory_subtitle_campaign: "キャンペーン完了",
+  game_over_title: "ゲームオーバー",
+  game_over_final_score: "最終スコア",
+  victory_title: "勝利！",
+  victory_title_epic: "銀河は救われた",
+  victory_subtitle_campaign: "キャンペーン完了",
+  victory_final_score: "最終スコア",
   victory_prompt: "ENTERキーでメニューに戻ります",
   intro_prompt: "ENTERキーで開始",
   intro_prompt_mobile: "タップして開始",
@@ -1427,6 +1450,8 @@ const ja = {
   leaderboard_no_entries: 'エントリーが見つかりません。最初のエントリーを目指しましょう！',
   leaderboard_player: 'プレイヤー',
   waves: 'ウェーブ',
+  leaderboard_rank_label: 'あなたの順位',
+  leaderboard_fetching_rank: '順位を取得中...',
 };
 
 const it = {
@@ -1492,7 +1517,6 @@ const it = {
   shop_category_ultimate: 'Potenziamenti di Prestigio Supremi',
   shop_upgrade_active_next_round: '(Attivo alla prossima partita)',
 
-  // --- AKTUALISIERTE NFT-BESCHREIBUNGEN ---
   nft_info_title: "Riguardo ai Tuoi Collezionabili",
   nft_phase1_title: "Fase 1: Fase di Pre-Conio",
   nft_phase1_desc: "Attualmente, la Rete Pi si sta preparando per la piena funzionalità degli smart contract. I tuoi collezionabili acquisiti sono registrati in modo sicuro al tuo account all'interno del gioco, garantendoti il diritto di coniare questo oggetto come un vero NFT sulla Blockchain di Pi non appena la tecnologia sarà abilitata da aggiornamenti della rete come il prossimo Protocollo 23.",
@@ -1698,8 +1722,12 @@ const it = {
   final_battle_msg_3: "Battaglia Finale: Omega Nexus",
   final_battle_msg_4: "Battaglia Finale: Nexus Prime",
 
-  game_over_title: "FINE PARTITA", game_over_final_score: "Punteggio Finale",
-  victory_title: "VITTORIA!", victory_title_epic: "GALASSIA SALVATA", victory_subtitle_campaign: "Campagna Completata",
+  game_over_title: "FINE PARTITA",
+  game_over_final_score: "Punteggio Finale",
+  victory_title: "VITTORIA!",
+  victory_title_epic: "GALASSIA SALVATA",
+  victory_subtitle_campaign: "Campagna Completata",
+  victory_final_score: "Punteggio Finale",
   victory_prompt: "Premi INVIO per tornare al Menu",
   intro_prompt: "Premi INVIO per Iniziare",
   intro_prompt_mobile: "Tocca per Iniziare",
@@ -1713,6 +1741,8 @@ const it = {
   leaderboard_no_entries: 'Nessun punteggio trovato. Sii il primo!',
   leaderboard_player: 'Giocatore',
   waves: 'Ondate',
+  leaderboard_rank_label: 'La tua Posizione',
+  leaderboard_fetching_rank: 'Recupero posizione...',
 };
 
 
