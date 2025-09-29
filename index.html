@@ -13,7 +13,7 @@
     <script src="//cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
 
-  <script type="module" crossorigin src="/assets/index.D4527AYg.js"></script>
+  <script type="module" crossorigin src="/assets/index.CKJyomSl.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index._z4L6HgW.css">
 </head>
 <body>
@@ -160,34 +160,20 @@
         </div>
     </div>
 
-    <!-- Container für den Game-Over-Bildschirm -->
-     <div id="game-over-container" class="fullscreen-container">
-    <div class="menu-box">
+    <!-- KORRIGIERTER Container für den Game-Over-Bildschirm -->
     <div id="game-over-container" style="display: none;">
         <div class="menu">
             <div class="menu-header">
-<p>Dein Score: <span id="final-score">0</span></p>
-        
-        <!-- NEUES ELEMENT -->
-        <div id="final-rank-display" class="final-rank"></div>
-
-        <div class="button-container">
-            <!-- ... Buttons ... -->
-        </div>
-    </div>
-</div>
-
                 <h1 data-translate-key="game_over_title">Game Over</h1>
             </div>
             <div class="final-score-container">
                 <span data-translate-key="game_over_final_score">Final Score</span>: <span id="final-score">0</span>
             </div>
+            <div id="final-rank-display" class="final-rank"></div>
             <button class="menu-button" id="restart-from-gameover-button" data-translate-key="btn_restart">Restart</button>
             <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
         </div>
     </div>
-
-    <p>Dein Score: <span id="final-score">0</span></p>
 
     <!-- ÜBERARBEITETER SHOP-CONTAINER -->
     <div id="shop-container" style="display: none;">
