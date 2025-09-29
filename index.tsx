@@ -343,9 +343,16 @@ class PiManager {
     }
     
     public showAd() {
-        if (!this.Pi) { return; }
-        try { this.Pi.showAd(); } 
-        catch(err) { console.error("Error calling Pi.showAd():", err); }
+        if (!this.Pi || typeof this.Pi.showAd !== 'function') {
+            console.warn("Pi.showAd() is not available in this environment (e.g., localhost). Skipping ad.");
+            return;
+        }
+        try { 
+            this.Pi.showAd(); 
+        } 
+        catch(err) { 
+            console.error("Error calling Pi.showAd():", err); 
+        }
     }
 }
 
@@ -404,15 +411,25 @@ class Player extends EntityFamily { public speed: number; public lives: number; 
     draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = this.isGhosted() ? 0.5 : 1; const equippedSkinId = this.game.shopManager.playerCosmetics.equipped_skin; const currentImage = playerImageMap[equippedSkinId] || playerImageMap['skin_default']; const visualWidth = 120; const visualHeight = 120; const drawX = (this.pos.x + this.width / 2) - (visualWidth / 2); const drawY = (this.pos.y + this.height / 2) - (visualHeight / 2); if (this.isShielded()) { const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5; const glowSize = 10 + pulse * 15; const glowAlpha = 0.7 + pulse * 0.3; ctx.shadowColor = `rgba(11, 255, 255, ${glowAlpha})`; ctx.shadowBlur = glowSize; } ctx.drawImage(currentImage, drawX, drawY, visualWidth, visualHeight); ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; const engineLeftX = this.pos.x + this.width * 0.1; const engineRightX = this.pos.x + this.width * 0.9; const engineY = drawY + visualHeight * 0.75; const drawFlame = (x: number, y: number) => { ctx.save(); const baseLength = 25, baseWidth = 9, swayAmount = 8; const STEERING_FLAME_OFFSET = 15; for (let i = 0; i < 3; i++) { const currentLength = baseLength + Math.random() * 10; const currentWidth = baseWidth + Math.random() * 4; const tipSway = (Math.random() - 0.5) * swayAmount; const nozzleX = x, nozzleY = y; const steeringOffset = -this.steeringDirection * STEERING_FLAME_OFFSET; const tipX = x + tipSway + steeringOffset; const tipY = y + currentLength; const controlX1 = x - currentWidth + steeringOffset * 0.5; const controlY1 = y + currentLength * 0.5; const controlX2 = x + currentWidth + steeringOffset * 0.5; const controlY2 = y + currentLength * 0.5; const gradient = ctx.createLinearGradient(nozzleX, nozzleY, nozzleX, tipY); gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.7)'); gradient.addColorStop(1, 'rgba(0, 255, 255, 0)'); ctx.fillStyle = gradient; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(nozzleX, nozzleY); ctx.quadraticCurveTo(controlX1, controlY1, tipX, tipY); ctx.quadraticCurveTo(controlX2, controlY2, nozzleX, nozzleY); ctx.closePath(); ctx.fill(); } ctx.restore(); }; ctx.shadowColor = '#00FFFF'; ctx.shadowBlur = 20; drawFlame(engineLeftX, engineY); drawFlame(engineRightX, engineY); ctx.shadowBlur = 0; this.drones.forEach(d => d.draw(ctx)); ctx.restore(); }
     shoot(): void { this.powerUpManager.shoot(); } takeHit(damagePercentage: number): void { if (this.isGhosted()) return; if (this.isShielded()) { this.powerUpManager.deactivate('SHIELD'); this.game.uiManager.soundManager.play('shieldDown'); return;        }
         
-        // NEU: Logik für den "Geisterfresser"-Bonus
         if (this.game.shopManager.getEquippedCollectibleBonus() === 'GHOST_CHANCE' && Math.random() < 0.25) {
             this.powerUpManager.activate('GHOST_PROTOCOL', 3000);
-            return; // Kein Schaden erlitten, da der Ghost-Modus aktiviert wurde
+            return;
         }
  this.powerUpManager.onPlayerHit(); this.energy -= damagePercentage; this.game.uiManager.soundManager.play('playerHit'); if (this.energy <= 0) { this.lives--; if (this.lives <= 0) { if (this.availableReviveCrystals.length > 0) { const crystalToUse = this.availableReviveCrystals.shift()!; this.game.startReviveSequence(this, crystalToUse); return; } this.destroy(); this.game.addEntity(new Explosion(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2, '#FFFFFF', 2)); this.game.uiManager.soundManager.play('playerExplosion'); } else { this.energy = this.maxEnergy; this.pos.x = this.game.width / 2 - this.width / 2; this.pos.y = this.game.height - 80; this.powerUpManager.activate('GHOST_PROTOCOL', 5000); } } } public finalizeRevive(): void { this.lives = 1; this.energy = this.maxEnergy * 0.5; this.game.addEntity(new ReviveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.height / 2)); this.game.uiManager.soundManager.play('revive'); this.powerUpManager.activate('GHOST_PROTOCOL', 3000); this.game.changeState('PLAYING'); } isShielded(): boolean { return this.powerUpManager.isActive('SHIELD'); } isGhosted(): boolean { return this.powerUpManager.isActive('GHOST_PROTOCOL'); } isScoreBoosted(): boolean { return this.powerUpManager.isActive('SCORE_BOOST'); } }
 class VoidPool extends EntityFamily { private life: number = 8000; private radius: number = 0; private maxRadius: number = 80; private damageCooldown: number = 500; private damageTimer: number = 0; constructor(game: Game, x: number, y: number) { super(game, x, y, 0, 0, 'effect', 'VOID_POOL'); } update(dt: number): void { this.life -= dt; if (this.life <= 0) { this.destroy(); return; } this.radius = Math.min(this.maxRadius, this.radius + 30 * (dt / 1000)); this.damageTimer -= dt; if (this.damageTimer <= 0 && this.game.player && !this.game.player.isGhosted()) { const dist = Math.hypot(this.pos.x - (this.game.player.pos.x + this.game.player.width / 2), this.pos.y - (this.game.player.pos.y + this.game.player.height / 2)); if (dist < this.radius) { this.game.player.takeHit(15); this.damageTimer = this.damageCooldown; } } } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const alpha = Math.min(1, this.life / 2000); const pulse = 1 + Math.sin(Date.now() / 300) * 0.1; ctx.globalAlpha = alpha * 0.7; const gradient = ctx.createRadialGradient(this.pos.x, this.pos.y, 0, this.pos.x, this.pos.y, this.radius * pulse); gradient.addColorStop(0, 'rgba(148, 0, 211, 0.8)'); gradient.addColorStop(0.7, 'rgba(75, 0, 130, 0.5)'); gradient.addColorStop(1, 'rgba(44, 0, 62, 0)'); ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.radius * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
 class BossSentinelPrime extends Enemy { private attackPattern: number = 0; private attackTimer: number = 5000; private movementPattern: string = 'ENTER'; private hSpeed: number; private image: HTMLImageElement; private patrolY: number = 50; private isPreparingCharge: boolean = false; private chargePreparationTimer: number = 0; private isPreparingLineAttack: boolean = false; private lineAttackPreparationTimer: number = 0; private chargeTargetPos: Vector2D | null = null; private chargeOriginPos: Vector2D | null = null; private visualOffsetY: number; private isFinalBattleVersion: boolean; constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) { const visualHeight = 150; const hitboxHeight = 100; super(game, game.width / 2 - 112.5, -visualHeight, 225, hitboxHeight, health, 5000, 'BOSS_SENTINEL_PRIME'); this.visualOffsetY = (visualHeight - hitboxHeight) / 2; this.isBoss = true; this.hSpeed = 100 * speedMultiplier; this.image = bossSentinelPrimeImg; this.collisionDamage = 50; this.isFinalBattleVersion = isFinalBattleVersion; if (this.isFinalBattleVersion) { this.attackTimer = 3500; } } update(dt: number): void { const dt_s = dt / 1000; if (this.isPreparingCharge) { this.chargePreparationTimer -= dt; if (this.chargePreparationTimer <= 0) this.executeAttack(); return; } if (this.isPreparingLineAttack) { this.lineAttackPreparationTimer -= dt; if (this.lineAttackPreparationTimer <= 0) this.executeAttack(); return; } if (this.movementPattern === 'DASH_TO_PLAYER' && this.chargeTargetPos) { const chargeSpeed = 800; const targetX = this.chargeTargetPos.x - (this.width / 2); const targetY = this.chargeTargetPos.y - (this.height / 2); const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x); this.pos.x += Math.cos(angle) * chargeSpeed * dt_s; this.pos.y += Math.sin(angle) * chargeSpeed * dt_s; const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y); if (dist < 20) this.movementPattern = 'RETURN_TO_ORIGIN'; } else if (this.movementPattern === 'RETURN_TO_ORIGIN' && this.chargeOriginPos) { const returnSpeed = 400; const targetX = this.chargeOriginPos.x; const targetY = this.chargeOriginPos.y; const angle = Math.atan2(targetY - this.pos.y, targetX - this.pos.x); this.pos.x += Math.cos(angle) * returnSpeed * dt_s; this.pos.y += Math.sin(angle) * returnSpeed * dt_s; const dist = Math.hypot(targetX - this.pos.x, targetY - this.pos.y); if (dist < 20) { this.movementPattern = 'PATROL'; this.chargeOriginPos = null; this.chargeTargetPos = null; this.pos.x = targetX; this.pos.y = targetY; } } else if (this.movementPattern === 'ENTER') { this.pos.y += 100 * dt_s; if (this.pos.y >= this.patrolY) { this.pos.y = this.patrolY; this.movementPattern = 'PATROL'; } } else if (this.movementPattern === 'PATROL') { this.pos.x += this.hSpeed * dt_s; if (this.pos.x <= 0 || this.pos.x >= this.game.width - this.width) { this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); this.hSpeed *= -1; } } this.attackTimer -= dt; if (this.attackTimer <= 0) { this.prepareAttack(); this.attackTimer = this.isFinalBattleVersion ? 3500 : 5000; } } prepareAttack(): void { this.attackPattern = Math.floor(Math.random() * 3); switch (this.attackPattern) { case 0: this.isPreparingLineAttack = true; this.lineAttackPreparationTimer = 1500; break; case 1: this.executeAttack(); break; case 2: if (this.game.player) { this.isPreparingCharge = true; this.chargePreparationTimer = 1500; this.chargeOriginPos = new Vector2D(this.pos.x, this.pos.y); this.chargeTargetPos = new Vector2D(this.game.player.pos.x + this.game.player.width / 2, this.game.player.pos.y + this.game.player.height / 2); this.movementPattern = 'PREPARE_CHARGE'; } break; } } executeAttack(): void { const { x, y } = this.pos; const { width: w, height: h } = this; const projectileType = this.isFinalBattleVersion ? FireballProjectile : PlasmaBallProjectile; switch (this.attackPattern) { case 0: this.game.uiManager.soundManager.play('enemyPlasmaShoot'); const attackWidth = this.width * 0.7; const startX = x + (this.width * 0.15); for (let i = 0; i < 7; i++) { this.game.addEntity(new projectileType(this.game, startX + (i * attackWidth / 6), y + this.height, 0, 360, this.collisionDamage)); } break; case 1: this.game.uiManager.soundManager.play('enemyPlasmaShoot'); for (let i = 0; i < 12; i++) { const angle = i * Math.PI / 6; this.game.addEntity(new projectileType(this.game, x + this.width / 2, y + this.height / 2, Math.cos(angle) * 240, Math.sin(angle) * 240, this.collisionDamage)); } break; case 2: this.movementPattern = 'DASH_TO_PLAYER'; break; } this.isPreparingCharge = false; this.isPreparingLineAttack = false; } draw(ctx: CanvasRenderingContext2D): void { if (!this.image || !this.image.complete) return; ctx.save(); if (this.isPreparingLineAttack) { const glow = (1 - this.lineAttackPreparationTimer / 1500) * 0.8; ctx.shadowColor = `rgba(255, 0, 0, ${glow})`; ctx.shadowBlur = 30; } else if (this.isPreparingCharge) { const pulse = 1 + Math.sin(Date.now() / 100); ctx.shadowColor = `rgba(255, 215, 0, 0.8)`; ctx.shadowBlur = 20 + pulse * 10; } ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 150); ctx.restore(); } }
-class BossVoidSerpent extends Enemy { private image: HTMLImageElement; private attackTimer: number = 4000; private angle: number = 0; private verticalTargetY: number = 80; private waveSpeed: number = 1.2; private waveAmplitude: number; private isPreparingToAttack: boolean = false; private attackPreparationTimer: number = 0; private readonly attackPreparationDuration: number = 1000; private visualOffsetY: number; private isFinalBattleVersion: boolean; constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) { const hitboxHeight = 100; const visualHeight = 240; super(game, game.width / 2 - 90, -visualHeight, 180, hitboxHeight, health * 0.7, 7500, 'BOSS_VOID_SERPENT'); this.visualOffsetY = (visualHeight - hitboxHeight) / 2; this.isBoss = true; this.image = bossVoidSerpentSrc; this.collisionDamage = 90; this.speed = 40 * speedMultiplier; this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20; this.isFinalBattleVersion = isFinalBattleVersion; } update(dt: number): void { if (this.isPreparingToAttack) { this.attackPreparationTimer -= dt; if (this.attackPreparationTimer <= 0) { this.isPreparingToAttack = false; this.executeAttack(); } return; } const dt_s = dt / 1000; if (this.pos.y < this.verticalTargetY) { this.pos.y += this.speed * dt_s; } else { this.angle += this.waveSpeed * dt_s; this.pos.x = (this.game.width / 2 - this.width / 2) + Math.sin(this.angle) * this.waveAmplitude; this.verticalTargetY = 80 + Math.cos(this.angle * 0.5) * 40; this.pos.y += (this.verticalTargetY - this.pos.y) * 0.1; } this.attackTimer -= dt; if (this.attackTimer <= 0 && this.pos.y >= 60) { this.isPreparingToAttack = true; this.attackPreparationTimer = this.attackPreparationDuration; const baseCooldown = Math.max(2000, 3500 - this.game.level * 100); this.attackTimer = baseCooldown * (1 + Math.random() * 0.5); } } private executeAttack(): void { const x = this.pos.x, y = this.pos.y, w = this.width; const attackType = Math.random() > 0.5 ? 'SPREAD' : 'WHIP'; if (this.isFinalBattleVersion) { this.game.addEntity(new VoidPool(this.game, x + w / 2, y + this.height / 2)); } if (attackType === 'SPREAD') { this.game.uiManager.soundManager.play('enemyPlasmaShoot'); const spawnX = x + w / 2; const spawnY = y + this.height / 2; for (let i = 0; i < 4; i++) { const angle = (Math.PI / 2.5) / 3 * (i - 1.5) + Math.PI / 2; this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 180, Math.sin(angle) * 180, this.collisionDamage)); } } else { if (this.game.player) { for (let i = 0; i < 3; i++) { setTimeout(() => { if (!this.isAlive()) return; const p = this.game.player!; const angle = Math.atan2(p.pos.y - this.pos.y, p.pos.x - this.pos.x); this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + w/2, this.pos.y + this.height, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage)); this.game.uiManager.soundManager.play('enemyShoot'); }, i * 150); } } } } draw(ctx: CanvasRenderingContext2D): void { if (!this.image || !this.image.complete) return; ctx.save(); const pulse = 1 + Math.sin(Date.now() / 500) * 0.1; ctx.globalAlpha = 0.85; ctx.shadowColor = `rgba(148, 0, 211, 0.7)`; ctx.shadowBlur = 25 * pulse; if (this.isPreparingToAttack) { const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9; ctx.shadowColor = `rgba(148, 0, 211, ${glow})`; ctx.shadowBlur = 20 + glow * 15; } ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240); ctx.restore(); } }
+class BossVoidSerpent extends Enemy { private image: HTMLImageElement; private attackTimer: number = 4000; private angle: number = 0; private verticalTargetY: number = 80; private waveSpeed: number = 1.2; private waveAmplitude: number; private isPreparingToAttack: boolean = false; private attackPreparationTimer: number = 0; private readonly attackPreparationDuration: number = 1000; private visualOffsetY: number; private isFinalBattleVersion: boolean; constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) {
+        const hitboxHeight = 100;
+        const visualHeight = 240;
+        super(game, game.width / 2 - 90, -visualHeight, 180, hitboxHeight, health * 0.7, 7500, 'BOSS_VOID_SERPENT');
+        this.visualOffsetY = (visualHeight - hitboxHeight) / 2;
+        this.isBoss = true;
+        this.image = bossVoidSerpentImg; 
+        this.collisionDamage = 90;
+        this.speed = 40 * speedMultiplier;
+        this.waveAmplitude = (this.game.width / 2) - (this.width / 2) - 20;
+        this.isFinalBattleVersion = isFinalBattleVersion;
+    } update(dt: number): void { if (this.isPreparingToAttack) { this.attackPreparationTimer -= dt; if (this.attackPreparationTimer <= 0) { this.isPreparingToAttack = false; this.executeAttack(); } return; } const dt_s = dt / 1000; if (this.pos.y < this.verticalTargetY) { this.pos.y += this.speed * dt_s; } else { this.angle += this.waveSpeed * dt_s; this.pos.x = (this.game.width / 2 - this.width / 2) + Math.sin(this.angle) * this.waveAmplitude; this.verticalTargetY = 80 + Math.cos(this.angle * 0.5) * 40; this.pos.y += (this.verticalTargetY - this.pos.y) * 0.1; } this.attackTimer -= dt; if (this.attackTimer <= 0 && this.pos.y >= 60) { this.isPreparingToAttack = true; this.attackPreparationTimer = this.attackPreparationDuration; const baseCooldown = Math.max(2000, 3500 - this.game.level * 100); this.attackTimer = baseCooldown * (1 + Math.random() * 0.5); } } private executeAttack(): void { const x = this.pos.x, y = this.pos.y, w = this.width; const attackType = Math.random() > 0.5 ? 'SPREAD' : 'WHIP'; if (this.isFinalBattleVersion) { this.game.addEntity(new VoidPool(this.game, x + w / 2, y + this.height / 2)); } if (attackType === 'SPREAD') { this.game.uiManager.soundManager.play('enemyPlasmaShoot'); const spawnX = x + w / 2; const spawnY = y + this.height / 2; for (let i = 0; i < 4; i++) { const angle = (Math.PI / 2.5) / 3 * (i - 1.5) + Math.PI / 2; this.game.addEntity(new FireballProjectile(this.game, spawnX, spawnY, Math.cos(angle) * 180, Math.sin(angle) * 180, this.collisionDamage)); } } else { if (this.game.player) { for (let i = 0; i < 3; i++) { setTimeout(() => { if (!this.isAlive()) return; const p = this.game.player!; const angle = Math.atan2(p.pos.y - this.pos.y, p.pos.x - this.pos.x); this.game.addEntity(new PlasmaBallProjectile(this.game, this.pos.x + w/2, this.pos.y + this.height, Math.cos(angle) * 600, Math.sin(angle) * 600, this.collisionDamage)); this.game.uiManager.soundManager.play('enemyShoot'); }, i * 150); } } } } draw(ctx: CanvasRenderingContext2D): void { if (!this.image || !this.image.complete) return; ctx.save(); const pulse = 1 + Math.sin(Date.now() / 500) * 0.1; ctx.globalAlpha = 0.85; ctx.shadowColor = `rgba(148, 0, 211, 0.7)`; ctx.shadowBlur = 25 * pulse; if (this.isPreparingToAttack) { const glow = (1 - this.attackPreparationTimer / this.attackPreparationDuration) * 0.9; ctx.shadowColor = `rgba(148, 0, 211, ${glow})`; ctx.shadowBlur = 20 + glow * 15; } ctx.drawImage(this.image, this.pos.x, this.pos.y - this.visualOffsetY, this.width, 240); ctx.restore(); } }
 class BossOmegaNexus extends Enemy { private baseImage: HTMLImageElement; private ringAngle1: number = 0; private plasmaFlicker: number = 0; private ringRotationSpeed: number = 0.4; private phase: number = 1; private attackTimer: number = 5000; private movementPattern: 'ENTERING' | 'SWOOPING' | 'DRIFTING' = 'ENTERING'; private movementTarget: Vector2D; private isInvulnerable: boolean = false; private visualOffsetY: number; private isPreparingAttack: boolean = false; private preparationTimer: number = 0; private currentAttack: 'CROSSFIRE' | 'LASER_FAN' | 'NEXUS_CANNON' | 'NONE' = 'NONE'; private laserFanActive: boolean = false; private laserFanDuration: number = 3500; private laserFanAngle: number = 0; private laserFanSweepSpeed: number = 0.4; private energyOrbs: { pos: Vector2D, fireCooldown: number, speed: number }[] = []; private isChargingCannon: boolean = false; private cannonChargeTimer: number = 4000; private isFiringCannon: boolean = false; private cannonDurationTimer: number = 3000; private isFinalBattleVersion: boolean; constructor(game: Game, health: number, speedMultiplier: number, isFinalBattleVersion: boolean = false) { const visualWidth = 240; const visualHeight = 184; const hitboxHeight = 110; super(game, game.width / 2 - visualWidth / 2, -visualHeight, visualWidth, hitboxHeight, health, 20000, 'BOSS_OMEGA_NEXUS'); this.visualOffsetY = (visualHeight - hitboxHeight) / 2; this.isBoss = true; this.baseImage = bossOmegaNexusBaseImg; this.collisionDamage = 150; this.movementTarget = new Vector2D(game.width / 2, 80); this.isFinalBattleVersion = isFinalBattleVersion; } takeHit(damage: number): void { if (this.isInvulnerable) return; super.takeHit(damage); if (!this.isAlive()) return; const healthPercentage = this.health / this.maxHealth; if (this.phase === 1 && healthPercentage <= 0.70) this.startPhaseTransition(2); else if (this.phase === 2 && healthPercentage <= 0.35) this.startPhaseTransition(3); } private startPhaseTransition(newPhase: number): void { this.phase = newPhase; this.isInvulnerable = true; this.attackTimer = 2000; this.game.addEntity(new ShockwaveEffect(this.game, this.pos.x + this.width / 2, this.pos.y + this.visualOffsetY, '#FFFFFF')); this.game.uiManager.soundManager.play('nuke'); this.ringRotationSpeed += 0.3; if (newPhase === 3) this.spawnEnergyOrbs(); setTimeout(() => { this.isInvulnerable = false; }, this.isFinalBattleVersion ? 1500 : 2500); } update(dt: number): void { const dt_s = dt / 1000; this.ringAngle1 += (this.ringRotationSpeed * 1.0) * dt_s; this.plasmaFlicker = Math.random(); this.handleMovement(dt_s); if (this.movementPattern !== 'SWOOPING') this.attackTimer -= dt; if (this.isPreparingAttack) { this.preparationTimer -= dt; if (this.preparationTimer <= 0) { this.isPreparingAttack = false; this.executeAttack(); } return; } if (this.laserFanActive) { this.updateLaserFan(dt_s); this.laserFanDuration -= dt; if (this.laserFanDuration <= 0) { this.laserFanActive = false; this.movementPattern = 'SWOOPING'; this.selectNewDriftTarget(); } } if (this.isChargingCannon) { this.cannonChargeTimer -= dt; if(this.cannonChargeTimer <= 0) { this.isChargingCannon = false; this.isFiringCannon = true; this.cannonDurationTimer = 3000; this.game.uiManager.soundManager.playLoop('laser'); } } if (this.isFiringCannon) { this.cannonDurationTimer -= dt; if(this.cannonDurationTimer <= 0) { this.isFiringCannon = false; this.movementPattern = 'SWOOPING'; this.selectNewDriftTarget(); this.game.uiManager.soundManager.stopLoop('laser'); } } if (this.phase === 3) this.updateEnergyOrbs(dt_s); if (this.attackTimer <= 0 && this.movementPattern === 'DRIFTING' && !this.isPreparingAttack && !this.laserFanActive && !this.isChargingCannon) this.prepareNextAttack(); } private handleMovement(dt_s: number): void { const speed = this.movementPattern === 'SWOOPING' ? 4 : 1.2; this.pos.x += (this.movementTarget.x - (this.pos.x + this.width / 2)) * speed * dt_s; this.pos.y += (this.movementTarget.y - this.pos.y) * speed * dt_s; this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width)); const dist = Math.hypot(this.movementTarget.x - (this.pos.x + this.width / 2), this.movementTarget.y - this.pos.y); if (dist < 15 && this.movementPattern !== 'DRIFTING') { this.movementPattern = 'DRIFTING'; this.selectNewDriftTarget(); } if (this.movementPattern === 'DRIFTING' && dist < 20) this.selectNewDriftTarget(); } private selectNewDriftTarget(): void { const margin = this.width / 2; const newX = Math.random() * (this.game.width - margin * 2) + margin; this.movementTarget = new Vector2D(newX, 60 + Math.random() * 40); } prepareNextAttack(): void { this.isPreparingAttack = true; this.movementPattern = 'SWOOPING'; const margin = this.width / 2; const newX = this.pos.x > this.game.width / 2 ? margin : this.game.width - margin; switch (this.phase) { case 1: this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1200; this.attackTimer = 4000; this.movementTarget = new Vector2D(this.game.width / 2, 80); break; case 2: if (Math.random() > 0.4) { this.currentAttack = 'LASER_FAN'; this.preparationTimer = 2000; this.attackTimer = 7000; this.movementTarget = new Vector2D(newX, 80); } else { this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1200; this.attackTimer = 5000; this.movementTarget = new Vector2D(this.game.width / 2, 80); } break; case 3: const roll = Math.random(); if (roll > 0.65) { this.currentAttack = 'NEXUS_CANNON'; this.preparationTimer = 1500; this.attackTimer = 12000; this.movementTarget = new Vector2D(this.game.width / 2, 60); } else if (roll > 0.3) { this.currentAttack = 'LASER_FAN'; this.preparationTimer = 1800; this.attackTimer = 6000; this.movementTarget = new Vector2D(newX, 80); } else { this.currentAttack = 'CROSSFIRE'; this.preparationTimer = 1000; this.attackTimer = 4000; this.movementPattern = 'DRIFTING'; } break; } } executeAttack(): void { switch (this.currentAttack) { case 'CROSSFIRE': this.fireCrossfirePulse(); if(this.phase < 3) this.movementPattern = 'DRIFTING'; break; case 'LASER_FAN': this.laserFanActive = true; this.laserFanDuration = 3500; this.laserFanAngle = 0; this.laserFanSweepSpeed = (this.pos.x > this.game.width / 2 ? -1 : 1) * 0.3; break; case 'NEXUS_CANNON': this.isChargingCannon = true; this.cannonChargeTimer = 4000; break; } this.currentAttack = 'NONE'; } fireCrossfirePulse(): void { this.game.uiManager.soundManager.play('enemyPlasmaShoot'); const spawnPointLeft = new Vector2D(this.pos.x + 40, this.pos.y + this.height * 0.5 + this.visualOffsetY); const spawnPointRight = new Vector2D(this.pos.x + this.width - 40, this.pos.y + this.height * 0.5 + this.visualOffsetY); const speed = 500; for (let i = 0; i < 5; i++) { const angleLeft = (Math.PI / 4) + (i * (Math.PI / 7)) - ((Math.PI / 7) * 2); const angleRight = (3 * Math.PI / 4) - (i * (Math.PI / 7)) + ((Math.PI / 7) * 2); setTimeout(() => { if (!this.isAlive()) return; this.game.addEntity(new PlasmaBallProjectile(this.game, spawnPointLeft.x, spawnPointLeft.y, Math.cos(angleLeft) * speed, Math.sin(angleLeft) * speed, 35)); this.game.addEntity(new PlasmaBallProjectile(this.game, spawnPointRight.x, spawnPointRight.y, Math.cos(angleRight) * speed, Math.sin(angleRight) * speed, 35)); }, i * 80); } } updateLaserFan(dt_s: number): void { this.laserFanAngle += this.laserFanSweepSpeed * dt_s; const maxAngle = Math.PI / 4; if (Math.abs(this.laserFanAngle) > maxAngle) { this.laserFanSweepSpeed *= -1; this.laserFanAngle = Math.sign(this.laserFanAngle) * maxAngle; } } spawnEnergyOrbs(): void { const orbY = this.pos.y + this.visualOffsetY; this.energyOrbs.push( { pos: new Vector2D(this.pos.x, orbY), fireCooldown: 1500, speed: 120 }, { pos: new Vector2D(this.pos.x + this.width, orbY), fireCooldown: 1500, speed: 120 } ); } updateEnergyOrbs(dt_s: number): void { if (!this.game.player) return; const p = this.game.player; this.energyOrbs.forEach(orb => { const targetY = p.pos.y - 100; const angleToTarget = Math.atan2(targetY - orb.pos.y, p.pos.x - orb.pos.x); orb.pos.x += Math.cos(angleToTarget) * orb.speed * dt_s; orb.pos.y += Math.sin(angleToTarget) * orb.speed * dt_s; orb.fireCooldown -= dt_s * 1000; if (orb.fireCooldown <= 0) { this.game.uiManager.soundManager.play('enemyShoot'); const angleToPlayer = Math.atan2(p.pos.y + p.height/2 - orb.pos.y, p.pos.x + p.width/2 - orb.pos.x); this.game.addEntity(new PlasmaBallProjectile(this.game, orb.pos.x, orb.pos.y, Math.cos(angleToPlayer) * 400, Math.sin(angleToPlayer) * 400, 30)); orb.fireCooldown = (this.isFinalBattleVersion ? 1000 : 1500) + Math.random() * 800; } }); } private drawNexusRings(ctx: CanvasRenderingContext2D, centerX: number, centerY: number): void { let primaryColor = this.phase === 1 ? '#00FFFF' : this.phase === 2 ? '#EE82EE' : '#FF4136'; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.save(); const corePulse = 1 + Math.sin(Date.now() / 200) * 0.15; const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 40 * corePulse); coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)'); coreGrad.addColorStop(0.6, primaryColor); coreGrad.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = coreGrad; ctx.beginPath(); ctx.arc(centerX, centerY, 40 * corePulse, 0, Math.PI * 2); ctx.fill(); ctx.restore(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(this.ringAngle1); ctx.lineWidth = 2 + this.plasmaFlicker * 3; ctx.strokeStyle = primaryColor; ctx.globalAlpha = 0.4 + this.plasmaFlicker * 0.4; for (let i = 0; i < 30; i++) { const angle = (i / 30) * Math.PI * 2; const startRadius = 80; const endRadius = 100 + Math.sin(i * 5 + Date.now() / 100) * 20; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * startRadius, Math.sin(angle) * startRadius); ctx.lineTo(Math.cos(angle) * endRadius, Math.sin(angle) * endRadius); ctx.stroke(); } ctx.restore(); ctx.restore(); }
     draw(ctx: CanvasRenderingContext2D): void { if (!this.baseImage || !this.baseImage.complete) return; const visualX = this.pos.x; const visualY = this.pos.y - this.visualOffsetY; const centerX = visualX + this.width / 2; const centerY = visualY + this.height / 2 + this.visualOffsetY; if(this.isInvulnerable) { ctx.save(); const pulse = 1 + Math.sin(Date.now() / 100) * 0.05; ctx.globalAlpha = 0.8; ctx.shadowColor = '#FFFFFF'; ctx.shadowBlur = 40; ctx.translate(centerX, centerY); ctx.scale(pulse, pulse); ctx.translate(-centerX, -centerY); } ctx.drawImage(this.baseImage, visualX, visualY, this.width, this.height + this.visualOffsetY * 2); this.drawNexusRings(ctx, centerX, centerY); if(this.isInvulnerable) ctx.restore(); if (this.isChargingCannon) { const chargeRatio = 1 - (this.cannonChargeTimer / 4000); const radius = (this.width * 0.4) * chargeRatio; if(Math.random() > 0.5) { this.game.addEntity(new Particle(this.game, centerX + (Math.random() - 0.5) * 800, centerY + (Math.random() - 0.5) * 800, '#FF4136', 0.3, 4)); } ctx.save(); const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius); grad.addColorStop(0, `rgba(255, 255, 255, ${chargeRatio})`); grad.addColorStop(0.8, `rgba(255, 65, 54, ${chargeRatio * 0.7})`); grad.addColorStop(1, `rgba(255, 140, 0, 0)`); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } if (this.isFiringCannon) { const beamWidth = this.game.width * 1.2; const beamX = centerX - beamWidth / 2; ctx.save(); ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(Date.now() / 50) * 0.2})`; ctx.fillRect(beamX, visualY, beamWidth, this.game.height); const grad = ctx.createLinearGradient(centerX - 150, 0, centerX + 150, 0); grad.addColorStop(0, 'rgba(255, 65, 54, 0)'); grad.addColorStop(0.5, 'rgba(255, 65, 54, 0.6)'); grad.addColorStop(1, 'rgba(255, 65, 54, 0)'); ctx.fillStyle = grad; ctx.fillRect(centerX - 150, visualY, 300, this.game.height); ctx.restore(); } if (this.laserFanActive) { const laserOriginX = this.pos.x > this.game.width / 2 ? visualX + 40 : visualX + this.width - 40; const laserOriginY = centerY; for (let i = 0; i < 7; i++) { const angle = this.laserFanAngle + (i - 3) * (Math.PI / 2 / 6); const endX = laserOriginX + Math.sin(angle) * this.game.height * 1.5; const endY = laserOriginY + Math.cos(angle) * this.game.height * 1.5; ctx.save(); ctx.beginPath(); ctx.moveTo(laserOriginX, laserOriginY); ctx.lineTo(endX, endY); ctx.strokeStyle = `rgba(255, 0, 255, 0.6)`; ctx.lineWidth = 10; ctx.shadowColor = '#EE82EE'; ctx.shadowBlur = 20; ctx.stroke(); ctx.strokeStyle = `rgba(255, 255, 255, 0.8)`; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); } } this.energyOrbs.forEach(orb => { ctx.save(); const pulse = Math.sin(Date.now() / 200); const radius = 25 + pulse * 5; const gradient = ctx.createRadialGradient(orb.pos.x, orb.pos.y, 0, orb.pos.x, orb.pos.y, radius); gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); gradient.addColorStop(0.5, 'rgba(255, 100, 100, 1)'); gradient.addColorStop(1, 'rgba(255, 0, 0, 0)'); ctx.fillStyle = gradient; ctx.shadowColor = '#FF4136'; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(orb.pos.x, orb.pos.y, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); } }
 class NexusLanceProjectile extends EnemyProjectile { constructor(game: Game, x: number, y: number, vX: number, vY: number) { super(game, x, y, vX, vY, 40); this.width = 6; this.height = 30; } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); const gradient = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x, this.pos.y + this.height); gradient.addColorStop(0, '#FFFFFF'); gradient.addColorStop(0.5, '#FF4136'); gradient.addColorStop(1, '#B10DC9'); ctx.fillStyle = gradient; ctx.shadowColor = '#FF00FF'; ctx.shadowBlur = 15; ctx.beginPath(); ctx.moveTo(this.pos.x + this.width / 2, this.pos.y); ctx.lineTo(this.pos.x, this.pos.y + this.height); ctx.lineTo(this.pos.x + this.width, this.pos.y + this.height); ctx.closePath(); ctx.fill(); ctx.restore(); } }
@@ -709,9 +726,9 @@ class SoundManager {
     scheduler() { if (!this.audioCtx || !this.musicPlaying || this.currentTrack === 'menu') return; while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) { let l, a, b, k, s, h; if (this.currentTrack === 'boss') {[l,a,b,k,s,h]=[this.bossLeadMelody,this.bossArpeggioMelody,this.bossBassLine,this.bossKickPattern,this.bossSnarePattern,this.bossHihatPattern];} else {[l,a,b,k,s,h]=[this.leadMelody,this.arpeggioMelody,this.bassLine,this.kickPattern,this.snarePattern,this.hihatPattern];} this.playNote(l[this.currentStep]!, this.nextNoteTime, this.stepDuration * 0.9, 'square', 0.15); this.playNote(a[this.currentStep]!, this.nextNoteTime, this.stepDuration, 'square', 0.07); if (this.currentStep % 2 === 0) this.playNote(b[this.currentStep]!, this.nextNoteTime, this.stepDuration * 1.8, 'triangle', 0.3); if(k[this.currentStep])this.playDrum('kick',this.nextNoteTime); if(s[this.currentStep])this.playDrum('snare',this.nextNoteTime); if(h[this.currentStep])this.playDrum('hihat',this.nextNoteTime); this.nextNoteTime += this.stepDuration; this.currentStep = (this.currentStep + 1) % this.totalSteps; } }
     toggleMusic(shouldPlay: boolean): void { this.musicPlaying = shouldPlay; if (shouldPlay) { this.setTrack(this.currentTrack); } else { this.stopProceduralMusic(); this.stopMenuMusic(); } }
     setVolume(volume: number) { if (this.masterGain && this.audioCtx) this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime); }
-    public playLoop(soundName: string) { if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx || this.continuousSounds[soundName]) { return; } let buffer: AudioBuffer | null = null; let volume = 1.0; switch(soundName) { case 'laser': buffer = this.laserBuffer; volume = 0.1; break; } if (buffer) { const source = this.audioCtx.createBufferSource(); source.buffer = buffer; source.loop = true; const gainNode = this.audioCtx.createGain(); gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); source.connect(gainNode); gainNode.connect(this.masterGain); source.start(this.audioCtx.currentTime); this.continuousSounds[soundName] = source; } }
+    public playLoop(soundName: string) { if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx || this.continuousSounds[soundName]) { return; } let buffer: AudioBuffer | null = null; let volume = 1.3; switch(soundName) { case 'laser': buffer = this.laserBuffer; volume = 0.1; break; } if (buffer) { const source = this.audioCtx.createBufferSource(); source.buffer = buffer; source.loop = true; const gainNode = this.audioCtx.createGain(); gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); source.connect(gainNode); gainNode.connect(this.masterGain); source.start(this.audioCtx.currentTime); this.continuousSounds[soundName] = source; } }
     public stopLoop(soundName: string) { if (this.continuousSounds[soundName]) { this.continuousSounds[soundName]!.stop(); delete this.continuousSounds[soundName]; } }
-    play(soundName: string) { if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return; const player = this.uiManager.game.player; let bufferToPlay: AudioBuffer | null = null; let volume = 1.0; let isHandled = false; switch (soundName) { case 'shoot': if (player) { switch (player.powerUpManager.weaponTier) { case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.2; break; case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.2; break; case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.18; break; case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.16; break; } } isHandled = true; break; case 'blackHole': bufferToPlay = this.blackHoleBuffer; volume = 0.6; isHandled = true; break; case 'droneTier1': bufferToPlay = this.droneTier1Buffer; volume = 0.1; isHandled = true; break; case 'droneTier2': bufferToPlay = this.droneTier2Buffer; volume = 0.1; isHandled = true; break; case 'droneTier3': bufferToPlay = this.droneTier3Buffer; volume = 0.1; isHandled = true; break; case 'coinCollect': bufferToPlay = this.coinCollectBuffer; volume = 0.1; isHandled = true; break; case 'powerup': bufferToPlay = this.powerupCollectBuffer; volume = 0.1; isHandled = true; break; case 'enemyExplosion': bufferToPlay = this.enemyExplosionBuffer; volume = 0.4; isHandled = true; break; case 'nuke': bufferToPlay = this.nukeBuffer; volume = 0.7; isHandled = true; break; case 'missileLaunch': bufferToPlay = this.missileLaunchBuffer; volume = 0.1; isHandled = true; break; } if (bufferToPlay) { const source = this.audioCtx.createBufferSource(); source.buffer = bufferToPlay; const gainNode = this.audioCtx.createGain(); gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); source.connect(gainNode); gainNode.connect(this.masterGain); source.start(this.audioCtx.currentTime); return; } if (isHandled) return; let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; switch (soundName) { case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; case 'shieldDown': freq = 300; duration = 0.2; type = 'square'; break; case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break; case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break; case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break; case 'enemyShoot': freq = 800; freqEnd = 400; duration = 0.1; type = 'triangle'; vol = 0.15; break; case 'enemyPlasmaShoot': freq = 400; duration = 0.2; type = 'sawtooth'; vol = 0.2; break; case 'bossLanceShoot': freq = 1500; duration = 0.15; type = 'square'; vol = 0.3; break; case 'revive': freq = 400; duration = 0.8; type = 'triangle'; vol = 0.7; const oscRevive = this.audioCtx.createOscillator(); const gainRevive = this.audioCtx.createGain(); oscRevive.connect(gainRevive); gainRevive.connect(this.masterGain); oscRevive.type = type; oscRevive.frequency.setValueAtTime(freq, this.audioCtx.currentTime); oscRevive.frequency.linearRampToValueAtTime(freq * 3, this.audioCtx.currentTime + duration * 0.9); gainRevive.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gainRevive.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); oscRevive.start(this.audioCtx.currentTime); oscRevive.stop(this.audioCtx.currentTime + duration); return; } const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); if (freqEnd !== freq) { osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration); } gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); } }
+    play(soundName: string) { if (!this.audioCtx || !this.masterGain || !this.uiManager.settings.sfx) return; const player = this.uiManager.game.player; let bufferToPlay: AudioBuffer | null = null; let volume = 1.0; let isHandled = false; switch (soundName) { case 'shoot': if (player) { switch (player.powerUpManager.weaponTier) { case 1: bufferToPlay = this.shootTier1Buffer; volume = 0.1; break; case 2: bufferToPlay = this.shootTier2Buffer; volume = 0.1; break; case 3: bufferToPlay = this.shootTier3Buffer; volume = 0.18; break; case 4: bufferToPlay = this.shootTier4Buffer; volume = 0.12; break; } } isHandled = true; break; case 'blackHole': bufferToPlay = this.blackHoleBuffer; volume = 0.6; isHandled = true; break; case 'droneTier1': bufferToPlay = this.droneTier1Buffer; volume = 0.1; isHandled = true; break; case 'droneTier2': bufferToPlay = this.droneTier2Buffer; volume = 0.1; isHandled = true; break; case 'droneTier3': bufferToPlay = this.droneTier3Buffer; volume = 0.1; isHandled = true; break; case 'coinCollect': bufferToPlay = this.coinCollectBuffer; volume = 0.1; isHandled = true; break; case 'powerup': bufferToPlay = this.powerupCollectBuffer; volume = 0.1; isHandled = true; break; case 'enemyExplosion': bufferToPlay = this.enemyExplosionBuffer; volume = 0.4; isHandled = true; break; case 'nuke': bufferToPlay = this.nukeBuffer; volume = 0.7; isHandled = true; break; case 'missileLaunch': bufferToPlay = this.missileLaunchBuffer; volume = 0.1; isHandled = true; break; } if (bufferToPlay) { const source = this.audioCtx.createBufferSource(); source.buffer = bufferToPlay; const gainNode = this.audioCtx.createGain(); gainNode.gain.setValueAtTime(volume * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); source.connect(gainNode); gainNode.connect(this.masterGain); source.start(this.audioCtx.currentTime); return; } if (isHandled) return; let freq = 440, duration = 0.1, type: OscillatorType = 'sine', vol= 1, freqEnd = freq; switch (soundName) { case 'playerHit': freq = 200; duration = 0.2; type = 'square'; break; case 'playerExplosion': freq = 100; duration = 0.5; type = 'sawtooth'; break; case 'shieldDown': freq = 300; duration = 0.2; type = 'square'; break; case 'uiClick': freq = 1200; duration = 0.05; type = 'triangle'; vol = 0.4; break; case 'purchaseSuccess': freq = 1500; duration = 0.1; type = 'sine'; vol = 0.5; break; case 'uiError': freq = 200; duration = 0.15; type = 'sawtooth'; vol = 0.4; break; case 'enemyShoot': freq = 800; freqEnd = 400; duration = 0.1; type = 'triangle'; vol = 0.15; break; case 'enemyPlasmaShoot': freq = 400; duration = 0.2; type = 'sawtooth'; vol = 0.2; break; case 'bossLanceShoot': freq = 1500; duration = 0.15; type = 'square'; vol = 0.3; break; case 'revive': freq = 400; duration = 0.8; type = 'triangle'; vol = 0.7; const oscRevive = this.audioCtx.createOscillator(); const gainRevive = this.audioCtx.createGain(); oscRevive.connect(gainRevive); gainRevive.connect(this.masterGain); oscRevive.type = type; oscRevive.frequency.setValueAtTime(freq, this.audioCtx.currentTime); oscRevive.frequency.linearRampToValueAtTime(freq * 3, this.audioCtx.currentTime + duration * 0.9); gainRevive.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gainRevive.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); oscRevive.start(this.audioCtx.currentTime); oscRevive.stop(this.audioCtx.currentTime + duration); return; } const osc = this.audioCtx.createOscillator(); const gN = this.audioCtx.createGain(); osc.connect(gN); gN.connect(this.masterGain); osc.type = type; osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime); if (freqEnd !== freq) { osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration); } gN.gain.setValueAtTime(vol * this.uiManager.settings.masterVolume, this.audioCtx.currentTime); gN.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration); osc.start(this.audioCtx.currentTime); osc.stop(this.audioCtx.currentTime + duration); } }
 
 class LocalizationManager {
     private currentLanguage: string = 'en';
@@ -1164,16 +1181,15 @@ private attachLeaderboardControlEvents(): void {
         const scaleFactor = this.game.width / this.game.baseWidth;
         const titleSize = Math.max(24, 50 * scaleFactor);
         const scoreSize = Math.max(16, 28 * scaleFactor);
-        const rankSize = Math.max(14, 24 * scaleFactor); // Schriftgröße für den Rang
+        const rankSize = Math.max(14, 24 * scaleFactor);
         const promptSize = Math.max(12, 20 * scaleFactor);
-        
-        const yOffset = this.game.height * 0.1; // Etwas mehr Platz
+        const yOffset = this.game.height * 0.1;
         const maxWidth = this.game.width * 0.9;
         
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Titel ("EPISCHER SIEG!")
+        // Titel
         ctx.fillStyle = '#FFD700';
         ctx.font = `${titleSize}px 'Press Start 2P'`;
         ctx.shadowColor = '#FFA500';
@@ -1186,18 +1202,27 @@ private attachLeaderboardControlEvents(): void {
         ctx.font = `${scoreSize}px 'Press Start 2P'`;
         ctx.fillText(`${t('victory_final_score')}: ${this.game.score.toLocaleString()}`, this.game.width / 2, this.game.height / 2 - yOffset, maxWidth);
         
-        // NEU: Rang-Anzeige
-        ctx.fillStyle = '#00FFFF'; // Cyan für Hervorhebung
+        // NEU: Intelligente Rang-Anzeige basierend auf dem Status
         ctx.font = `${rankSize}px 'Press Start 2P'`;
-        if (this.game.lastGameResult) {
-            // Wenn das Ergebnis da ist, zeige den Rang an
-            ctx.fillText(`${t('leaderboard_rank_label')}: #${this.game.lastGameResult.rank}`, this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
-        } else {
-            // Solange wir warten, zeige eine Lade-Nachricht
-            ctx.fillText(t('leaderboard_fetching_rank'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+        switch (this.game.rankStatus) {
+            case 'success':
+                ctx.fillStyle = '#00FFFF'; // Cyan für Erfolg
+                if (this.game.lastGameResult) {
+                    ctx.fillText(`${t('leaderboard_rank_label')}: #${this.game.lastGameResult.rank}`, this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                }
+                break;
+            case 'error':
+                ctx.fillStyle = '#FF4136'; // Rot für Fehler
+                ctx.fillText(t('leaderboard_error'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                break;
+            case 'fetching':
+            default:
+                ctx.fillStyle = '#FFFFFF'; // Weiß für Lade-Text
+                ctx.fillText(t('leaderboard_fetching_rank'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                break;
         }
         
-        // Aufforderung (z.B. "Drücke Enter")
+        // Aufforderung
         ctx.fillStyle = '#FFF';
         ctx.font = `${promptSize}px 'Press Start 2P'`;
         const promptKey = this.game.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
@@ -1263,6 +1288,7 @@ class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0; public phoenixCoreUI: PhoenixCoreUI; public isBossSlayerActive: boolean = false; public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN'; public isMobile: boolean = false; public touchX: number | null = null; public touchY: number | null = null; private container: HTMLElement; public scale: number = 1; public audioNeedsUnlock: boolean = false; public isFormationActive: boolean = false; private activeFormationEnemies: Enemy[] = []; private formationMovementDirection: number = 1; private formationMoveTimer: number = 0; private formationMoveInterval: number = 1000; private formationVerticalStep: number = 20; public isMultiFormationWaveActive: boolean = false; private multiFormationStage: number = 0; private introAnimationTimer: number = 0; public isFinalBattleActive: boolean = false; private finalBattleStage: number = 0; private finalBattleBoss: Enemy | null = null; private victoryTimer: number = 0;
 
     public lastGameResult: ILeaderboardEntry | null = null;
+    public rankStatus: 'fetching' | 'success' | 'error' = 'fetching';
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements) { this.canvas = canvas; this.ctx = canvas.getContext('2d')!; this.width = this.baseWidth; this.height = this.baseHeight; this.container = document.getElementById('gameContainer')!; this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent); const handleResize = () => { const newHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight; this.container.style.height = `${newHeight}px`; this.resizeGame(); }; handleResize(); if (window.visualViewport) { window.visualViewport.addEventListener('resize', handleResize); } else { window.addEventListener('resize', handleResize); } this.shopManager = new ShopManager(this); this.uiManager = new UIManager(this, ui); this.piManager = new PiManager(); this.piManager.setGame(this); this.phoenixCoreUI = new PhoenixCoreUI(this); this.loadGameData(); this.initEventListeners(); this.createParallaxStarfield(); this.uiManager.populateAllTranslatedContent(); if (localStorage.getItem('galaxyFallLanguage')) { this.changeState('INTRO'); this.piManager.authenticate(); } else { document.getElementById('language-select-screen')!.style.display = 'flex'; } }
     public async loadPlayerDataFromServer(): Promise<void> { if (!this.piManager.isAuthenticated || !this.piManager.uid) return; try { const response = await fetch(`${API_BASE_URL}/load-data?pi_uid=${this.piManager.uid}`); if (response.ok) { const data = await response.json(); this.coins = data.coins; this.shopManager.playerUpgrades = data.upgrades; this.shopManager.playerCosmetics = data.cosmetics; this.shopManager.playerCollectibles = data.collectibles || this.shopManager.loadCollectibles(); this.shopManager.saveUpgrades(); this.shopManager.saveCosmetics(); this.shopManager.saveCollectibles(); } else if (response.status === 404) { this.loadGameData(); this.shopManager.playerUpgrades = this.shopManager.loadUpgrades(); this.shopManager.playerCosmetics = this.shopManager.loadCosmetics(); this.shopManager.playerCollectibles = this.shopManager.loadCollectibles(); await this.savePlayerDataToServer(); } this.saveGameData(); this.uiManager.update(); } catch (error) { console.error("Fehler beim Laden/Erstellen des Spielstands:", error); } }
@@ -1453,44 +1479,325 @@ class Game {
         });
     }
     togglePause(): void { this.isPaused = !this.isPaused; this.changeState(this.isPaused ? 'PAUSED' : 'PLAYING'); }
-    public startReviveSequence(player: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE'): void { this.changeState('REVIVING'); const level = this.shopManager.getUpgradeLevel('revive_chance'); let index = 0; if(crystalType === 'BLUE') index = 0; if(crystalType === 'YELLOW') index = level > 1 ? 1 : 0; if(crystalType === 'PURPLE') index = level > 2 ? 2 : (level > 1 ? 1 : 0); const startX = this.width - 160 + (index * 45) + 20; const startY = 10 + 20; this.addEntity(new ReviveCrystalAnimation(this, startX, startY, player, crystalType)); }
-    changeState(newState: string, forceReset: boolean = false): void { if (newState === this.gameState && !forceReset) return; const mobilePauseButton = document.getElementById('mobile-pause-button')!; if (this.isMobile) { mobilePauseButton.style.display = newState === 'PLAYING' ? 'block' : 'none'; } this.uiManager.toggleMainMenu(false); this.uiManager.togglePauseMenu(false); this.uiManager.toggleGameOverScreen(false); this.uiManager.toggleShopScreen(false); this.uiManager.toggleModeSelectScreen(false); if (newState === 'PAUSED') this.isPaused = true; else if (this.gameState === 'PAUSED') this.isPaused = false; const oldState = this.gameState; this.gameState = newState; switch (newState) { case 'INTRO': this.introAnimationTimer = 0; break; case 'MENU': this.entities = []; this.player = null; this.uiManager.toggleMainMenu(true); this.uiManager.soundManager.setTrack('menu'); break; case 'MODE_SELECT': this.uiManager.toggleModeSelectScreen(true); break; case 'PAUSED': this.uiManager.soundManager.setTrack('menu'); this.uiManager.togglePauseMenu(true); break; case 'PLAYING': if (oldState === 'PAUSED' || oldState === 'REVIVING') { if (this.isBossActive) this.uiManager.soundManager.setTrack('boss'); else this.uiManager.soundManager.setTrack('normal'); } break; case 'LEVEL_START': const isNewGame = forceReset || !this.player || !this.player.isAlive(); if (isNewGame) { this.level = 50; this.score = 0; this.entities = []; this.isBossSlayerActive = false; this.lastGameResult = null; const initialStats = this.shopManager.getInitialPlayerStats(); this.player = new Player(this, initialStats); this.addEntity(this.player); if (this.shopManager.getEquippedCollectibleBonus() === 'START_POWERUP') {
-                    const startingPowerups = ['SIDE_SHOTS', 'RAPID_FIRE', 'ORBITAL_DRONE'];
-                    const randomPowerup = startingPowerups[Math.floor(Math.random() * startingPowerups.length)]!;
-                    this.player.powerUpManager.activate(randomPowerup);
-                } const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge'); if (specialChargeLevel > 0) { const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST']; for (let i = 0; i < specialChargeLevel; i++) { if (availablePowerUps.length === 0) break; const randomIndex = Math.floor(Math.random() * availablePowerUps.length); const chosenPowerUp = availablePowerUps.splice(randomIndex, 1)[0]!; this.player.powerUpManager.collectSpecial(chosenPowerUp); } } } else { this.level++; this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM'); } if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) { this.changeState('WIN'); return; } this.isBossActive = false; this.isFinalBattleActive = false; this.isFormationActive = false; this.isMultiFormationWaveActive = false; this.activeFormationEnemies = []; this.scoreEarnedThisLevel = 0; this.configureLevel(); this.changeState('PLAYING_TRANSITION'); break; case 'PLAYING_TRANSITION': setTimeout(() => this.changeState('PLAYING'), 3000); break; case 'GAME_OVER': if (this.score > this.highscore) this.highscore = this.score; this.saveGameData(); this.submitScoreToServer(); this.uiManager.soundManager.setTrack('menu'); this.uiManager.toggleGameOverScreen(true); this.piManager.showAd(); break; case 'VICTORY_SEQUENCE': this.victoryTimer = 0; this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'effect'); this.uiManager.soundManager.setTrack('menu'); break; case 'WIN': if (this.score > this.highscore) this.highscore = this.score; this.saveGameData(); this.submitScoreToServer(); this.uiManager.soundManager.setTrack('menu'); break; } }
-    private async submitScoreToServer(): Promise<void> { if (!this.piManager.isAuthenticated || !this.piManager.uid) return; const scoreData = { pi_uid: this.piManager.uid, username: this.piManager.username, score: this.score, waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level, mode: this.gameMode.toLowerCase() }; try { await fetch(`${API_BASE_URL}/submit-score`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(scoreData) }); } catch (error) { console.error("Netzwerkfehler beim Übermitteln des Scores:", error); } }
-    update(deltaTime: number): void { if (this.gameState === 'REVIVING') { this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => { if(e.family === 'effect' || e instanceof Player) e.update(deltaTime); }); this.cleanupEntities(); return; } if (this.isPaused) return; switch (this.gameState) { case 'INTRO': this.introAnimationTimer += deltaTime; break; case 'VICTORY_SEQUENCE': this.updateVictorySequence(deltaTime); break; } if (!['PLAYING', 'VICTORY_SEQUENCE'].includes(this.gameState)) { if (this.gameState !== 'LANGUAGE_SELECT') this.updateParallaxStarfield(deltaTime); return; } if(this.gameState !== 'PLAYING') return; this.updateParallaxStarfield(deltaTime); this.entities.forEach(e => e.update(deltaTime)); this.phoenixCoreUI.update(deltaTime); this.enemySpawnTimer += deltaTime; if (this.isFinalBattleActive) { if (this.finalBattleBoss && !this.finalBattleBoss.isAlive()) { this.advanceFinalBattle(); } } else if (this.isMultiFormationWaveActive) { if (this.activeFormationEnemies.length > 0 && this.activeFormationEnemies.every(e => !e.isAlive())) { this.multiFormationStage++; this.activeFormationEnemies = []; if (this.multiFormationStage > 3) { this.isMultiFormationWaveActive = false; this.changeState('LEVEL_START'); } else { this.spawnNextFormationStage(); } } else if (this.activeFormationEnemies.length > 0) { this.updateActiveFormation(deltaTime); } } else if (this.isFormationActive) { this.updateActiveFormation(deltaTime); if (this.activeFormationEnemies.every(e => !e.isAlive())) { this.isFormationActive = false; this.changeState('LEVEL_START'); } } else if (this.isBossActive) { const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const healthPercentage = boss.health / boss.maxHealth; const spawnInterval = 1000 + (4000 * healthPercentage); if(this.enemySpawnTimer > spawnInterval) { this.spawnEnemy(true); this.enemySpawnTimer = 0; } } else { this.isBossActive = false; } } else { if (this.enemySpawnTimer > this.enemySpawnInterval) { this.spawnEnemy(); this.enemySpawnTimer = 0; } if (this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) { this.changeState('LEVEL_START'); } } this.handleCollisions(); this.cleanupEntities(); if (this.player && !this.player.isAlive()) this.changeState('GAME_OVER'); this.uiManager.update(); }
-    draw(): void { this.ctx.clearRect(0, 0, this.width, this.height); this.drawParallaxStarfield(); if (['PLAYING', 'PLAYING_TRANSITION', 'PAUSED', 'REVIVING', 'VICTORY_SEQUENCE'].includes(this.gameState)) { this.entities.forEach(e => { if (e.family === 'projectile') e.draw(this.ctx); }); this.entities.forEach(e => { if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') e.draw(this.ctx); }); this.entities.forEach(e => { if (e.family === 'player') e.draw(this.ctx); }); this.ctx.save(); this.ctx.globalCompositeOperation = 'lighter'; this.entities.forEach(e => { if (e.family === 'effect') e.draw(this.ctx); }); this.ctx.restore(); this.phoenixCoreUI.draw(this.ctx); } this.uiManager.drawOverlay(); switch (this.gameState) { case 'INTRO': case 'MENU': this.drawProfessionalIntro(); break; case 'PLAYING_TRANSITION': this.uiManager.drawLevelMessage(); break; case 'GAME_OVER': this.uiManager.drawGameOver(); break; case 'VICTORY_SEQUENCE': this.drawVictorySequence(); break; case 'WIN': this.uiManager.drawWinScreen(); break; } }
-updateVictorySequence(deltaTime: number): void {
-    this.victoryTimer += deltaTime;
-    if (this.victoryTimer < 4000) {
-        const slowMoFactor = 0.1;
-        this.updateParallaxStarfield(deltaTime * slowMoFactor);
-        this.entities.forEach(e => {
-            if (e.family === 'effect' || e.family === 'player') {
-                e.update(deltaTime * slowMoFactor);
-            }
-        });
-    } else if (this.victoryTimer >= 4000 && this.victoryTimer < 7000) {
-        if (this.player) {
-            this.player.pos.y -= 1200 * (deltaTime / 1000);
-        }
-        this.updateParallaxStarfield(deltaTime * 8);
-    } else if (this.victoryTimer < 12000) { // Animation läuft bis 12 Sekunden
-        this.updateParallaxStarfield(deltaTime * 0.5);
-        if (Math.random() < 0.05) {
-            this.addEntity(new LightRay(this));
-        }
-    } else {
-        // Nach 12 Sekunden zum finalen, statischen Win-Screen wechseln
-        this.changeState('WIN');
+    
+    public startReviveSequence(player: Player, crystalType: 'BLUE' | 'YELLOW' | 'PURPLE'): void {
+        this.changeState('REVIVING');
+        const level = this.shopManager.getUpgradeLevel('revive_chance');
+        let index = 0;
+        if (crystalType === 'BLUE') index = 0;
+        if (crystalType === 'YELLOW') index = level > 1 ? 1 : 0;
+        if (crystalType === 'PURPLE') index = level > 2 ? 2 : (level > 1 ? 1 : 0);
+        const startX = this.width - 160 + (index * 45) + 20;
+        const startY = 10 + 20;
+        this.addEntity(new ReviveCrystalAnimation(this, startX, startY, player, crystalType));
     }
-    this.entities.forEach(e => {
-        if (e.family === 'effect') e.update(deltaTime);
-    });
+    
+    changeState(newState: string, forceReset: boolean = false): void {
+        if (newState === this.gameState && !forceReset) return;
+        const mobilePauseButton = document.getElementById('mobile-pause-button')!;
+        if (this.isMobile) { mobilePauseButton.style.display = newState === 'PLAYING' ? 'block' : 'none'; }
+        this.uiManager.toggleMainMenu(false);
+        this.uiManager.togglePauseMenu(false);
+        this.uiManager.toggleGameOverScreen(false);
+        this.uiManager.toggleShopScreen(false);
+        this.uiManager.toggleModeSelectScreen(false);
+        if (newState === 'PAUSED') this.isPaused = true;
+        else if (this.gameState === 'PAUSED') this.isPaused = false;
+        const oldState = this.gameState;
+        this.gameState = newState;
+        switch (newState) {
+            case 'INTRO':
+                this.introAnimationTimer = 0;
+                break;
+            case 'MENU':
+                this.entities = [];
+                this.player = null;
+                this.uiManager.toggleMainMenu(true);
+                this.uiManager.soundManager.setTrack('menu');
+                break;
+            case 'MODE_SELECT':
+                this.uiManager.toggleModeSelectScreen(true);
+                break;
+            case 'PAUSED':
+                this.uiManager.soundManager.setTrack('menu');
+                this.uiManager.togglePauseMenu(true);
+                break;
+            case 'PLAYING':
+                if (oldState === 'PAUSED' || oldState === 'REVIVING') {
+                    if (this.isBossActive) this.uiManager.soundManager.setTrack('boss');
+                    else this.uiManager.soundManager.setTrack('normal');
+                }
+                break;
+            case 'LEVEL_START':
+                // *** HIER IST DIE KORREKTUR ***
+                const isNewGame = forceReset || !this.player;
+                if (isNewGame) {
+                    this.level = 1;
+                    this.score = 0;
+                    this.entities = [];
+                    this.isBossSlayerActive = false;
+                    this.lastGameResult = null;
+                    const initialStats = this.shopManager.getInitialPlayerStats();
+                    this.player = new Player(this, initialStats);
+                    this.addEntity(this.player);
+                    if (this.shopManager.getEquippedCollectibleBonus() === 'START_POWERUP') {
+                        const startingPowerups = ['SIDE_SHOTS', 'RAPID_FIRE', 'ORBITAL_DRONE'];
+                        const randomPowerup = startingPowerups[Math.floor(Math.random() * startingPowerups.length)]!;
+                        this.player.powerUpManager.activate(randomPowerup);
+                    }
+                    const specialChargeLevel = this.shopManager.getUpgradeLevel('special_charge');
+                    if (specialChargeLevel > 0) {
+                        const availablePowerUps = ['NUKE', 'BLACK_HOLE', 'SCORE_BOOST'];
+                        for (let i = 0; i < specialChargeLevel; i++) {
+                            if (availablePowerUps.length === 0) break;
+                            const randomIndex = Math.floor(Math.random() * availablePowerUps.length);
+                            const chosenPowerUp = availablePowerUps.splice(randomIndex, 1)[0]!;
+                            this.player.powerUpManager.collectSpecial(chosenPowerUp);
+                        }
+                    }
+                } else {
+                    this.level++;
+                    this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'pickup' || e.type === 'LASER_BEAM');
+                }
+                if (this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length) {
+                    this.changeState('WIN');
+                    return;
+                }
+                this.isBossActive = false;
+                this.isFinalBattleActive = false;
+                this.isFormationActive = false;
+                this.isMultiFormationWaveActive = false;
+                this.activeFormationEnemies = [];
+                this.scoreEarnedThisLevel = 0;
+                this.configureLevel();
+                this.changeState('PLAYING_TRANSITION');
+                break;
+            case 'PLAYING_TRANSITION':
+                setTimeout(() => this.changeState('PLAYING'), 3000);
+                break;
+            case 'GAME_OVER':
+                if (this.score > this.highscore) this.highscore = this.score;
+                this.saveGameData();
+                this.rankStatus = 'fetching';
+                this.submitScoreToServer();
+                this.uiManager.soundManager.setTrack('menu');
+                this.uiManager.toggleGameOverScreen(true);
+                this.piManager.showAd();
+                break;
+            case 'VICTORY_SEQUENCE':
+                this.victoryTimer = 0;
+                this.entities = this.entities.filter(e => e.family === 'player' || e.family === 'effect');
+                this.uiManager.soundManager.setTrack('menu');
+                break;
+            case 'WIN':
+                if (this.score > this.highscore) this.highscore = this.score;
+                this.saveGameData();
+                this.rankStatus = 'fetching';
+                this.submitScoreToServer();
+                this.uiManager.soundManager.setTrack('menu');
+                break;
+        }
+    }
+
+    private async submitScoreToServer(): Promise<void> {
+        if (!this.piManager.isAuthenticated || !this.piManager.uid) {
+            this.rankStatus = 'error';
+            return;
+        }
+
+        const scoreData = {
+            pi_uid: this.piManager.uid,
+            username: this.piManager.username,
+            score: this.score,
+            waves: this.gameMode === 'CAMPAIGN' && this.level > LEVELS.length ? LEVELS.length : this.level,
+            mode: this.gameMode.toLowerCase()
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/submit-score`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(scoreData)
+            });
+            
+            if (response.ok) {
+                const result: ILeaderboardEntry = await response.json();
+                this.lastGameResult = result;
+                this.rankStatus = 'success';
+                if (this.gameState === 'GAME_OVER') {
+                    this.uiManager.displayFinalRank(result);
+                }
+            } else {
+                throw new Error(`Server error: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Fehler beim Übermitteln des Scores:", error);
+            this.rankStatus = 'error';
+            if (this.gameState === 'GAME_OVER') {
+                this.uiManager.displayFinalRank(null, true);
+            }
+        }
+    }
+
+    update(deltaTime: number): void {
+    if (this.gameState === 'REVIVING') {
+        this.updateParallaxStarfield(deltaTime);
+        this.entities.forEach(e => {
+            if (e.family === 'effect' || e instanceof Player) e.update(deltaTime);
+        });
+        this.cleanupEntities();
+        return;
+    }
+
+    if (this.isPaused || !['PLAYING', 'VICTORY_SEQUENCE'].includes(this.gameState)) {
+        if (this.gameState !== 'LANGUAGE_SELECT' && this.gameState !== 'PLAYING') {
+            this.updateParallaxStarfield(deltaTime);
+        }
+        if (this.gameState === 'INTRO') {
+            this.introAnimationTimer += deltaTime;
+        }
+        return;
+    }
+    
+    if (this.gameState === 'VICTORY_SEQUENCE') {
+        this.updateVictorySequence(deltaTime);
+        return;
+    }
+
+    // Ab hier ist der gameState definitiv 'PLAYING'
+    this.updateParallaxStarfield(deltaTime);
+    this.entities.forEach(e => e.update(deltaTime));
+    this.phoenixCoreUI.update(deltaTime);
+
+    // Kollisionen und Aufräumen
+    this.handleCollisions();
     this.cleanupEntities();
+
+    // Priorität 1: Ist das Spiel vorbei?
+    if (!this.player || !this.player.isAlive()) {
+        this.changeState('GAME_OVER');
+        return;
+    }
+
+    // Priorität 2: Nur wenn das Spiel NICHT vorbei ist, prüfen wir die Level-Ziele.
+    let levelObjectiveMet = false;
+    if (this.isFinalBattleActive) {
+        if (this.finalBattleBoss && !this.finalBattleBoss.isAlive()) {
+            this.advanceFinalBattle();
+        }
+    } else if (this.isMultiFormationWaveActive) {
+        if (this.activeFormationEnemies.length > 0 && this.activeFormationEnemies.every(e => !e.isAlive())) {
+            levelObjectiveMet = true;
+        }
+    } else if (this.isFormationActive) {
+        if (this.activeFormationEnemies.every(e => !e.isAlive())) {
+            levelObjectiveMet = true;
+        }
+    } else if (this.isBossActive) {
+        // Boss Logik (kein automatischer Levelwechsel)
+    } else { // Normaler Wave-Modus
+        if (this.levelScoreToEarn > 0 && this.scoreEarnedThisLevel >= this.levelScoreToEarn) {
+            levelObjectiveMet = true;
+        }
+    }
+
+    if (levelObjectiveMet) {
+        this.changeState('LEVEL_START');
+        return;
+    }
+
+    // Nur wenn weder das Spiel vorbei ist noch ein Levelziel erreicht wurde, spawnen wir neue Gegner.
+    this.enemySpawnTimer += deltaTime;
+    if (this.isBossActive) {
+         const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy;
+         if(boss) {
+            const healthPercentage = boss.health / boss.maxHealth;
+            const spawnInterval = 1000 + (4000 * healthPercentage);
+            if (this.enemySpawnTimer > spawnInterval) {
+                this.spawnEnemy(true);
+                this.enemySpawnTimer = 0;
+            }
+         }
+    } else if (!this.isFormationActive && !this.isMultiFormationWaveActive) {
+         if (this.enemySpawnTimer > this.enemySpawnInterval) {
+            this.spawnEnemy();
+            this.enemySpawnTimer = 0;
+        }
+    }
+
+    this.uiManager.update();
 }
+
+    draw(): void {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.drawParallaxStarfield();
+        if (['PLAYING', 'PLAYING_TRANSITION', 'PAUSED', 'REVIVING', 'VICTORY_SEQUENCE'].includes(this.gameState)) {
+            this.entities.forEach(e => {
+                if (e.family === 'projectile') e.draw(this.ctx);
+            });
+            this.entities.forEach(e => {
+                if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') e.draw(this.ctx);
+            });
+            this.entities.forEach(e => {
+                if (e.family === 'player') e.draw(this.ctx);
+            });
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'lighter';
+            this.entities.forEach(e => {
+                if (e.family === 'effect') e.draw(this.ctx);
+            });
+            this.ctx.restore();
+            this.phoenixCoreUI.draw(this.ctx);
+        }
+        this.uiManager.drawOverlay();
+        switch (this.gameState) {
+            case 'INTRO':
+            case 'MENU':
+                this.drawProfessionalIntro();
+                break;
+            case 'PLAYING_TRANSITION':
+                this.uiManager.drawLevelMessage();
+                break;
+            case 'GAME_OVER':
+                this.uiManager.drawGameOver();
+                break;
+            case 'VICTORY_SEQUENCE':
+                this.drawVictorySequence();
+                break;
+            case 'WIN':
+                this.uiManager.drawWinScreen();
+                break;
+        }
+    }
+    
+    updateVictorySequence(deltaTime: number): void {
+        this.victoryTimer += deltaTime;
+        if (this.victoryTimer < 4000) {
+            const slowMoFactor = 0.1;
+            this.updateParallaxStarfield(deltaTime * slowMoFactor);
+            this.entities.forEach(e => {
+                if (e.family === 'effect' || e.family === 'player') {
+                    e.update(deltaTime * slowMoFactor);
+                }
+            });
+        } else if (this.victoryTimer >= 4000 && this.victoryTimer < 7000) {
+            if (this.player) {
+                this.player.pos.y -= 1200 * (deltaTime / 1000);
+            }
+            this.updateParallaxStarfield(deltaTime * 8);
+        } else if (this.victoryTimer < 12000) {
+            this.updateParallaxStarfield(deltaTime * 0.5);
+            if (Math.random() < 0.05) {
+                this.addEntity(new LightRay(this));
+            }
+        } else {
+            this.changeState('WIN');
+        }
+        this.entities.forEach(e => {
+            if (e.family === 'effect') e.update(deltaTime);
+        });
+        this.cleanupEntities();
+    }
 drawVictorySequence(): void {
     const t = (key: string) => this.uiManager.localizationManager.translate(key);
     const timer = this.victoryTimer;
