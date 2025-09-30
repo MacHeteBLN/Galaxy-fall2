@@ -1286,7 +1286,7 @@ const LEVELS: ILevelDefinition[] = [
 
 class Game {
     public canvas: HTMLCanvasElement; public ctx: CanvasRenderingContext2D; public readonly baseWidth: number = 800; public readonly baseHeight: number = 800; public width: number; public height: number; public keys: IKeyMap = {}; public gameState: string = 'LANGUAGE_SELECT'; public isPaused: boolean = false; public entities: Entity[] = []; public player: Player | null = null; public score: number = 0; public coins: number = 0; public scoreEarnedThisLevel: number = 0; public level: number = 1; public highscore: number = 0; public isBossActive: boolean = false; public uiManager: UIManager; public shopManager: ShopManager; public piManager: PiManager; public stars: IStar[] = []; public enemySpawnTypes: string[] = []; public enemySpawnInterval: number = 1200; private enemySpawnTimer: number = 0; public enemySpeedMultiplier: number = 1.0; public enemyHealthMultiplier: number = 1; public levelMessage: string = ''; public levelScoreToEarn: number = 0; public phoenixCoreUI: PhoenixCoreUI; public isBossSlayerActive: boolean = false; public gameMode: 'CAMPAIGN' | 'ENDLESS' = 'CAMPAIGN'; public isMobile: boolean = false; public touchX: number | null = null; public touchY: number | null = null; private container: HTMLElement; public scale: number = 1; public audioNeedsUnlock: boolean = false; public isFormationActive: boolean = false; private activeFormationEnemies: Enemy[] = []; private formationMovementDirection: number = 1; private formationMoveTimer: number = 0; private formationMoveInterval: number = 1000; private formationVerticalStep: number = 20; public isMultiFormationWaveActive: boolean = false; private multiFormationStage: number = 0; private introAnimationTimer: number = 0; public isFinalBattleActive: boolean = false; private finalBattleStage: number = 0; private finalBattleBoss: Enemy | null = null; private victoryTimer: number = 0;
-
+    private isSpawningNextStage: boolean = false;
     public lastGameResult: ILeaderboardEntry | null = null;
     public rankStatus: 'fetching' | 'success' | 'error' = 'fetching';
 
@@ -1668,6 +1668,9 @@ class Game {
     this.updateParallaxStarfield(deltaTime);
     this.entities.forEach(e => e.update(deltaTime));
     this.phoenixCoreUI.update(deltaTime);
+    if (this.isFormationActive || this.isMultiFormationWaveActive) {
+        this.updateActiveFormation(deltaTime);
+    }
 
     // Kollisionen und Aufräumen
     this.handleCollisions();
@@ -1685,11 +1688,24 @@ class Game {
         if (this.finalBattleBoss && !this.finalBattleBoss.isAlive()) {
             this.advanceFinalBattle();
         }
-    } else if (this.isMultiFormationWaveActive) {
-        if (this.activeFormationEnemies.length > 0 && this.activeFormationEnemies.every(e => !e.isAlive())) {
-            levelObjectiveMet = true;
+    } else if (this.isMultiFormationWaveActive && !this.isSpawningNextStage) {
+        if (this.activeFormationEnemies.every(e => !e.isAlive())) {
+            
+            this.isSpawningNextStage = true; 
+            
+            this.multiFormationStage++;
+            this.activeFormationEnemies = [];
+
+            if (this.multiFormationStage > 3) {
+                levelObjectiveMet = true;
+                this.isSpawningNextStage = false;
+            } else {
+                this.spawnNextFormationStage();
+            }
         }
-    } else if (this.isFormationActive) {
+    }
+
+    else if (this.isFormationActive) {
         if (this.activeFormationEnemies.every(e => !e.isAlive())) {
             levelObjectiveMet = true;
         }
@@ -1706,7 +1722,6 @@ class Game {
         return;
     }
 
-    // Nur wenn weder das Spiel vorbei ist noch ein Levelziel erreicht wurde, spawnen wir neue Gegner.
     this.enemySpawnTimer += deltaTime;
     if (this.isBossActive) {
          const boss = this.entities.find(e => (e as Enemy).isBoss) as Enemy;
@@ -1868,8 +1883,52 @@ drawVictorySequence(): void {
 }    private generateEndlessWave(waveNumber: number): ILevelDefinition { const t = (key: string) => this.uiManager.localizationManager.translate(key); const isBreatherWave = (waveNumber > 0 && waveNumber % 4 === 0); let healthMultiplier = 1 + (waveNumber * 0.02); let speedMultiplier = 1 + (waveNumber * 0.015); let budget = 8 + Math.pow(waveNumber, 1.25); if (isBreatherWave) budget *= 0.6; const enemyCosts = { 'GRUNT': 1, 'WEAVER': 2, 'TANK': 3, 'SHOOTER': 4, 'TELEPORTER': 6 }; const weightedEnemyTypes = [ { type: 'GRUNT', weight: 5 }, { type: 'WEAVER', weight: 4 }, { type: 'TANK', weight: 3 }, { type: 'SHOOTER', weight: 3 }, { type: 'TELEPORTER', weight: 2 }, ]; const enemyPool: string[] = []; let totalPointsInPool = 0; let tempBudget = budget; while (tempBudget > 0) { const totalWeight = weightedEnemyTypes.reduce((sum, e) => sum + e.weight, 0); let randomWeight = Math.random() * totalWeight; let chosenEnemyType = 'GRUNT'; for (const enemy of weightedEnemyTypes) { randomWeight -= enemy.weight; if (randomWeight <= 0) { chosenEnemyType = enemy.type; break; } } const cost = enemyCosts[chosenEnemyType as keyof typeof enemyCosts]; if (tempBudget - cost >= 0) { enemyPool.push(chosenEnemyType); tempBudget -= cost; totalPointsInPool += (this.createEnemyByType(chosenEnemyType)?.pointsValue || 10); } else { if (tempBudget - enemyCosts['GRUNT'] >= 0) { enemyPool.push('GRUNT'); tempBudget -= enemyCosts['GRUNT']; totalPointsInPool += (this.createEnemyByType('GRUNT')?.pointsValue || 10); } else break; } } if (enemyPool.length === 0) enemyPool.push('GRUNT'); let spawnInterval = Math.max(200, 800 - waveNumber * 10); if (isBreatherWave) spawnInterval *= 1.5; let msgKey = isBreatherWave ? t('endless_wave_breather') : `${t('endless_wave')} ${waveNumber}`; if (!isBreatherWave && Math.random() < 0.25) { const affix = ['Frenzy', 'Thick Skins', 'Bullet Hell', 'Blink Storm'][Math.floor(Math.random() * 4)]!; switch(affix) { case 'Frenzy': speedMultiplier *= 1.3; spawnInterval *= 0.7; msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_frenzy')}`; break; case 'Thick Skins': healthMultiplier *= 1.5; for(let i=0; i<Math.ceil(enemyPool.length/4); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'TANK'; msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_thick_skins')}`; break; case 'Bullet Hell': for(let i=0; i<Math.ceil(enemyPool.length/2); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'SHOOTER'; msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_bullet_hell')}`; break; case 'Blink Storm': for(let i=0; i<Math.ceil(enemyPool.length/2); i++) enemyPool[Math.floor(Math.random()*enemyPool.length)] = 'TELEPORTER'; msgKey = `${t('endless_wave')} ${waveNumber}: ${t('affix_blink_storm')}`; break; } } const expectedSpawns = (35 * 1000) / spawnInterval; const avgPoints = totalPointsInPool / enemyPool.length; const scoreToEarn = Math.floor(expectedSpawns * avgPoints * waveNumber * 0.8); return { wave: waveNumber, scoreToEarn, enemies: enemyPool, msgKey, s: spawnInterval, m: speedMultiplier, h: healthMultiplier }; }
     configureLevel(): void { let levelData: ILevelDefinition; if (this.gameMode === 'CAMPAIGN') { if (this.level > LEVELS.length) { this.changeState('WIN'); return; } levelData = LEVELS[this.level - 1]!; } else { levelData = this.generateEndlessWave(this.level); } if (this.gameMode === 'CAMPAIGN' && this.level === 50) { this.isFinalBattleActive = true; this.finalBattleStage = 0; this.advanceFinalBattle(); return; } this.enemySpawnTypes = levelData.enemies; this.enemySpawnInterval = levelData.s; this.enemySpeedMultiplier = levelData.m; this.enemyHealthMultiplier = levelData.h ?? 1; this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) || levelData.msgKey; this.levelScoreToEarn = levelData.scoreToEarn; this.enemySpawnTimer = 0; this.uiManager.update(); if (levelData.isMultiFormation) { this.isMultiFormationWaveActive = true; this.multiFormationStage = 1; this.spawnNextFormationStage(); if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal'); } else if (levelData.boss) { this.isBossActive = true; this.spawnEnemy(false, levelData.boss); this.uiManager.soundManager.setTrack('boss'); } else { if (this.gameState !== 'MENU') this.uiManager.soundManager.setTrack('normal'); } }
     private advanceFinalBattle(): void { this.finalBattleStage++; this.finalBattleBoss = null; this.entities.filter(e => e.family === 'enemy').forEach(e => e.destroy()); let bossToSpawn: Enemy | null = null; let messageKey: string = ''; switch(this.finalBattleStage) { case 1: messageKey = 'final_battle_msg_1'; bossToSpawn = new BossSentinelPrime(this, 10 * (1 + this.level/5), 1.2 + this.level/10, true); break; case 2: messageKey = 'final_battle_msg_2'; bossToSpawn = new BossVoidSerpent(this, 11 * (1 + this.level/5), 1.3 + this.level/10, true); break; case 3: messageKey = 'final_battle_msg_3'; bossToSpawn = new BossOmegaNexus(this, 12 * (1 + this.level/5), 1.4 + this.level/10, true); break; case 4: messageKey = 'final_battle_msg_4'; bossToSpawn = new BossNexusPrime(this, 15 * (1 + this.level/5), 1.5 + this.level/10, true); break; case 5: this.changeState('VICTORY_SEQUENCE'); return; } if (bossToSpawn) { this.isBossActive = true; this.levelMessage = this.uiManager.localizationManager.translate(messageKey); this.finalBattleBoss = bossToSpawn; this.addEntity(this.finalBattleBoss); this.uiManager.soundManager.setTrack('boss'); this.addEntity(new ShockwaveEffect(this, this.width/2, this.height/2, '#FFD700')); } }
-    private spawnNextFormationStage(): void { const levelData = LEVELS[this.level - 1]!; this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) + ` (${this.multiFormationStage}/3)`; this.uiManager.update(); setTimeout(() => { if (this.level === 5) { switch(this.multiFormationStage) { case 1: this.spawnFormation_Wave5_Stage1(); break; case 2: this.spawnFormation_Wave5_Stage2(); break; case 3: this.spawnFormation_Wave5_Stage3(); break; } } else if (this.level === 15) { switch(this.multiFormationStage) { case 1: this.spawnFormation_Wave15_Stage1(); break; case 2: this.spawnFormation_Wave15_Stage2(); break; case 3: this.spawnFormation_Wave15_Stage3(); break; } } else if (this.level === 25) { switch(this.multiFormationStage) { case 1: this.spawnFormation_Wave25_Stage1(); break; case 2: this.spawnFormation_Wave25_Stage2(); break; case 3: this.spawnFormation_Wave25_Stage3(); break; } } else if (this.level === 35) { switch(this.multiFormationStage) { case 1: this.spawnFormation_Wave35_Stage1(); break; case 2: this.spawnFormation_Wave35_Stage2(); break; case 3: this.spawnFormation_Wave35_Stage3(); break; } } else if (this.level === 45) { switch(this.multiFormationStage) { case 1: this.spawnFormation_Wave45_Stage1(); break; case 2: this.spawnFormation_Wave45_Stage2(); break; case 3: this.spawnFormation_Wave45_Stage3(); break; } } }, 2000); }
-    updateActiveFormation(dt: number): void { const dt_s = dt / 1000; const livingEnemies = this.activeFormationEnemies.filter(e => e.isAlive()); if (livingEnemies.length === 0) return; let highestY = this.height; livingEnemies.forEach(e => { highestY = Math.min(highestY, e.pos.y); }); if (highestY < 50) { livingEnemies.forEach(e => { e.pos.y += 120 * dt_s; }); return; } this.formationMoveTimer += dt; if (this.formationMoveTimer < this.formationMoveInterval) return; this.formationMoveTimer = 0; let minX = this.width, maxX = 0; livingEnemies.forEach(e => { minX = Math.min(minX, e.pos.x); maxX = Math.max(maxX, e.pos.x + e.width); }); const stepX = 15; let wallHit = (this.formationMovementDirection > 0 && maxX + stepX > this.width) || (this.formationMovementDirection < 0 && minX - stepX < 0); if (wallHit) { this.formationMovementDirection *= -1; let lowestY = 0; livingEnemies.forEach(e => { e.pos.y += this.formationVerticalStep; lowestY = Math.max(lowestY, e.pos.y); }); if (lowestY > this.height) { livingEnemies.forEach(e => e.destroy()); return; } } else { livingEnemies.forEach(e => { e.pos.x += stepX * this.formationMovementDirection; }); } }
+private spawnNextFormationStage(): void {
+    const levelData = LEVELS[this.level - 1]!;
+    // Die Nachricht wird jetzt mit der korrekten Stufennummer aktualisiert
+    this.levelMessage = this.uiManager.localizationManager.translate(levelData.msgKey) + ` (${this.multiFormationStage}/3)`;
+    this.uiManager.update();
+
+    setTimeout(() => {
+        // Finde die richtige Formation basierend auf Level und Stufe
+        if (this.level === 5) {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Wave5_Stage1(); break;
+                case 2: this.spawnFormation_Wave5_Stage2(); break;
+                case 3: this.spawnFormation_Wave5_Stage3(); break;
+            }
+        } else if (this.level === 15) {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Wave15_Stage1(); break;
+                case 2: this.spawnFormation_Wave15_Stage2(); break;
+                case 3: this.spawnFormation_Wave15_Stage3(); break;
+            }
+        } else if (this.level === 25) {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Wave25_Stage1(); break;
+                case 2: this.spawnFormation_Wave25_Stage2(); break;
+                case 3: this.spawnFormation_Wave25_Stage3(); break;
+            }
+        } else if (this.level === 35) {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Wave35_Stage1(); break;
+                case 2: this.spawnFormation_Wave35_Stage2(); break;
+                case 3: this.spawnFormation_Wave35_Stage3(); break;
+            }
+        } else if (this.level === 45) {
+            switch(this.multiFormationStage) {
+                case 1: this.spawnFormation_Wave45_Stage1(); break;
+                case 2: this.spawnFormation_Wave45_Stage2(); break;
+                case 3: this.spawnFormation_Wave45_Stage3(); break;
+            }
+        }
+
+        // WICHTIG: Signalisiere, dass das Spawnen beendet ist und die
+        // 'update'-Methode wieder prüfen darf.
+        this.isSpawningNextStage = false;
+
+    }, 2000); // Wartezeit vor der nächsten Stufe
+}    updateActiveFormation(dt: number): void { const dt_s = dt / 1000; const livingEnemies = this.activeFormationEnemies.filter(e => e.isAlive()); if (livingEnemies.length === 0) return; let highestY = this.height; livingEnemies.forEach(e => { highestY = Math.min(highestY, e.pos.y); }); if (highestY < 50) { livingEnemies.forEach(e => { e.pos.y += 120 * dt_s; }); return; } this.formationMoveTimer += dt; if (this.formationMoveTimer < this.formationMoveInterval) return; this.formationMoveTimer = 0; let minX = this.width, maxX = 0; livingEnemies.forEach(e => { minX = Math.min(minX, e.pos.x); maxX = Math.max(maxX, e.pos.x + e.width); }); const stepX = 15; let wallHit = (this.formationMovementDirection > 0 && maxX + stepX > this.width) || (this.formationMovementDirection < 0 && minX - stepX < 0); if (wallHit) { this.formationMovementDirection *= -1; let lowestY = 0; livingEnemies.forEach(e => { e.pos.y += this.formationVerticalStep; lowestY = Math.max(lowestY, e.pos.y); }); if (lowestY > this.height) { livingEnemies.forEach(e => e.destroy()); return; } } else { livingEnemies.forEach(e => { e.pos.x += stepX * this.formationMovementDirection; }); } }
     private addEnemyToFormation(enemy: Enemy | null, x: number, y: number) { if (enemy) { enemy.pos.x = x; enemy.pos.y = y; enemy.speed = 0; enemy.inFormation = true; this.activeFormationEnemies.push(enemy); this.addEntity(enemy); } }
     spawnFormation_Wave5_Stage1(): void { const rows = 4; const cols = 5; const hSpacing = Math.min(100, (this.width - 40) / cols); const vSpacing = 80; const startX = (this.width - (cols - 1) * hSpacing) / 2; const startY = -300; for (let r = 0; r < rows; r++) { for (let c = 0; c < cols; c++) { const type = r < 2 ? 'GRUNT' : 'WEAVER'; const enemy = this.createEnemyByType(type); if (enemy) { this.addEnemyToFormation(enemy, startX + c * hSpacing - (enemy.width / 2), startY + r * vSpacing); } } } }
     spawnFormation_Wave5_Stage2(): void { const size = 4; const hSpacing = 80; const vSpacing = 80; const startY = -250; for (let i = 0; i < size; i++) { const type = 'GRUNT'; const y = startY + i * vSpacing; if (i === 0) { const enemy = this.createEnemyByType(type); if (enemy) this.addEnemyToFormation(enemy, this.width / 2 - (enemy.width / 2), y); } else { const enemyL = this.createEnemyByType(type); if (enemyL) this.addEnemyToFormation(enemyL, this.width / 2 - (i * hSpacing), y); const enemyR = this.createEnemyByType(type); if (enemyR) this.addEnemyToFormation(enemyR, this.width / 2 + (i * hSpacing), y); } } }
