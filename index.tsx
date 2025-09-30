@@ -1532,7 +1532,7 @@ class Game {
                 // *** HIER IST DIE KORREKTUR ***
                 const isNewGame = forceReset || !this.player;
                 if (isNewGame) {
-                    this.level = 1;
+                    this.level = 5;
                     this.score = 0;
                     this.entities = [];
                     this.isBossSlayerActive = false;
