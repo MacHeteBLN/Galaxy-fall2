@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' blob: data: gap:; style-src * 'self' 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-inline' 'unsafe-eval' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * 'self' 'unsafe-inline' blob: data: gap:; connect-src * 'self' blob: data: gap:; frame-src * 'self' blob: data: gap:;">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Galaxy Fall - Spieler-Hub</title>
+    <title>Galaxy Fall: PI Edition</title>
 
     <!-- Meta-Tags für die Beschreibung und SEO -->
-    <meta name="description" content="Das offizielle Spieler-Hub für Galaxy Fall. Verbinde dich mit dem Pi-Netzwerk, verfolge deine Statistiken, erklimme die Ranglisten und starte das Spiel.">
+    <meta name="description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
 
     <!-- Open Graph Meta-Tags (für Facebook, Discord, etc.) -->
-    <meta property="og:title" content="Galaxy Fall: Spieler-Hub">
-    <meta property="og:description" content="Deine persönliche Kommandozentrale für das Galaxy Fall Universum.">
+    <meta property="og:title" content="Galaxy Fall: PI Edition">
+    <meta property="og:description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://galaxyfall.space/">
     <meta property="og:image" content="https://galaxyfall.space/assets/social_preview.png">
@@ -21,371 +19,29 @@
     
     <!-- Twitter Card Meta-Tags (für X) -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Galaxy Fall: Spieler-Hub">
-    <meta name="twitter:description" content="Deine persönliche Kommandozentrale für das Galaxy Fall Universum.">
+    <meta name="twitter:title" content="Galaxy Fall: PI Edition">
+    <meta name="twitter:description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
     <meta name="twitter:image" content="https://galaxyfall.space/assets/social_preview.png">
 
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index.BfHF9zAi.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index.CDgs0jMD.css">
+
+    <!-- 
+<script src="//cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+-->
+
+  <script type="module" crossorigin src="/assets/index.BOeeJ05R.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index.ypsbkUKi.css">
 </head>
 <body>
-    <!-- Ebene 1: Animierter Sternenhintergrund -->
-    <div class="stars"></div>
-    <!-- Ebene 2: Statisches Grid für den HUD-Look -->
-    <div class="background-grid"></div>
+<div class="stars"></div>
 
-    <!-- ======================================================= -->
-    <!-- Das Spieler-Hub (Kommandobrücke) - ULTIMATIVES UPDATE   -->
-    <!-- ======================================================= -->
-        
-    <div id="hub-container">
-        <header class="hub-header">
-            <div class="logo glitch-effect" data-text="GALAXY FALL">GALAXY FALL</div>
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <button id="hub-language-btn" class="hub-button">
-                    <span data-translate-key="hub_change_language">Sprache</span>
-                </button>
-                <div id="profile-widget">
-    <!-- GAST ANSICHT -->
-    <div class="logged-out-view">
-        <span data-translate-key="hub_guest_pilot">Gast-Pilot</span>
-        <div class="login-buttons-container">
-            <button id="login-btn" class="hub-button primary"><span data-translate-key="hub_connect_pi">Pi Connect</span></button>
-            <!-- NEUER IOTA BUTTON -->
-            <button id="iota-login-btn" class="hub-button iota-btn">
-                <span>IOTA Connect</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- EINGELOGGT ANSICHT (Pi oder IOTA) -->
-    <div class="logged-in-view interactive">
-        <img class="profile-avatar-small" id="user-avatar-img" src="./assets/images/pi_logo.png" alt="Avatar">
-        <div class="user-info-box">
-            <span class="user-label"><span data-translate-key="hub_pilot_greeting">Pilot</span>:</span>
-            <strong id="username-placeholder">[Username]</strong>
-            
-            <!-- IOTA WALLET INFO (Versteckt wenn Pi) -->
-            <div id="iota-wallet-display" style="display:none;">
-                <span class="wallet-address" id="iota-address-short">iota1q...xyz</span>
-                <button class="copy-btn" id="iota-copy-btn" title="Adresse kopieren">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                </button>
-            </div>
-        </div>
-        <button id="logout-btn" class="hub-button"><span data-translate-key="hub_logout">Logout</span></button>
-    </div>
-</div>
-            </header>
-
-        <main class="hub-main-grid">
-            <!-- LINKE SPALTE -->
-            <div class="hub-column left">
-                <div class="dashboard-module pilot-stats-module requires-auth">
-                    <h2 class="module-title" data-translate-key="hub_career_stats">Karriere-Statistiken</h2>
-                    <div class="module-content">
-                        <div class="stats-grid">
-                            <div class="stat-item"><span data-translate-key="hub_stat_kills">Gesamtkills</span><strong data-stat="kills">0</strong></div>
-                            <div class="stat-item"><span data-translate-key="hub_stat_playtime">Spielzeit</span><strong data-stat="playtime">0h</strong></div>
-                            <div class="stat-item"><span data-translate-key="hub_stat_coins">Gesammelte Coins</span><strong data-stat="coins">0</strong></div>
-                            <div class="stat-item"><span data-translate-key="hub_stat_missions">Missionen</span><strong data-stat="missions">0</strong></div>
-                        </div>
-                    </div>
-                    <p class="auth-message" data-translate-key="hub_auth_required">Bitte mit Pi verbinden, um deine Daten zu sehen.</p>
-                </div>
-
-                <div class="dashboard-module ship-systems-module requires-auth">
-                    <h2 class="module-title" data-translate-key="hub_ship_systems">Schiffsysteme</h2>
-                    <div class="module-content">
-                        <div class="system-upgrade-item" data-upgrade="start_lives">
-                            <span data-translate-key="shop_start_lives_name">Start-Leben</span>
-                            <div class="progress-bar"><div style="width: 0%;"></div></div>
-                            <span>0/5</span>
-                        </div>
-                        <div class="system-upgrade-item" data-upgrade="coin_value">
-                            <span data-translate-key="shop_coin_value_name">Coin-Wert</span>
-                            <div class="progress-bar"><div style="width: 0%;"></div></div>
-                            <span>0/10</span>
-                        </div>
-                        <div class="system-upgrade-item" data-upgrade="powerup_duration">
-                            <span data-translate-key="shop_powerup_duration_name">PowerUp-Dauer</span>
-                            <div class="progress-bar"><div style="width: 0%;"></div></div>
-                            <span>0/10</span>
-                        </div>
-                    </div>
-                     <p class="auth-message" data-translate-key="hub_auth_required">Bitte mit Pi verbinden, um deine Daten zu sehen.</p>
-                </div>
-                
-                <div class="dashboard-module news-module">
-                    <h2 class="module-title" data-translate-key="hub_news">Galaxy News Network</h2>
-                    <div class="module-content news-feed">
-                        <p><strong data-translate-key="news_1_title">Update v1.2 live!</strong> <span data-translate-key="news_1_body">Der neue Boss "Omega Nexus" wurde gesichtet. Piloten, seid auf der Hut!</span></p>
-                        <p><strong data-translate-key="news_2_title">Wochenend-Event:</strong> <span data-translate-key="news_2_body">Doppelte Coin-Belohnungen für alle Boss-Kills!</span></p>
-                        <p><strong data-translate-key="news_3_title">Community-Wettbewerb:</strong> <span data-translate-key="news_3_body">Erreiche Welle 50 im Endlos-Modus und gewinne exklusive NFTs!</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ZENTRALE SPALTE (HERZSTÜCK) -->
-            <div class="hub-column center">
-                <div class="dashboard-module hangar-module">
-                    <h2 class="module-title" data-translate-key="hub_hangar">Hangar A-01</h2>
-                    <div class="module-content">
-                        <div class="hangar-ship-showcase">
-                            <img src="/assets/player_tier1.CKmJeXHL.png" alt="Dein Schiff" class="hangar-ship-image">
-                        </div>
-                        <div class="hangar-ship-info">
-                            <h3 id="ship-name">Phoenix Mk. I</h3>
-                            <p id="ship-class" data-translate-key="shop_skin_default_name">Standard-Jäger</p>
-                        </div>
-                        <div class="hangar-loadout">
-                            <div class="loadout-item"><span data-translate-key="loadout_projectile">Projektil</span><strong data-cosmetic="projectile">Standard</strong></div>
-                            <div class="loadout-item"><span data-translate-key="loadout_trail">Antriebsspur</span><strong data-cosmetic="trail">Standard</strong></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dashboard-module mission-start-module">
-                     <h2 class="module-title" data-translate-key="hub_start_mission">MISSION STARTEN</h2>
-                     <div class="module-content edition-gallery">
-                         <a id="start-pi-edition" href="#" class="edition-card pi"><div class="card-bg"></div><div class="card-title" data-translate-key="hub_pi_edition">PI EDITION</div></a>
-                        <div class="edition-card iota disabled"><div class="card-bg"></div><div class="card-title" data-translate-key="hub_iota_edition">IOTA EDITION</div><div class="card-info" data-translate-key="hub_coming_soon">COMING SOON</div></div>
-                        <div class="edition-card og disabled"><div class="card-bg"></div><div class="card-title" data-translate-key="hub_og_edition">ORIGINAL</div><div class="card-info" data-translate-key="hub_coming_soon">COMING SOON</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RECHTE SPALTE -->
-            <div class="hub-column right">
-                 <div class="dashboard-module leaderboard-module">
-                    <h2 class="module-title" data-translate-key="hub_leaderboard">GLOBALE RANGLISTE (Top 10)</h2>
-                    <div class="module-content leaderboard-wrapper">
-                        <p data-translate-key="hub_leaderboard_loading">Rangliste wird geladen...</p>
-                    </div>
-                </div>
-                <div class="dashboard-module achievements-module requires-auth">
-                    <h2 class="module-title" data-translate-key="hub_achievements">Trophäen</h2>
-                    <div class="module-content">
-                        <div class="achievements-summary">
-                            <span data-translate-key="hub_achievements_unlocked">Freigeschaltet</span>
-                            <div class="progress-bar"><div style="width: 0%;"></div></div>
-                            <span>0 / 20</span>
-                        </div>
-                        <div class="achievements-showcase">
-                            <!-- Wird dynamisch gefüllt -->
-                        </div>
-                    </div>
-                    <p class="auth-message" data-translate-key="hub_auth_required">Bitte mit Pi verbinden, um deine Daten zu sehen.</p>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- ======================================================= -->
-    <!-- Die bildschirmfüllende Piloten-Akte (Profil)   -->
-    <!-- ======================================================= -->
-    <div id="profile-view" class="profile-view-hidden">
-        <button id="profile-close-btn" class="hub-button"><span>Schließen</span></button>
-        <div class="profile-banner"></div>
-        <div class="profile-header">
-            <div class="profile-avatar"><img src="/assets/player_skin_void.CQvrZ90r.png" alt="Avatar"></div>
-            <div class="profile-identity">
-                <h1 id="profile-username">[Pi-Username]</h1>
-                <div id="profile-title-selector">Aktueller Titel: <span class="selected-title">Elite-Pilot</span> ▼</div>
-            </div>
-        </div>
-        <div class="profile-content">
-            <div class="profile-panel stats-panel">
-                <h3>Leistungs-Analyse</h3>
-                <div class="radar-chart-placeholder"></div>
-                <div class="best-run">
-                    <h4>Bester Lauf</h4>
-                    <p>Score: <span id="best-run-score">-</span> | Welle: <span id="best-run-wave">-</span></p>
-                </div>
-            </div>
-            <div class="profile-panel trophy-panel">
-                <h3>Trophäen-Schrank</h3>
-                <div class="trophy-shelf">
-                    <!-- Trophäen werden hier dynamisch eingefügt -->
-                </div>
-            </div>
-            <div class="profile-panel hangar-panel">
-                <h3>Hangar</h3>
-                <div class="hangar-showcase">
-                    <img id="hangar-ship" src="/assets/player_skin_void.CQvrZ90r.png" alt="Ausgerüstetes Schiff">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ======================================================= -->
-    <!-- Dein bestehendes Spiel in einem Wrapper-Container      -->
-    <!-- ======================================================= -->
-    <div id="game-wrapper" style="display: none;">
-        <div id="gameContainer">
-            <!-- Haupt-UI des Spiels -->
-            <div id="ui-panel">
-                <div class="left-stats">
-                    <div id="mobile-pause-button">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                            <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
-                            <rect x="60" y="25" width="15" height="50" fill="currentColor"/>
-                        </svg>
-                    </div>
-                    <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
-                    <div class="ui-item" id="coin-display">
-                        <img id="coin-icon" src="" alt="Coins"/>: <span id="coins">0</span>
-                    </div>
-                </div>
-                <div class="right-stats">
-                    <div class="ui-item" id="energy-display">
-                        <div id="energy-bar-container"><div id="energy-bar"></div></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="ui-panel-bottom">
-                <div class="left-stats">
-                    <div class="ui-item" id="lives-display"></div>
-                    <div class="ui-item" id="weapon-tier-display"></div>
-                </div>
-                <div class="right-stats">
-                    <div class="ui-item">
-                        <span data-translate-key="level">Level</span>: <span id="level">1</span>
-                    </div>
-                </div>
-            </div>
-            
-            <canvas id="gameCanvas" width="800" height="750"></canvas>
-            
-            <div id="bottom-ui-container">
-                <div id="special-inventory"></div>
-                <div id="ultra-inventory"></div>
-            </div>
-            
-            <div id="level-display-container"></div>
-            <div id="weapon-status"></div>
-            
-            <!-- Menü-Container (für Pause und Hauptmenü) -->
-            <div id="menu-container" style="display: none;">
-                <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
-                <div class="menu-tabs">
-                    <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
-                    <button class="tab-button" id="tab-galerie" data-translate-key="tab_galerie">Galerie</button>
-                    <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
-                    <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
-                    <button class="tab-button" id="tab-rangliste" data-translate-key="tab_rangliste">Rangliste</button>
-                    <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
-                </div>
-                
-                <div class="menu-content">
-                    <div id="spiel-view" class="tab-pane active">
-                         <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
-                         <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
-                         <button class="menu-button" id="back-to-hub-button" data-translate-key="btn_back_to_hub">Zurück zum Hub</button>
-                         <button class="menu-button" id="restart-button" data-translate-key="btn_start_game">Spiel starten</button>
-                         <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
-                         <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
-                         <div id="menu-highscore">
-                            <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
-                         </div>
-                    </div>
-                    <div id="galerie-view" class="tab-pane"><div class="info-panel" id="galerie-list"></div></div>
-                    <div id="arsenal-view" class="tab-pane"><div class="info-panel" id="arsenal-list"></div></div>
-                    <div id="gegner-view" class="tab-pane"><div class="info-panel" id="gegner-list"></div></div>
-                    <div id="rangliste-view" class="tab-pane"><div class="info-panel" id="leaderboard-content"></div></div>
-                        
-<div id="einstellungen-view" class="tab-pane">
-    <div class="info-panel">
-        <div class="settings-panel">
-            <div class="setting-item"><span data-translate-key="settings_volume_label">Lautstärke</span><input type="range" id="volume-master" min="0" max="1" step="0.1"></div>
-            <div class="setting-item"><span data-translate-key="settings_music_label">Musik</span><button class="menu-button" id="toggle-music">AN</button></div>
-            <div class="setting-item"><span data-translate-key="settings_sfx_label">SFX</span><button class="menu-button" id="toggle-sfx">AN</button></div>
-            <div class="setting-item"><span data-translate-key="settings_particles_label">Partikel</span><button class="menu-button" id="toggle-particles">HOCH</button></div>
-            <div class="setting-item"><span data-translate-key="settings_shake_label">Bildwackeln</span><button class="menu-button" id="toggle-shake">AN</button></div>
-        </div>
-    </div>
-</div>
-
-  
-                </div>
-            </div>
-
-            <!-- CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
-            <div id="mode-select-container" style="display: none;">
-                <div class="menu">
-                    <div class="menu-header"><h1 data-translate-key="mode_select_title">Choose Mode</h1></div>
-                    <div class="menu-content" style="flex-direction: column; gap: 15px; padding: 20px;">
-                        <button id="select-campaign-button" class="menu-button" data-translate-key="btn_campaign">Campaign</button>
-                        <button id="select-endless-button" class="menu-button" data-translate-key="btn_endless">Endless</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- KORRIGIERTER Container für den Game-Over-Bildschirm -->
-            <div id="game-over-container" style="display: none;">
-                <div class="menu">
-                    <div class="menu-header"><h1 data-translate-key="game_over_title">Game Over</h1></div>
-                    <div class="final-score-container"><span data-translate-key="game_over_final_score">Final Score</span>: <span id="final-score">0</span></div>
-                    <div id="final-rank-display" class="final-rank"></div>
-                    <button class="menu-button" id="restart-from-gameover-button" data-translate-key="btn_restart">Restart</button>
-                    <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
-                </div>
-            </div>
-
-            <!-- ÜBERARBEITETER SHOP-CONTAINER -->
-            <div id="shop-container" style="display: none;">
-                <div class="shop-menu">
-                    <div class="shop-header">
-                        <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
-                        <div id="shop-coin-display">
-                            <img id="shop-coin-icon" src="" alt="Coins"/>
-                            <span id="shop-coins">0</span>
-                        </div>
-                        <div id="pi-user-display" style="display: none;">
-                            <span data-translate-key="connected_as">Verbunden als</span>: <span id="pi-username"></span>
-                        </div>
-                    </div>
-                    <div id="shop-tabs" class="menu-tabs">
-                        <button class="tab-button active" data-tab="permanent" data-translate-key="shop_tab_permanent">Upgrades</button>
-                        <button class="tab-button" data-tab="consumable" data-translate-key="shop_tab_consumable">Verbrauch</button>
-                        <button class="tab-button" data-tab="skin" data-translate-key="shop_tab_skins">Skins</button>
-                        <button class="tab-button" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">Optik</button>
-                        <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
-                        <button class="tab-button" data-tab="collectible" data-translate-key="shop_tab_collectibles">NFT-Hangar</button>
-                    </div>
-                    <div id="shop-content" class="menu-content"></div>
-                    <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
-                </div>
-            </div>
-
-            <div id="exit-screen" style="display: none;">
-                <div class="menu">
-                    <h1 data-translate-key="exit_title">Bis bald!</h1>
-                    <p data-translate-key="exit_message">Du kannst diesen Tab jetzt sicher schließen.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="collectible-modal">
-            <div class="modal-content">
-                <img id="modal-img" src="" alt="Collectible Artwork" />
-                <div class="modal-text-content">
-                    <h2 id="modal-title"></h2>
-                    <p id="modal-story"></p>
-                    <p id="modal-bonus"></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- =================================================================================== -->
+<div id="gameContainer">
     <!-- Sprachauswahl-Bildschirm -->
-    <!-- =================================================================================== -->
-    <div id="language-select-screen" class="game-screen" style="display: none;">
+    <div id="language-select-screen">
         <h1 data-translate-key="lang_select_title">SELECT LANGUAGE</h1>
         <div class="language-grid">
             <button class="lang-button" data-lang="en">English</button>
@@ -398,12 +54,204 @@
         <button class="menu-button" id="lang-back-button" data-translate-key="btn_back">Back</button>
     </div>
 
-    <!-- Pi Network SDK -->
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-    <script>
-        Pi.init({ version: "2.0", sandbox: false });
-    </script>
+    <!-- Haupt-UI des Spiels -->
+    <div id="ui-panel">
+        <div class="left-stats">
+            <div id="mobile-pause-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
+                    <rect x="60" y="25" width="15" height="50" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
+            <div class="ui-item" id="coin-display">
+                <img id="coin-icon" src="" alt="Coins"/>: <span id="coins">0</span>
+            </div>
+        </div>
+        <div class="right-stats">
+            <div class="ui-item" id="energy-display">
+                <div id="energy-bar-container"><div id="energy-bar"></div></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ui-panel-bottom">
+        <div class="left-stats">
+            <div class="ui-item" id="lives-display"></div>
+            <div class="ui-item" id="weapon-tier-display"></div>
+        </div>
+        <div class="right-stats">
+            <div class="ui-item">
+                <span data-translate-key="level">Level</span>: <span id="level">1</span>
+            </div>
+        </div>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="750"></canvas>
+    
+    <div id="bottom-ui-container">
+        <div id="special-inventory"></div>
+        <div id="ultra-inventory"></div>
+    </div>
+    
+    <div id="level-display-container">
+    </div>
 
-    <!-- Dein Spiel-Skript -->
+    <div id="weapon-status"></div>
+    
+    <!-- Menü-Container (für Pause und Hauptmenü) -->
+    <div id="menu-container" style="display: none;">
+        <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
+        <div class="menu-tabs">
+            <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
+            <button class="tab-button" id="tab-galerie" data-translate-key="tab_galerie">Galerie</button>
+            <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
+            <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
+            <button class="tab-button" id="tab-rangliste" data-translate-key="tab_rangliste">Rangliste</button>
+            <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
+        </div>
+        
+        <div class="menu-content">
+            <div id="spiel-view" class="tab-pane active">
+                 <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
+                 <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
+                 <button class="menu-button" id="restart-button" data-translate-key="btn_start_game">Spiel starten</button>
+                 <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
+                 <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
+                 <div id="menu-highscore">
+                    <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
+                 </div>
+            </div>
+            <div id="galerie-view" class="tab-pane">
+                 <div class="info-panel" id="galerie-list">
+                 </div>
+            </div>
+            <div id="arsenal-view" class="tab-pane">
+                 <div class="info-panel" id="arsenal-list"></div>
+            </div>
+            <div id="gegner-view" class="tab-pane">
+                 <div class="info-panel" id="gegner-list"></div>
+            </div>
+            <div id="rangliste-view" class="tab-pane">
+                 <div class="info-panel" id="leaderboard-content">
+                 </div>
+            </div>
+            <div id="einstellungen-view" class="tab-pane">
+                <div class="info-panel">
+                    <div class="settings-panel">
+                        <div class="setting-item">
+                            <span data-translate-key="settings_language_label">Sprache</span>
+                            <button class="menu-button" id="toggle-language">Deutsch</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_volume_label">Lautstärke</span>
+                            <input type="range" id="volume-master" min="0" max="1" step="0.1">
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_music_label">Musik</span>
+                            <button class="menu-button" id="toggle-music">AN</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_sfx_label">SFX</span>
+                            <button class="menu-button" id="toggle-sfx">AN</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_particles_label">Partikel</span>
+                            <button class="menu-button" id="toggle-particles">HOCH</button>
+                        </div>
+                        <div class="setting-item">
+                            <span data-translate-key="settings_shake_label">Bildwackeln</span>
+                            <button class="menu-button" id="toggle-shake">AN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
+    <div id="mode-select-container" style="display: none;">
+        <div class="menu">
+            <div class="menu-header">
+                <h1 data-translate-key="mode_select_title">Choose Mode</h1>
+            </div>
+            <div class="menu-content" style="flex-direction: column; gap: 15px; padding: 20px;">
+                <button id="select-campaign-button" class="menu-button" data-translate-key="btn_campaign">Campaign</button>
+                <button id="select-endless-button" class="menu-button" data-translate-key="btn_endless">Endless</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KORRIGIERTER Container für den Game-Over-Bildschirm -->
+    <div id="game-over-container" style="display: none;">
+        <div class="menu">
+            <div class="menu-header">
+                <h1 data-translate-key="game_over_title">Game Over</h1>
+            </div>
+            <div class="final-score-container">
+                <span data-translate-key="game_over_final_score">Final Score</span>: <span id="final-score">0</span>
+            </div>
+            <div id="final-rank-display" class="final-rank"></div>
+            <button class="menu-button" id="restart-from-gameover-button" data-translate-key="btn_restart">Restart</button>
+            <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
+        </div>
+    </div>
+
+    <!-- ÜBERARBEITETER SHOP-CONTAINER -->
+    <div id="shop-container" style="display: none;">
+        <div class="shop-menu">
+            <div class="shop-header">
+                <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
+                <div id="shop-coin-display">
+                    <img id="shop-coin-icon" src="" alt="Coins"/>
+                    <span id="shop-coins">0</span>
+                </div>
+                <div id="pi-user-display" style="display: none;">
+                    <span data-translate-key="connected_as">Verbunden als</span>: <span id="pi-username"></span>
+                </div>
+            </div>
+
+            <div id="shop-tabs" class="menu-tabs">
+                <button class="tab-button active" data-tab="permanent" data-translate-key="shop_tab_permanent">Upgrades</button>
+                <button class="tab-button" data-tab="consumable" data-translate-key="shop_tab_consumable">Verbrauch</button>
+                <button class="tab-button" data-tab="skin" data-translate-key="shop_tab_skins">Skins</button>
+                <button class="tab-button" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">Optik</button>
+                <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
+                <button class="tab-button" data-tab="collectible" data-translate-key="shop_tab_collectibles">NFT-Hangar</button>
+            </div>
+
+            <div id="shop-content" class="menu-content">
+            </div>
+
+            <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
+        </div>
+    </div>
+
+    <div id="exit-screen" style="display: none;">
+        <div class="menu">
+            <h1 data-translate-key="exit_title">Bis bald!</h1>
+            <p data-translate-key="exit_message">Du kannst diesen Tab jetzt sicher schließen.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- NEU: Modal-Container für die vergrößerte Ansicht der Sammlerstücke -->
+<div id="collectible-modal">
+    <div class="modal-content">
+        <img id="modal-img" src="" alt="Collectible Artwork" />
+        <h2 id="modal-title"></h2>
+        <p id="modal-story"></p>
+        <p id="modal-bonus"></p>
+    </div>
+</div>
+
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>
+    Pi.init({ version: "2.0", sandbox: false });
+</script>
+
+
+
 </body>
 </html>
