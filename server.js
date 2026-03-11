@@ -140,6 +140,7 @@ const db = new sqlite3.Database('./leaderboard.db', (err) => {
         db.run(`ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL`, () => { });
         db.run(`ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (datetime('now'))`, () => { });
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT DEFAULT NULL`, () => { });
+        db.run(`ALTER TABLE users ADD COLUMN profile_visibility TEXT DEFAULT 'public'`, () => { });
 
         // Friend requests: minimal workflow (pending -> accepted/declined/cancelled)
         db.run(`CREATE TABLE IF NOT EXISTS friend_requests (
@@ -1402,6 +1403,73 @@ app.get('/api/public-profile', (req, res) => {
             );
         });
     });
+});
+
+// ==================================================================
+// OWN PROFILE (Editor)
+// ==================================================================
+app.get('/api/profile', (req, res) => {
+    const pi_uid = normalizeUid(req.query.pi_uid);
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    db.get(
+        `SELECT pi_uid, username, display_name, bio, profile_visibility,
+                has_premium_license, created_at, last_seen,
+                total_kills, total_coins_collected, playtime_seconds, missions_completed,
+                trophies, cosmetics, collectibles
+         FROM users WHERE pi_uid = ?`,
+        [pi_uid],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(404).json({ error: 'User not found' });
+
+            let trophies = {}, cosmetics = {}, collectibles = {};
+            try { trophies = JSON.parse(row.trophies || '{}'); } catch { }
+            try { cosmetics = JSON.parse(row.cosmetics || '{}'); } catch { }
+            try { collectibles = JSON.parse(row.collectibles || '{}'); } catch { }
+
+            res.json({
+                pi_uid: row.pi_uid,
+                username: row.username,
+                display_name: row.display_name,
+                bio: row.bio,
+                profile_visibility: row.profile_visibility || 'public',
+                has_premium_license: row.has_premium_license === 1,
+                created_at: row.created_at,
+                last_seen: row.last_seen,
+                stats: {
+                    total_kills: row.total_kills || 0,
+                    total_coins_collected: row.total_coins_collected || 0,
+                    playtime_seconds: row.playtime_seconds || 0,
+                    missions_completed: row.missions_completed || 0
+                },
+                trophies,
+                loadout: { cosmetics, collectibles }
+            });
+        }
+    );
+});
+
+app.post('/api/profile', (req, res) => {
+    const pi_uid = normalizeUid(req.body.pi_uid);
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    let { display_name, bio, profile_visibility } = req.body;
+    display_name = (display_name || '').toString().trim().slice(0, 24);
+    bio = (bio || '').toString().trim().slice(0, 500);
+    profile_visibility = ['public', 'friends', 'private'].includes(profile_visibility)
+        ? profile_visibility
+        : 'public';
+
+    db.run(
+        `UPDATE users SET display_name = ?, bio = ?, profile_visibility = ? WHERE pi_uid = ?`,
+        [display_name || null, bio || null, profile_visibility, pi_uid],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) return res.status(404).json({ error: 'User not found' });
+            res.json({ success: true });
+        }
+    );
 });
 
 // ==================================================================

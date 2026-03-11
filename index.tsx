@@ -7071,8 +7071,77 @@ window.addEventListener('load', async function () {
     })();
 
     // =========================================================================
-    // PUBLIC PROFILE VIEWER (Pilot Dossier)
+    // OWN PROFILE EDITOR + PUBLIC PROFILE VIEWER (Pilot Dossier)
     // =========================================================================
+    (window as any).openOwnProfileEditor = (data: any, uid: string) => {
+        const container = document.getElementById('profile-container');
+        const view = document.getElementById('spiel-view');
+        if (!container || !view) return;
+
+        const t = (k: string) => globalLocalizationManager.translate(k);
+        const displayName = data.display_name || data.username || 'PILOT';
+        const bio = data.bio || '';
+        const visibility = data.profile_visibility || 'public';
+
+        view.innerHTML = `
+            <div class="profile-dashboard">
+                <div class="pilot-identity-header">
+                    <div class="pilot-avatar-frame">
+                        <img src="${playerImgSrc1}" alt="Avatar">
+                    </div>
+                    <div class="pilot-header-info">
+                        <label class="profile-label">PILOT NAME</label>
+                        <input id="profile-display-name" class="profile-input" maxlength="24" value="${displayName}">
+                        <label class="profile-label" style="margin-top:10px;">BIO</label>
+                        <textarea id="profile-bio" class="profile-textarea" maxlength="500">${bio}</textarea>
+                        <label class="profile-label" style="margin-top:10px;">VISIBILITY</label>
+                        <select id="profile-visibility" class="profile-input">
+                            <option value="public" ${visibility === 'public' ? 'selected' : ''}>PUBLIC</option>
+                            <option value="friends" ${visibility === 'friends' ? 'selected' : ''}>FRIENDS</option>
+                            <option value="private" ${visibility === 'private' ? 'selected' : ''}>PRIVATE</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:20px; text-align:right;">
+                    <button class="retro-btn big" id="profile-save-btn">SAVE</button>
+                </div>
+            </div>
+        `;
+
+        container.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        const saveBtn = document.getElementById('profile-save-btn') as HTMLButtonElement | null;
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                const nameEl = document.getElementById('profile-display-name') as HTMLInputElement;
+                const bioEl = document.getElementById('profile-bio') as HTMLTextAreaElement;
+                const visEl = document.getElementById('profile-visibility') as HTMLSelectElement;
+                saveBtn.disabled = true;
+                saveBtn.textContent = t('msg_syncing') || 'SAVING...';
+                try {
+                    await fetch(`${API_BASE_URL}/profile`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pi_uid: uid,
+                            display_name: nameEl.value,
+                            bio: bioEl.value,
+                            profile_visibility: visEl.value
+                        })
+                    });
+                    container.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                    if (typeof (window as any).updateHubUI === 'function') (window as any).updateHubUI();
+                } catch (e) {
+                    console.error('Profile save failed', e);
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'SAVE';
+                }
+            };
+        }
+    };
+
     function ensurePublicProfileOverlay() {
         let overlay = document.getElementById('public-profile-overlay') as HTMLElement | null;
         if (overlay) return overlay;
@@ -7653,6 +7722,24 @@ window.addEventListener('load', async function () {
         document.getElementById('game-wrapper')!.dataset.fromHub = 'true';
         showGameOverlay((show) => setTimeout(() => showHallOfFameOverlay(), 50));
     });
+
+    // --- HUB PROFILE WIDGET -> OWN PROFILE EDITOR ---
+    const profileWidget = document.getElementById('profile-widget');
+    if (profileWidget) {
+        profileWidget.addEventListener('click', async () => {
+            if (!(window as any).requireLogin()) return;
+            const { uid } = getHubPlayerIdentity();
+            if (!uid || uid === 'UNREGISTERED') return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile?pi_uid=${uid}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                (window as any).openOwnProfileEditor?.(data, uid);
+            } catch (e) {
+                console.error('Profile load failed', e);
+            }
+        });
+    }
 
     document.getElementById('hangar-prev')?.addEventListener('click', () => {
         currentHangarIndex = (currentHangarIndex - 1 + allHangarItems.length) % allHangarItems.length;
