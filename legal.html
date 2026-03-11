@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GALAXY FALL | LEGAL PROTOCOLS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f2ff;
+            --neon-magenta: #ff00ff;
+            --pi-yellow: #ffcc00;
+            --dark-bg: #050505;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: #ccc;
+            font-family: 'Share Tech Mono', monospace;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(1px 1px at 10% 10%, #fff, transparent),
+                radial-gradient(1px 1px at 20% 50%, #fff, transparent),
+                radial-gradient(1px 1px at 50% 20%, #fff, transparent),
+                radial-gradient(1px 1px at 80% 80%, #fff, transparent);
+            background-size: 200px 200px;
+            animation: starsMove 100s linear infinite;
+        }
+
+        @keyframes starsMove {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 1000px 1000px;
+            }
+        }
+
+        /* CRT SCANLINE EFFECT */
+        body::after {
+            content: " ";
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .terminal-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            border: 1px solid var(--neon-cyan);
+            background: rgba(0, 0, 0, 0.85);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        header {
+            border-bottom: 2px solid var(--neon-cyan);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+            font-size: 1.5rem;
+            letter-spacing: 4px;
+        }
+
+        .lang-select {
+            background: #111;
+            color: var(--neon-cyan);
+            border: 1px solid var(--neon-cyan);
+            padding: 5px 10px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+        }
+
+        .tab-btn.active {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .content-area {
+            height: 60vh;
+            overflow-y: auto;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-cyan) #000;
+        }
+
+        h2 {
+            color: var(--pi-yellow);
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            border-left: 4px solid var(--pi-yellow);
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: var(--neon-cyan);
+            margin: 25px 0 10px 0;
+            font-size: 1rem;
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        strong {
+            color: #fff;
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 0.7rem;
+            opacity: 0.5;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .glitch-text {
+            animation: ripple 5s infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: skewX(0);
+            }
+
+            1% {
+                transform: skewX(20deg);
+            }
+
+            2% {
+                transform: skewX(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .terminal-container {
+                margin: 10px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        .back-btn {
+            background: transparent;
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            padding: 8px 16px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            touch-action: manipulation;
+        }
+
+        .back-btn:hover,
+        .back-btn:active {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="terminal-container">
+        <header>
+            <button class="back-btn" id="legalBackBtn"
+                onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }">&#8592;
+                <span id="backBtnText">BACK</span></button>
+            <div class="logo glitch-text">GALAXY FALL</div>
+            <select class="lang-select" id="langSelect">
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+                <option value="it">Italiano</option>
+            </select>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="btnTerms">PROTOCOL: MANDATE</button>
+            <button class="tab-btn" id="btnPrivacy">PROTOCOL: ENCRYPTION</button>
+        </div>
+
+        <div class="content-area" id="mainContent">
+            <!-- Content will be injected here -->
+        </div>
+
+        <footer>
+            <span id="footerMsg">SECURED UPLINK // VERIFIED BY PI NETWORK NODES</span>
+            <span>VERSION: 3.5.0-LEGAL</span>
+        </footer>
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                title: "GALACTIC MANDATE & PRIVACY PROTOCOLS",
+                termsTab: "PROTOCOL: MANDATE",
+                privacyTab: "PROTOCOL: ENCRYPTION",
+                termsHeader: "THE GALACTIC MANDATE FOR PILOT CONDUCT",
+                privacyHeader: "NEURAL DATA PROTECTION & ENCRYPTION PROTOCOLS",
+                footerMsg: "SECURED UPLINK // VERIFIED BY PI NETWORK NODES",
+                backBtn: "BACK",
+                termsContent: `
+                <h3>1. THE UPLINK AGREEMENT</h3>
+                <p>By establishing a neural uplink with the <strong>Galaxy Fall Network</strong>, you agree to abide by the Galactic Mandate. Unauthorized access or system manipulation is strictly prohibited by central fleet command.</p>
+                <h3>2. PILOT RESPONSIBILITY</h3>
+                <p>Every Pilot is responsible for the security of their own <strong>Uplink ID (UID)</strong>. Sharing credentials with hostile factions or unregistered entities will result in immediate termination of flight privileges.</p>
+                <h3>3. VIRTUAL ASSETS (GFC & NFTS)</h3>
+                <p>Galactic Fall Credits (GFC) and ship-based collectibles are digital assets managed via the <strong>Pi Network Blockchain</strong> protocols. Ownership is verifiable but subject to the stability of the sector's power grid.</p>
+                <h3>4. COMBAT DATA USAGE</h3>
+                <p>Combat statistics, kill counts, and mission success rates are recorded for the purpose of global Ranking and Hall of Fame distribution. This data is public across the galaxy.</p>
+                <h3>5. LIABILITY LIMITS</h3>
+                <p>Fleet Command is not liable for data loss during black hole traversals or unexpected server maintenance by the Galactic Sector technicians.</p>
+            `,
+                privacyContent: `
+                <h3>1. DATA SCANNERS</h3>
+                <p>We do not scan for personal neural patterns beyond what is required for the operation of the <strong>Pilot Systems</strong>. Your identity remains shielded within the Pi Network ecosystem.</p>
+                <h3>2. ENCRYPTION PROTOCOLS</h3>
+                <p>Technical telemetry (device type, connection latency, and OS version) is automatically encrypted to ensure stable synchronization with the <strong>Nexus Central Hub</strong>.</p>
+                <h3>3. PI NETWORK INTEGRATION</h3>
+                <p>Only data authorized via the <strong>Pi SDK</strong> (Username, UID, and Transaction Hashes) is accessed by our systems. We do not store private keys or sensitive biometric data.</p>
+                <h3>4. NEURAL PURGE (DELETION)</h3>
+                <p>Pilots may request a complete <strong>Neural Purge</strong> (account deletion) at any time. This action is irreversible and will erase all earned GFC and Rank history from the galactic servers.</p>
+                <h3>5. SECTOR CONTACT</h3>
+                <p>For questions regarding these protocols, transmit a high-frequency burst to our technical support beam.</p>
+            `
+            },
+            de: {
+                title: "GALAKTISCHES MANDAT & DATENSCHUTZ PROTOKOLLE",
+                termsTab: "PROTOKOLL: MANDAT",
+                privacyTab: "PROTOKOLL: VERSCHLÜSSELUNG",
+                termsHeader: "DAS GALAKTISCHE MANDAT FÜR PILOTEN-VERHALTEN",
+                privacyHeader: "NEURALE DATENSCHUTZ- & VERSCHLÜSSELUNGS-PROTOKOLLE",
+                footerMsg: "GESICHERTER UPLINK // VERIFIZIERT DURCH PI-NETZWERK-NODES",
+                backBtn: "ZURÜCK",
+                termsContent: `
+                <h3>1. DIE UPLINK-VEREINBARUNG</h3>
+                <p>Durch den Aufbau eines neuralen Uplinks zum <strong>Galaxy Fall Netzwerk</strong> erklären Sie sich mit dem galaktischen Mandat einverstanden. Unbefugter Zugriff oder Systemmanipulationen sind durch das Zentralkommando der Flotte strengstens untersagt.</p>
+                <h3>2. VERANTWORTUNG DES PILOTEN</h3>
+                <p>Jeder Pilot ist für die Sicherheit seiner eigenen <strong>Uplink-ID (UID)</strong> verantwortlich. Das Teilen von Zugangsdaten mit feindlichen Fraktionen oder nicht registrierten Entitäten führt zum sofortigen Entzug der Flugprivilegien.</p>
+                <h3>3. VIRTUELLE GÜTER (GFC & NFTS)</h3>
+                <p>Galaxy Fall Credits (GFC) und schiffsbasierte Sammlerstücke sind digitale Assets, die über die <strong>Pi Network Blockchain</strong> Protokolle verwaltet werden. Das Eigentum ist verifizierbar, unterliegt jedoch der Stabilität des Sektor-Stromnetzes.</p>
+                <h3>4. NUTZUNG VON KAMPFDATEN</h3>
+                <p>Kampfstatistiken, Abschusszahlen und Missionserfolgsraten werden zum Zweck der globalen Rangliste und der Hall of Fame aufgezeichnet. Diese Daten sind galaxisweit öffentlich einsehbar.</p>
+                <h3>5. HAFTUNGSBESCHRÄNKUNGEN</h3>
+                <p>Das Flottenkommando haftet nicht für Datenverluste während Schwarzes-Loch-Durchquerungen oder unerwarteter Serverwartungen durch Techniker des Galaktischen Sektors.</p>
+            `,
+                privacyContent: `
+                <h3>1. DATEN-SCANNER</h3>
+                <p>Wir scannen keine persönlichen neuralen Muster über das hinaus, was für den Betrieb der <strong>Pilot-Systeme</strong> erforderlich ist. Ihre Identität bleibt innerhalb des Pi-Netzwerk-Ökosystems abgeschirmt.</p>
+                <h3>2. VERSCHLÜSSELUNGSPROTOKOLLE</h3>
+                <p>Technische Telemetrie wird automatisch verschlüsselt, um eine stabile Synchronisation mit dem <strong>Nexus Central Hub</strong> zu gewährleisten.</p>
+                <h3>3. PI-NETZWERK-INTEGRATION</h3>
+                <p>Nur Daten, die über das <strong>Pi SDK</strong> autorisiert wurden (Benutzername, UID und Transaktions-Hashes), werden von unseren Systemen abgefragt. Wir speichern keine privaten Schlüssel.</p>
+                <h3>4. NEURALER PURGE (LÖSCHUNG)</h3>
+                <p>Piloten können jederzeit einen vollständigen <strong>Neuralen Purge</strong> (Kontolöschung) anfordern. Diese Aktion ist unumkehrbar und löscht alle verdienten GFC und Ranglistenverläufe.</p>
+                <h3>5. SEKTOR-KONTAKT</h3>
+                <p>Bei Fragen zu diesen Protokollen senden Sie einen Hochfrequenz-Burst an unseren technischen Support-Strahl.</p>
+            `
+            },
+            es: {
+                title: "MANDATO GALÁCTICO Y PRIVACIDAD",
+                termsTab: "PROTOCOLO: MANDATO",
+                privacyTab: "PROTOCOLO: ENCRIPTACIÓN",
+                termsHeader: "EL MANDATO GALÁCTICO DE CONDUCTA DEL PILOTO",
+                privacyHeader: "PROTECCIÓN DE DATOS NEURALES Y PROTOCOLOS",
+                footerMsg: "UPLINK SEGURO // NODOS DE PI NETWORK",
+                backBtn: "VOLVER",
+                termsContent: `
+                <h3>1. ACUERDO DE ENLACE NEURAL</h3>
+                <p>Al establecer un enlace neural con la <strong>Red Galaxy Fall</strong>, aceptas cumplir con el Mandato Galáctico. El acceso no autorizado o la manipulación del sistema están estrictamente prohibidos por el comando central de la flota.</p>
+                <h3>2. RESPONSABILIDAD DEL PILOTO</h3>
+                <p>Cada piloto es responsable de la seguridad de su propia <strong>ID de Enlace (UID)</strong>. Compartir credenciales con facciones hostiles resultará en la terminación inmediata de los privilegios de vuelo.</p>
+                <h3>3. ACTIVOS VIRTUALES (GFC Y NFTS)</h3>
+                <p>Los Créditos Galaxy Fall (GFC) y los coleccionables son activos digitales gestionados a través de los protocolos de la <strong>Blockchain de Pi Network</strong>. La propiedad es verificable pero depende de la estabilidad de la red.</p>
+                <h3>4. USO DE DATOS DE COMBATE</h3>
+                <p>Las estadísticas de combate, las bajas confirmadas y el éxito de las misiones se registran para el Ranking global y el Salón de la Fama. Estos datos son públicos en toda la galaxia.</p>
+            `,
+                privacyContent: `
+                <h3>1. ESCÁNERES DE DATOS</h3>
+                <p>No escaneamos patrones neurales personales más allá de lo requerido para los <strong>Sistemas de Piloto</strong>. Tu identidad permanece blindada dentro del ecosistema de Pi Network.</p>
+                <h3>2. PROTOCOLOS DE ENCRIPTACIÓN</h3>
+                <p>La telemetría técnica (tipo de dispositivo, latencia y versión del SO) se encripta automáticamente para asegurar una sincronización estable con el <strong>Hub Central Nexus</strong>.</p>
+                <h3>3. INTEGRACIÓN CON PI NETWORK</h3>
+                <p>Solo se accede a los datos autorizados a través del <strong>SDK de Pi</strong> (Nombre de usuario, UID y hashes de transacciones). No almacenamos claves privadas ni datos biométricos sensibles.</p>
+                <h3>4. DIRECTIVA DE PURGA NEURAL</h3>
+                <p>Los pilotos pueden solicitar una <strong>Purga Neural</strong> completa (eliminación de cuenta) en cualquier momento. Esta acción es irreversible y borrará todo el historial de rango y GFC.</p>
+            `
+            },
+            zh: {
+                title: "银河指令与隐私加密协议",
+                termsTab: "协议：指令",
+                privacyTab: "协议：加密",
+                termsHeader: "银河飞行员行为准则指令",
+                privacyHeader: "神经数据保护与加密协议",
+                footerMsg: "安全上行链路 // 由 PI NETWORK 节点验证",
+                backBtn: "返回",
+                termsContent: `
+                <h3>1. 神经链接协议</h3>
+                <p>通过与<strong>Galaxy Fall 网络</strong>建立神经链接，您同意遵守银河指令。严禁未经授权的访问或系统操纵，违者将受舰队司令部严惩。</p>
+                <h3>2. 飞行员职责</h3>
+                <p>每位飞行员都有责任保护自己的<strong>上行链路 ID (UID)</strong>。与敌对派系共享凭据将导致立即终止飞行权限。</p>
+                <h3>3. 虚拟资产 (GFC 与 NFTS)</h3>
+                <p>Galaxy Fall 信用点 (GFC) 和舰船收藏品是通过 <strong>Pi Network 区块链</strong>协议管理的数字资产。所有权可验证。</p>
+                <h3>4. 战斗数据使用</h3>
+                <p>战斗统计、击杀数和任务成功率将被记录，用于全球排名和名人堂展示。这些数据在全银河系公开。</p>
+            `,
+                privacyContent: `
+                <h3>1. 数据扫描</h3>
+                <p>我们不会扫描超出<strong>飞行员系统</strong>操作所需的个人神经模式。您的身份在 Pi Network 生态系统内保持屏蔽状态。</p>
+                <h3>2. 加密协议</h3>
+                <p>技术遥测（设备类型、连接延迟和操作系统版本）会自动加密，以确保与 <strong>Nexus 中央枢纽</strong>的稳定同步。</p>
+                <h3>3. PI NETWORK 集成</h3>
+                <p>我们的系统仅访问通过 <strong>Pi SDK</strong> 授权的数据。我们不存储私钥或敏感生物特征数据。</p>
+                <h3>4. 神经清除指令</h3>
+                <p>飞行员可以随时请求完整的<strong>神经清除</strong>（账号注销）。此操作不可逆。</p>
+            `
+            },
+            ja: {
+                title: "銀河指令およびプライバシー・プロトコル",
+                termsTab: "プロトコル：指令",
+                privacyTab: "プロトコル：暗号化",
+                termsHeader: "パイロット行動規範に関する銀河指令",
+                privacyHeader: "ニューラルデータ保護および暗号化プロトコル",
+                footerMsg: "保護されたアップリンク // PI NETWORK ノード認証済み",
+                backBtn: "戻る",
+                termsContent: `
+                <h3>1. ニューラルリンク合意</h3>
+                <p><strong>Galaxy Fall ネットワーク</strong>とのニューラルリンクを確立することにより、あなたは銀河指令を遵守することに同意したものとみなされます。艦隊司令部による許可のないシステム操作は厳禁です。</p>
+                <h3>2. パイロットの責任</h3>
+                <p>全パイロットは、自身の<strong>アップリンクID (UID)</strong>のセキュリティを維持する責任があります。敵対勢力への資格情報の共有は、飛行権限の即時剥奪に繋がります。</p>
+                <h3>3. 仮想資産 (GFC および NFT)</h3>
+                <p>銀河クレジット (GFC) およびコレクションアイテムは、密接に <strong>Pi Network ブロックチェーン</strong>を通じて管理されるデジタル資産です。</p>
+                <h3>4. 戦闘データの利用</h3>
+                <p>戦闘統計、撃破数、ミッション成功率は、グローバルランキングおよび殿堂入りのために記録されます。これらのデータは銀河全域で公開されます。</p>
+            `,
+                privacyContent: `
+                <h3>1. データスキャン</h3>
+                <p><strong>パイロットシステム</strong>の運用に必要以上の個人のニューラルパターンをスキャンすることはありません。あなたのアイデンティティは Pi Network 内で保護されます。</p>
+                <h3>2. 暗号化プロトコル</h3>
+                <p>デバイスタイプ、遅延、OSバージョン等の技術テレメトリは、<strong>Nexus中央ハブ</strong>との同期を安定させるために自動的に暗号化されます。</p>
+                <h3>3. PI NETWORK 統合</h3>
+                <p><strong>Pi SDK</strong>を通じて許可されたデータ（ユーザー名、UID、取引ハッシュ）のみがアクセスされます。</p>
+                <h3>4. ニューラルパージ命令</h3>
+                <p>パイロットはいつでも完全な<strong>ニューラルパージ</strong>（アカウント削除）を要求できます。この操作は取消不能です。</p>
+            `
+            },
+            it: {
+                title: "MANDATO GALATTICO E PRIVACY",
+                termsTab: "PROTOCOLLO: MANDATO",
+                privacyTab: "PROTOCOLLO: CRIPTOGRAFIA",
+                termsHeader: "IL MANDATO GALATTICO PER LA CONDOTTA PILOTI",
+                privacyHeader: "PROTEZIONE DATI NEURALI E PROTOCOLLI DI CRIPTOGRAFIA",
+                footerMsg: "UPLINK PROTETTO // VERIFICATO DAI NODI PI NETWORK",
+                backBtn: "INDIETRO",
+                termsContent: `
+                <h3>1. ACCORDO DI UPLINK NEURALE</h3>
+                <p>Stabilendo un uplink neurale con la <strong>Rete Galaxy Fall</strong>, accetti di rispettare il Mandato Galattico. L'accesso non autorizzato è severamente proibito dal comando centrale della flotta.</p>
+                <h3>2. RESPONSABILITÀ DEL PILOTA</h3>
+                <p>Ogni pilota è responsabile della sicurezza del proprio <strong>ID Uplink (UID)</strong>. La condivisione di credenziali con fazioni ostili comporterà la revoca immediata dei privilegi di volo.</p>
+                <h3>3. RISORSE VIRTUALI (GFC E NFTS)</h3>
+                <p>I Crediti Galaxy Fall (GFC) e i collezionabili sono asset digitali gestiti tramite i protocolli della <strong>Blockchain Pi Network</strong>. La proprietà è verificabile.</p>
+                <h3>4. UTILIZZO DATI DI COMBATTIMENTO</h3>
+                <p>Statistiche di combattimento e tassi di successo sono registrati per la Classifica globale e la Hall of Fame. Questi dati sono pubblici in tutta la galassia.</p>
+            `,
+                privacyContent: `
+                <h3>1. SCUOTIMENTO DATI</h3>
+                <p>Non scansioniamo schemi neurali personali oltre quanto richiesto dai <strong>Sistemi Pilota</strong>. La tua identità rimane protetta all'interno dell'ecosistema Pi Network.</p>
+                <h3>2. PROTOCOLLI DI CRIPTOGRAFIA</h3>
+                <p>La telemetria tecnica (tipo di dispositivo, latenza e versione OS) viene criptata automaticamente per garantire la sincronizzazione con il <strong>Nexus Central Hub</strong>.</p>
+                <h3>3. INTEGRAZIONE PI NETWORK</h3>
+                <p>Il sistema accede solo ai dati autorizzati tramite il <strong>Pi SDK</strong> (Username, UID e hash transazioni).</p>
+                <h3>4. DIRETTIVA NEURAL PURGE</h3>
+                <p>I piloti possono richiedere un <strong>Neural Purge</strong> completo (cancellazione account) in qualsiasi momento.</p>
+            `
+            }
+        };
+
+        let currentLang = 'en';
+        let currentTab = 'terms';
+
+        function render() {
+            const lang = translations[currentLang];
+            document.getElementById('btnTerms').textContent = lang.termsTab;
+            document.getElementById('btnPrivacy').textContent = lang.privacyTab;
+            document.getElementById('footerMsg').textContent = lang.footerMsg;
+            document.getElementById('backBtnText').textContent = lang.backBtn;
+
+            if (currentTab === 'terms') {
+                document.getElementById('mainContent').innerHTML = `<h2>${lang.termsHeader}</h2>` + lang.termsContent;
+                document.getElementById('btnTerms').classList.add('active');
+                document.getElementById('btnPrivacy').classList.remove('active');
+            } else {
+                document.getElementById('mainContent').innerHTML = `<h2>${lang.privacyHeader}</h2>` + lang.privacyContent;
+                document.getElementById('btnPrivacy').classList.add('active');
+                document.getElementById('btnTerms').classList.remove('active');
+            }
+        }
+
+        document.getElementById('langSelect').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            render();
+        });
+
+        document.getElementById('btnTerms').addEventListener('click', () => {
+            currentTab = 'terms';
+            render();
+        });
+
+        document.getElementById('btnPrivacy').addEventListener('click', () => {
+            currentTab = 'privacy';
+            render();
+        });
+
+        render();
+    </script>
+
+</body>
+
+</html>

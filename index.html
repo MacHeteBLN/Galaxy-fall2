@@ -1,48 +1,1008 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Galaxy Fall: PI Edition</title>
-
-    <!-- Meta-Tags für die Beschreibung und SEO -->
-    <meta name="description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
-
-    <!-- Open Graph Meta-Tags (für Facebook, Discord, etc.) -->
-    <meta property="og:title" content="Galaxy Fall: PI Edition">
-    <meta property="og:description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://galaxyfall.space/">
-    <meta property="og:image" content="https://galaxyfall.space/assets/social_preview.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    
-    <!-- Twitter Card Meta-Tags (für X) -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Galaxy Fall: PI Edition">
-    <meta name="twitter:description" content="Save the galaxy in Galaxy Fall! A retro arcade space shooter with upgrades, boss battles, and online leaderboards. Play now!">
-    <meta name="twitter:image" content="https://galaxyfall.space/assets/social_preview.png">
-
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Galaxy Fall - Spieler-Hub</title>
     <link rel="stylesheet" href="index.css">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="cyber.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* === BOMB TIMER DIGITS === */
+        .bomb-digit {
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ff4400;
+            background: #0a0000;
+            border: 1px solid #440000;
+            border-radius: 4px;
+            width: 32px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 5px #ff2200;
+            box-shadow: inset 0 0 4px rgba(255, 0, 0, 0.2), 0 0 6px rgba(255, 50, 0, 0.3);
+            line-height: 1;
+        }
 
-    <!-- 
-<script src="//cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
--->
+        .bomb-colon {
+            font-family: 'Courier New', monospace;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ff2200;
+            text-shadow: 0 0 10px #ff2200;
+            animation: blink-colon 1s step-end infinite;
+            line-height: 1;
+            margin-bottom: 4px;
+            width: 14px;
+            text-align: center;
+        }
 
+        @keyframes blink-colon {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.05;
+            }
+        }
+
+        @keyframes pulse-green {
+            0% {
+                text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+            }
+
+            100% {
+                text-shadow: 0 0 20px #00ff88, 0 0 50px #00ff88, 0 0 5px #fff;
+            }
+        }
+
+        /* Warning flash when < 1 minute */
+        .bomb-digit.urgent {
+            color: #ff6600;
+            text-shadow: 0 0 12px #ff6600, 0 0 25px #ff6600;
+            animation: digit-flash 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes digit-flash {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0.6;
+            }
+        }
+
+        /* Smaller variant for Hub teaser */
+        .hub-digit {
+            font-size: 1.1rem !important;
+            width: 18px !important;
+            height: 26px !important;
+        }
+
+        .hub-colon {
+            font-size: 1rem !important;
+            width: 8px !important;
+        }
+    </style>
 </head>
-<body>
-<div class="stars"></div>
 
-<div id="gameContainer">
-    <!-- Sprachauswahl-Bildschirm -->
-    <div id="language-select-screen">
-        <h1 data-translate-key="lang_select_title">SELECT LANGUAGE</h1>
-        <div class="language-grid">
+<body>
+    <div id="startup-loading-screen" class="startup-loading-overlay">
+        <div class="loading-content">
+            <h1 class="glitch-text" data-text="GALAXY FALL">GALAXY FALL</h1>
+            <div class="loading-bar-container">
+                <div class="loading-bar-fill" id="startup-loading-bar"></div>
+            </div>
+            <div class="loading-text" id="startup-loading-text">INITIALIZING SYSTEMS...</div>
+        </div>
+    </div>
+
+    <!-- LANDSCAPE BLOCKER -->
+    <div id="orientation-warning">
+        <div class="orientation-icon">📲</div>
+        <h2 style="font-size: 1.5rem; color: #fff; margin-bottom: 20px;" data-translate-key="orientation_title">PORTRAIT
+            ONLY</h2>
+        <p style="font-size: 0.8rem; color: #ccc; max-width: 80%;" data-translate-key="orientation_desc">Please rotate
+            your device to portrait mode to play GALAXY FALL.</p>
+    </div>
+
+    <div class="stars"></div>
+    <div class="background-grid"></div>
+
+    <div id="cockpit-wrapper">
+        <button class="carousel-nav prev" id="nav-rotate-left">❮</button>
+        <button class="carousel-nav next" id="nav-rotate-right">❯</button>
+
+        <div class="carousel-stage">
+
+            <!-- PANEL 1: PILOT (LINKS) -->
+            <div class="cockpit-panel side-monitor pos-left has-scanlines" id="panel-pilot" onclick="rotateTo('pilot')">
+                <div class="holo-header cyber-glow glitch-text" data-text="PILOT-SYSTEME"
+                    data-translate-key="hub_pilot_systems">PILOT SYSTEMS</div>
+                <div class="monitor-tabs cyber-tabs">
+                    <button class="monitor-tab active" data-target="view-pilot-main"
+                        data-translate-key="hub_home">HOME</button>
+                    <button class="monitor-tab" data-target="view-pilot-stats"
+                        data-translate-key="hub_stats">STATS</button>
+                    <button class="monitor-tab" data-target="view-pilot-history"
+                        data-translate-key="hub_logs">LOGS</button>
+                    <button class="monitor-tab" data-target="view-pilot-gallery"
+                        data-translate-key="tab_galerie">GALLERY</button>
+                    <button class="monitor-tab" data-target="view-pilot-network"
+                        data-translate-key="tab_network">NETWORK</button>
+                </div>
+                <div class="monitor-content cyber-grid-bg">
+                    <div id="view-pilot-main" class="monitor-view active">
+                        <div class="id-card-visual">
+                            <div class="id-avatar-holo">
+                                <img id="pilot-ship-preview" src=""
+                                    style="width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 0 10px #0ff);">
+                                <div class="holo-scanline"></div>
+                            </div>
+                            <div class="id-details">
+                                <span class="label">ID:// <span class="value cyan text-truncate"
+                                        id="ext-username">GUEST</span></span>
+                                <span class="label" data-translate-key="hub_class">CLASS</span>:// <span
+                                    class="value yellow pulse-slow" id="ext-rank">ROOKIE</span></span>
+                            </div>
+                        </div>
+
+                        <!-- XP / PROGRESS SECTION -->
+                        <div class="progress-section tech-border" style="margin-top:10px; padding: 10px;">
+                            <div class="bar-header"><label
+                                    data-translate-key="pilot_level_label">PILOT.LEVEL</label><span id="val-xp">LVL 1 -
+                                    0%</span></div>
+                            <div class="bar-track cyber-track-xp">
+                                <div class="bar-fill-xp" id="bar-xp" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="separator glitch-sep"></div>
+                        <div class="chart-section tech-border">
+                            <div class="stat-bar-group">
+                                <div class="bar-header"><label
+                                        data-translate-key="shield_capacity_label">SHIELD.CAPACITY</label><span
+                                        id="val-shield">100%</span>
+                                </div>
+                                <div class="bar-track cyber-track">
+                                    <div class="bar-fill cyber-fill" style="width: 100%" id="bar-shield"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar-group" style="margin-top:10px;">
+                                <div class="bar-header"><label
+                                        data-translate-key="weapon_calib_label">WEAPON.CALIB</label><span
+                                        id="val-weapon">OFFLINE</span>
+                                </div>
+                                <div class="bar-track cyber-track">
+                                    <div class="bar-fill cyber-fill-alt" style="width: 0%" id="bar-weapon"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="view-pilot-stats" class="monitor-view tech-border" style="background:rgba(0,0,0,0.8);">
+                        <table class="detail-table cyber-table">
+                            <thead>
+                                <tr>
+                                    <th data-translate-key="hub_metrics">SYS.METRICS</th>
+                                    <th style="text-align:right" data-translate-key="hub_value">VALUE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td data-translate-key="hub_kills">KILLS</td>
+                                    <td id="table-kills" class="mono-digit">0</td>
+                                </tr>
+                                <tr>
+                                    <td data-translate-key="hub_highscore">HIGHSCORE</td>
+                                    <td id="table-highscore" class="mono-digit">0</td>
+                                </tr>
+                                <tr>
+                                    <td data-translate-key="hub_playtime">PLAYTIME</td>
+                                    <td id="table-time" class="mono-digit">0h</td>
+                                </tr>
+                                <tr>
+                                    <td data-translate-key="hub_missions">MISSIONS</td>
+                                    <td id="table-games" class="mono-digit">0</td>
+                                </tr>
+                                <tr>
+                                    <td data-translate-key="hub_credits">COINS</td>
+                                    <td id="table-coins" class="mono-digit">0</td>
+                                </tr>
+                                <tr>
+                                    <td data-translate-key="hub_trophies">TROPHIES</td>
+                                    <td id="val-stats" class="mono-digit" style="color:var(--pi-yellow)">0/0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="view-pilot-history" class="monitor-view">
+                        <div class="news-ticker hacker-term">
+                            <div class="ticker-header" style="color:#0f0; border-bottom:1px solid #0f0;"><span
+                                    class="blinking-dot"></span><span
+                                    data-translate-key="hub_terminal">SYS.TERMINAL</span></div>
+                            <ul class="ticker-list" id="pilot-log-list" style="color:#0f0;">
+                                <li data-translate-key="hub_uplink_established">> UPLINK ESTABLISHED...</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="view-pilot-gallery" class="monitor-view">
+                        <div id="pilot-gallery-root" style="padding: 5px; height: 100%; overflow-y: auto;">
+                            <!-- Gallery content injected via populateGalerie('pilot-gallery-root') -->
+                        </div>
+                    </div>
+                    <div id="view-pilot-network" class="monitor-view">
+                        <div id="pilot-network-root" style="padding: 5px; height: 100%; overflow-y: auto;">
+                            <!-- Network content injected via populateNetworkView() -->
+                        </div>
+                    </div>
+                </div>
+                <div class="holo-footer cyber-footer"><span data-translate-key="hub_id">UID</span>: <span
+                        id="pilot-uid-footer" class="text-truncate"
+                        style="max-width: 150px; display:inline-block; vertical-align:middle; margin-left:5px;"
+                        data-translate-key="hub_connecting">CONNECTING...</span>
+                </div>
+            </div>
+
+            <!-- PANEL 2: GAME (MITTE) -->
+            <div class="cockpit-panel pos-center" id="panel-game" onclick="rotateTo('game')">
+                <div class="phone-bezel">
+
+                    <div id="app-viewport">
+
+                        <!-- HUB CONTAINER -->
+                        <div id="auth-lock-overlay" class="auth-lock-screen">
+                            <div class="lock-content">
+                                <div class="lock-icon" style="font-size: 3rem; margin-bottom: 20px;">🔒</div>
+                                <h2 class="glitch-text" data-text="RESTRICTED ACCESS"
+                                    style="font-size: 1.8rem; letter-spacing: 5px;">RESTRICTED ACCESS</h2>
+                                <p data-translate-key="auth_required_text"
+                                    style="font-size: 0.8rem; margin-bottom: 40px; color: #fff;">CENTRAL FLEET COMMAND
+                                    REQUIRES NEURAL AUTHENTICATION TO ACCESS GALACTIC SYSTEMS.</p>
+                                <button id="auth-login-btn" class="epic-login-button"
+                                    data-translate-key="hub_login">LOGIN</button>
+                                <button onclick="window.location.href='legal.html'"
+                                    data-translate-key="legal_protocols_title" class="legal-link-button">&#128220;
+                                    GALACTIC MANDATE &amp; PRIVACY PROTOCOLS</button>
+                            </div>
+                        </div>
+
+
+
+                        <!-- LEGAL PROTOCOLS OVERLAY (EPIC) -->
+                        <div id="legal-overlay" class="legal-overlay">
+                            <div class="legal-card tech-border">
+                                <div class="legal-header">
+                                    <h2 class="glitch-text" data-text="PROTOCOL: LEGAL"
+                                        data-translate-key="legal_protocols_title">GALACTIC MANDATE & PRIVACY PROTOCOLS
+                                    </h2>
+                                    <button class="legal-close-btn" id="close-legal-btn">X</button>
+                                </div>
+                                <div class="legal-tabs">
+                                    <button class="legal-tab-btn active" data-tab="terms"
+                                        data-translate-key="legal_tab_terms">PROTOCOL: MANDATE</button>
+                                    <button class="legal-tab-btn" data-tab="privacy"
+                                        data-translate-key="legal_tab_privacy">PROTOCOL: ENCRYPTION</button>
+                                </div>
+                                <div id="legal-content-area" class="legal-scroll-area">
+                                    <!-- Dynamic content based on tab -->
+                                    <div id="legal-view-terms">
+                                        <h3 data-translate-key="legal_terms_header">THE GALACTIC MANDATE FOR PILOT
+                                            CONDUCT</h3>
+                                        <div data-translate-key="legal_terms_content" data-use-html></div>
+                                    </div>
+                                    <div id="legal-view-privacy" style="display:none;">
+                                        <h3 data-translate-key="legal_privacy_header">NEURAL DATA PROTECTION &
+                                            ENCRYPTION PROTOCOLS</h3>
+                                        <div data-translate-key="legal_privacy_content" data-use-html></div>
+                                    </div>
+                                </div>
+                                <div class="legal-footer">
+                                    <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
+                                        <a href="legal.html" target="_blank"
+                                            style="color:var(--neon-cyan); text-decoration:none; border-bottom:1px solid var(--neon-cyan); padding-bottom:2px; font-size:0.7rem;">OPEN
+                                            FULLSCREEN PROTOCOL TERMINAL</a>
+                                        <span class="protocol-meta" data-translate-key="legal_footer_msg">SECURED UPLINK
+                                            // VERIFIED BY PI NETWORK NODES</span>
+                                    </div>
+                                    <button class="legal-close-btn" id="close-legal-btn-bottom"
+                                        data-translate-key="btn_back">BACK</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="hub-container" style="filter: blur(5px); pointer-events: none;">
+                            <header class="hub-header">
+                                <div class="brand-container">
+                                    <div class="logo glitch-effect" data-text="GALAXY FALL">GALAXY FALL</div>
+                                    <div class="edition-tag" data-translate-key="hub_pi_edition">PI NETWORK EDITION
+                                    </div>
+                                </div>
+                                <div id="profile-widget" class="hud-panel">
+                                    <div class="logged-out-view">
+                                        <span class="status-text" data-translate-key="hub_guest_mode">GUEST MODE</span>
+                                        <button id="login-btn" class="hub-button"
+                                            data-translate-key="hub_login">LOGIN</button>
+                                    </div>
+                                    <div class="logged-in-view" style="display:none;">
+                                        <div class="pilot-info">
+                                            <img class="profile-avatar-small" src="./assets/images/player_skin_void.png"
+                                                id="hub-avatar-small">
+                                            <div class="pilot-text">
+                                                <div class="pilot-rank" id="hub-rank-display">ROOKIE</div>
+                                                <div class="pilot-name text-truncate" id="pi-username-placeholder"
+                                                    style="max-width: 100px;">Commander</div>
+                                            </div>
+                                        </div>
+                                        <div class="currency-display">
+                                            <img src="./assets/images/pi_coin2.png" alt="Pi">
+                                            <span id="hub-coins-display">0</span>
+                                        </div>
+                                    </div>
+                                    <!-- Language Selection Carousel -->
+                                    <div class="hub-lang-selector" id="hub-lang-selector">
+                                        <button class="lang-nav prev" id="hub-lang-prev">❮</button>
+                                        <div class="lang-display" id="hub-current-flag">
+                                            <img src="https://flagcdn.com/w80/gb.png" id="hub-flag-icon">
+                                        </div>
+                                        <button class="lang-nav next" id="hub-lang-next">❯</button>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <main class="hub-grid scroll-content">
+                                <div class="hub-col center-col">
+                                    <div class="hangar-display">
+                                        <div class="ship-stage">
+                                            <button class="nav-arrow prev" id="hangar-prev">❮</button>
+                                            <div class="ship-img-container" id="hangar-tilt-container">
+                                                <img src="./assets/images/player_tier1.png" id="hangar-img"
+                                                    class="main-ship" alt="Ship">
+                                                <div class="engine-pulse"></div>
+                                            </div>
+                                            <button class="nav-arrow next" id="hangar-next">❯</button>
+                                        </div>
+                                        <div class="ship-data">
+                                            <h2 id="ship-name" style="margin: 0; font-size: 0.8rem;">PHOENIX MK. I</h2>
+                                            <div id="ship-bonus" class="ship-bonus"
+                                                style="color:var(--pi-yellow); font-size: 0.6rem; margin: 8px 0; min-height: 2.8em; display: flex; align-items: center; justify-content: center; line-height: 1.2; padding: 0 10px; text-align: center;">
+                                            </div>
+                                            <div class="hangar-controls">
+                                                <button id="hangar-equip-btn" class="hub-button wide secondary"
+                                                    data-translate-key="hub_equip">EQUIP</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="launch-pad">
+                                        <button id="start-pi-edition" class="launch-button">
+                                            <div class="launch-content"><span class="launch-title"
+                                                    data-translate-key="hub_start_mission">START MISSION</span></div>
+                                        </button>
+                                    </div>
+
+                                    <!-- DIRECT HUB WHEEL TEASER IN FREE SPACE -->
+                                    <div class="hub-wheel-teaser" id="hub-wheel-teaser-btn" style="margin: 20px auto;">
+                                        <div class="teaser-canvas-wrap">
+                                            <canvas id="hub-wheel-mini-canvas" width="100" height="100"></canvas>
+                                            <div class="teaser-pointer"></div>
+                                        </div>
+                                        <div class="teaser-info">
+                                            <span class="teaser-title" data-translate-key="wheel_title">LUCKY
+                                                WHEEL</span>
+                                            <!-- MINI BOMB TIMER für den Hub -->
+                                            <div id="hub-bomb-timer"
+                                                style="display:flex; flex-direction:column; align-items:center; gap:3px; margin-top:5px;">
+                                                <div style="display:flex; align-items:center; gap:2px;">
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-h1">0</div>
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-h2">0</div>
+                                                    <div class="bomb-colon hub-colon">:</div>
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-m1">0</div>
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-m2">0</div>
+                                                    <div class="bomb-colon hub-colon">:</div>
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-s1">0</div>
+                                                    <div class="bomb-digit hub-digit" id="hub-bt-s2">0</div>
+                                                </div>
+                                            </div>
+                                            <!-- READY state -->
+                                            <span id="hub-wheel-timer" class="teaser-timer"
+                                                style="display:none;">READY!</span>
+                                        </div>
+                                        <div class="teaser-action-icon">🎡</div>
+                                    </div>
+
+                                    <div class="hub-nav-grid">
+                                        <button class="hub-nav-btn" id="nav-shop"><span class="icon">🛒</span>
+                                            <span data-translate-key="btn_shop">SHOP</span></button>
+                                        <button class="hub-nav-btn" id="nav-leaderboard"><span class="icon">🏆</span>
+                                            <span data-translate-key="tab_rangliste">RANK</span></button>
+                                        <button class="hub-nav-btn" id="nav-trophies">
+                                            <span class="icon">🥇<div id="trophy-badge" class="notification-badge"
+                                                    style="display:none;"></div></span>
+                                            <span data-translate-key="hub_achievements">TROPHIES</span>
+                                        </button>
+                                        <!-- Settings moved to Mission Control per user request -->
+                                    </div>
+                                </div>
+                            </main>
+                            <div id="pi-ad-banner-container" class="pi-ad-banner">AD_RESERVED_320x50</div>
+                        </div>
+
+                        <!-- GAME OVERLAY & CANVAS -->
+                        <div id="game-wrapper" style="display: none;" data-from-hub="false">
+                            <div id="gameContainer">
+                                <div id="ui-panel">
+                                    <div class="left-stats">
+                                        <div id="mobile-pause-button">☰</div>
+                                        <div class="ui-item"><span data-translate-key="hub_score">SCORE</span>: <span
+                                                id="score">0</span></div>
+                                        <div class="ui-item"><span data-translate-key="hub_wave">WAVE</span>: <span
+                                                id="level">1</span></div>
+                                    </div>
+                                    <div class="right-stats">
+                                        <div class="ui-item" id="coin-display"><img id="coin-icon"
+                                                src="./assets/images/pi_coin2.png" /><span id="coins">0</span></div>
+                                    </div>
+                                </div>
+
+                                <canvas id="gameCanvas"></canvas>
+
+                                <div id="bottom-ui-container">
+                                    <div id="special-inventory"></div>
+                                    <div id="ultra-inventory"></div>
+                                </div>
+                                <div id="weapon-tier-display"></div>
+                                <div id="lives-display"></div>
+                                <div id="energy-bar-container">
+                                    <div id="energy-bar"></div>
+                                </div>
+                                <div id="level-display-container"></div>
+                                <div id="weapon-status"></div>
+
+                                <!-- IN-GAME MENÜ (PAUSE / LAUNCHER) -->
+                                <div id="menu-container" style="display:none;" class="epic-menu-overlay">
+                                    <div class="epic-menu-launcher">
+                                        <h1 class="launcher-title glitch-text" data-text="MISSION CONTROL"
+                                            data-translate-key="hub_mission_control">MISSION
+                                            CONTROL</h1>
+                                        <div class="launcher-grid">
+                                            <!-- ROW 1: GAME ACTIONS -->
+                                            <button id="resume-button" class="launcher-card highlight">
+                                                <div class="card-icon">▶️</div>
+                                                <div class="card-label" data-translate-key="hub_resume">RESUME</div>
+                                            </button>
+                                            <button id="shop-button" class="launcher-card">
+                                                <div class="card-icon">🛒</div>
+                                                <div class="card-label">SHOP</div>
+                                            </button>
+
+                                            <!-- ROW 2: INTEL & DATA -->
+                                            <button id="btn-open-profile" class="launcher-card">
+                                                <div class="card-icon">👤</div>
+                                                <div class="card-label" data-translate-key="tab_spiel">PROFILE</div>
+                                            </button>
+                                            <button id="btn-open-gallery" class="launcher-card">
+                                                <div class="card-icon">💾</div>
+                                                <div class="card-label" data-translate-key="hub_data">DATA</div>
+                                            </button>
+                                            <button id="btn-open-arsenal" class="launcher-card">
+                                                <div class="card-icon">⚔️</div>
+                                                <div class="card-label" data-translate-key="hub_armory">ARMORY</div>
+                                            </button>
+                                            <button id="btn-open-intel" class="launcher-card">
+                                                <div class="card-icon">👾</div>
+                                                <div class="card-label" data-translate-key="hub_intel">INTEL</div>
+                                            </button>
+
+                                            <!-- ROW 3: SYSTEM -->
+                                            <button id="btn-open-league" class="launcher-card">
+                                                <div class="card-icon">🏆</div>
+                                                <div class="card-label" data-translate-key="tab_rangliste">RANKING</div>
+                                            </button>
+                                            <button id="btn-open-settings" class="launcher-card">
+                                                <div class="card-icon">⚙️</div>
+                                                <div class="card-label" data-translate-key="tab_einstellungen">SETTINGS
+                                                </div>
+                                            </button>
+                                            <button id="btn-open-lucky-wheel" class="launcher-card"
+                                                style="border-color:var(--cyan-glow); color:var(--cyan-glow); background:rgba(0,255,255,0.05);">
+                                                <div class="card-icon">🎡</div>
+                                                <div class="card-label" data-translate-key="wheel_title">WHEEL</div>
+                                            </button>
+                                        </div>
+
+                                        <div class="launcher-footer">
+                                            <button id="restart-button" class="footer-btn"
+                                                data-translate-key="hub_restart_mission">RESTART MISSION</button>
+                                            <button id="exit-button" class="footer-btn danger"
+                                                data-translate-key="hub_exit_app">EXIT APP</button>
+                                            <button id="quit-button" class="footer-btn pi-purple"
+                                                data-translate-key="hub_quit_to_hub">HUB</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="game-over-container" style="display:none;" class="epic-game-over-overlay">
+                                    <div class="epic-game-over-content">
+                                        <h1 class="game-over-title glitch-text" data-text="GAME OVER"
+                                            data-translate-key="hub_game_over">GAME OVER</h1>
+
+                                        <div class="mission-report">
+                                            <h2 class="report-title" data-translate-key="mission_report_title">MISSION
+                                                REPORT</h2>
+
+                                            <div class="report-stats-grid">
+                                                <div class="report-stat-card tech-border">
+                                                    <div class="stat-icon">🎯</div>
+                                                    <div class="stat-label" data-translate-key="hub_score">SCORE</div>
+                                                    <div class="stat-value glitch-text" id="final-score" data-text="0">0
+                                                    </div>
+                                                </div>
+
+                                                <div class="report-stat-card tech-border">
+                                                    <div class="stat-icon">💥</div>
+                                                    <div class="stat-label" data-translate-key="hub_kills">KILLS</div>
+                                                    <div class="stat-value" id="final-kills">0</div>
+                                                </div>
+
+                                                <div class="report-stat-card tech-border">
+                                                    <div class="stat-icon"><img src="./assets/images/pi_coin2.png"
+                                                            style="width:20px;"></div>
+                                                    <div class="stat-label" data-translate-key="hub_credits">COINS</div>
+                                                    <div class="stat-value coin-color" id="final-coins">0</div>
+                                                </div>
+
+                                                <div class="report-stat-card tech-border">
+                                                    <div class="stat-icon">⏱️</div>
+                                                    <div class="stat-label" data-translate-key="hub_playtime">SURVIVED
+                                                    </div>
+                                                    <div class="stat-value" id="final-time">0s</div>
+                                                </div>
+                                            </div>
+
+                                            <div id="final-rank-display" class="final-rank pulse-slow"
+                                                style="margin-top:20px; color:#0ff; font-size: 0.8rem;"></div>
+                                        </div>
+
+                                        <div class="game-over-actions">
+                                            <button class="epic-action-btn gold-border" id="rewarded-ad-button"
+                                                data-translate-key="hub_continue_ad" style="display:none;">CONTINUE
+                                                (AD)</button>
+
+                                            <div class="action-row">
+                                                <button class="epic-action-btn primary"
+                                                    id="restart-from-gameover-button"
+                                                    data-translate-key="hub_retry">RESTART</button>
+                                                <button class="epic-action-btn danger" id="quit-from-gameover-button"
+                                                    data-translate-key="hub_exit">HUB</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="mode-select-container" style="display:none;">
+                                    <header class="shop-header-compact">
+                                        <div class="shop-branding">
+                                            <span class="glitch-text" data-text="MISSION"
+                                                data-translate-key="tab_spiel">MISSION</span>
+                                        </div>
+                                    </header>
+
+                                    <div class="shop-scroll-area"
+                                        style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+                                        <h1 class="pixel-title"
+                                            style="color:#0ff; font-size:1.2rem; margin-bottom:10px;"
+                                            data-translate-key="hub_protocol_select">SELECT PROTOCOL
+                                        </h1>
+
+                                        <div
+                                            style="display:grid; grid-template-columns:1fr 1fr; gap:20px; width:100%; max-width:600px; padding:0 20px;">
+                                            <button id="select-campaign-button" class="mode-card">
+                                                <div class="mode-icon">🚀</div>
+                                                <div class="mode-title" data-translate-key="hub_campaign">CAMPAIGN</div>
+                                                <div class="mode-desc" data-translate-key="hub_campaign_desc">Story
+                                                    Mode. Save the Galaxy.</div>
+                                            </button>
+                                            <button id="select-endless-button" class="mode-card">
+                                                <div class="mode-icon">☠️</div>
+                                                <div class="mode-title" data-translate-key="hub_endless">ENDLESS</div>
+                                                <div class="mode-desc" data-translate-key="hub_endless_desc">Survive
+                                                    against infinite waves.</div>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <footer class="shop-footer-fixed">
+                                        <button class="epic-back-btn" id="mode-select-back-button"
+                                            data-translate-key="hub_abort">ABORT</button>
+                                    </footer>
+                                </div>
+
+                                <div id="exit-screen" style="display:none;">
+                                    <div class="menu">
+                                        <h1 data-translate-key="hub_bye">BYE!</h1>
+                                        <p data-translate-key="hub_close_tab">Close tab to exit.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 3: MARKET (RECHTS) -->
+            <div class="cockpit-panel side-monitor pos-right has-scanlines" id="panel-market"
+                onclick="rotateTo('market')">
+                <div class="holo-header neon-purple glitch-text" data-text="SCHWARZMARKT"
+                    data-translate-key="hub_nexus_market">SCHWARZMARKT</div>
+                <div class="monitor-tabs cyber-tabs alt">
+                    <button class="monitor-tab" data-target="view-market-live"
+                        data-translate-key="hub_live">LIVE</button>
+                    <button class="monitor-tab active" data-target="view-market-offers"
+                        data-translate-key="hub_daily_deal">DAILY DEAL</button>
+                </div>
+                <div class="monitor-content cyber-grid-bg dark">
+                    <div id="view-market-live" class="monitor-view">
+
+                        <!-- NPC Vendor Element! -->
+                        <div class="vendor-npc-box">
+                            <div class="vendor-avatar">
+                                <div class="vendor-eye"></div>
+                            </div>
+                            <div class="vendor-speech typing-loop" data-translate-key="hub_vendor_greet">
+                                [SYS_VEND] > "Fresh supplies, Commander."
+                            </div>
+                        </div>
+
+                        <div class="data-row large wallet-box">
+                            <span class="label" style="color:#ffcc00;"><span
+                                    data-translate-key="hub_credits">CREDITS</span> <span
+                                    class="currency-label">GFC</span></span>
+                            <div class="currency-wrapper">
+                                <img src="./assets/images/pi_coin2.png" class="holo-coin"
+                                    style="filter: drop-shadow(0 0 5px #ffcc00);">
+                                <span class="value gold text-truncate coin-value-display">0</span>
+                            </div>
+                        </div>
+                        <div class="separator glitch-sep purple"></div>
+                        <div class="data-grid cyber-grid-2">
+                            <div class="grid-cell tech-border" style="grid-column: span 2;">
+                                <div class="value green" id="pi-rate">+1.2%</div>
+                                <div class="label" style="font-size:0.5rem; color:#888;"
+                                    data-translate-key="hub_pi_rate">PI.RATE</div>
+                            </div>
+                        </div>
+                        <div class="news-ticker hacker-term no-bg">
+                            <div class="ticker-header" style="color:#df00ff; border-bottom:1px solid #df00ff;"><span
+                                    class="blinking-dot purple"></span><span
+                                    data-translate-key="hub_market_log">BLACK_MARKET.LOG</span></div>
+                            <ul class="ticker-list scrolling-fast" id="market-news-list" style="color:#df00ff;">
+                                <li data-translate-key="hub_nexus_online_msg">> Nexus is online.</li>
+                                <li data-translate-key="hub_rare_drops_msg">> Rare drops confirmed.</li>
+                                <li data-translate-key="hub_pi_bridge_msg">> PI bridge active.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="view-market-offers" class="monitor-view active">
+                        <div class="daily-deal-wrapper">
+                            <div class="deal-header"><span class="blinking-dot red"></span> <span
+                                    data-translate-key="hub_flash_deal_label">FLASH DEAL</span></div>
+                            <div class="deal-timer" id="daily-deal-timer">05:14:23</div>
+                            <div class="deal-item-box holo-levitate">
+                                <img src="./assets/images/player_skin_gold.png" class="deal-img">
+                                <div class="deal-name" data-translate-key="hub_skin_gold_name">ROYAL GOLD SKIN</div>
+                                <div class="deal-desc" data-translate-key="hub_skin_gold_desc">Black Market Exclusive
+                                </div>
+                                <button class="retro-btn"
+                                    style="width:100%; margin-top:10px; padding:8px; font-size:0.5rem;"
+                                    onclick="document.getElementById('nav-shop')?.click()"
+                                    data-translate-key="hub_open_shop">OPEN SHOP</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="holo-footer cyber-footer purple">ENC_LINK: <span style="color:#df00ff; margin-left:5px;"
+                        data-translate-key="hub_secure">SECURE</span></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SHOP SCREEN -->
+    <div id="shop-container" style="display:none;" class="full-screen-overlay shop-epic-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding">
+                <span class="glitch-text" data-text="SHOP" data-translate-key="btn_shop">SHOP</span>
+            </div>
+            <div class="shop-wallet">
+                <div class="wallet-badge">
+                    <img id="shop-coin-icon" src="./assets/images/pi_coin2.png">
+                    <span id="shop-coins">0</span>
+                </div>
+            </div>
+        </header>
+        <nav id="shop-tabs" class="shop-tabs-fixed">
+            <button class="shop-tab-btn active" data-tab="permanent"
+                data-translate-key="shop_tab_permanent">UPGR</button>
+            <button class="shop-tab-btn" data-tab="consumable" data-translate-key="shop_tab_consumable">ITEM</button>
+            <button class="shop-tab-btn" data-tab="skin" data-translate-key="shop_tab_skins">SKIN</button>
+            <button class="shop-tab-btn" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">VFX</button>
+            <button class="shop-tab-btn" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">BANK</button>
+            <button class="shop-tab-btn" data-tab="collectible"
+                data-translate-key="shop_tab_collectibles">COLL.</button>
+        </nav>
+        <div id="shop-content" class="shop-scroll-area"></div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="shop-back-button" data-translate-key="btn_back">BACK</button>
+        </footer>
+    </div>
+
+    <!-- PROFILE SCREEN -->
+    <div id="profile-container" style="display:none;" class="full-screen-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding"><span class="glitch-text" data-text="PROFILE"
+                    data-translate-key="tab_spiel">PROFILE</span></div>
+        </header>
+        <div id="spiel-view" class="shop-scroll-area padded-view">
+            <!-- Profile Content Injected Here -->
+        </div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="profile-back-button" data-translate-key="btn_back">CLOSE</button>
+        </footer>
+    </div>
+
+    <!-- GALLERY SCREEN (DATA) -->
+    <div id="gallery-container" style="display:none;" class="full-screen-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding"><span class="glitch-text" data-text="GALLERY"
+                    data-translate-key="hub_data">GALLERY</span></div>
+        </header>
+        <div id="galerie-list" class="shop-scroll-area padded-view">
+            <!-- Gallery Content Injected Here -->
+        </div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="gallery-back-button" data-translate-key="btn_back">CLOSE</button>
+        </footer>
+    </div>
+
+    <!-- ARSENAL SCREEN (ARMORY) -->
+    <div id="arsenal-container" style="display:none;" class="full-screen-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding"><span class="glitch-text" data-text="INFO AREA"
+                    data-translate-key="hub_armory">INFO AREA</span></div>
+        </header>
+        <div id="arsenal-list" class="shop-scroll-area padded-view">
+            <!-- Arsenal Content Injected Here -->
+        </div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="arsenal-back-button" data-translate-key="btn_back">CLOSE</button>
+        </footer>
+    </div>
+
+    <!-- INTEL SCREEN (GEGNER) -->
+    <div id="intel-container" style="display:none;" class="full-screen-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding"><span class="glitch-text" data-text="ENEMIES"
+                    data-translate-key="hub_intel">ENEMIES</span></div>
+        </header>
+        <div id="gegner-list" class="shop-scroll-area padded-view">
+            <!-- Intel Content Injected Here -->
+        </div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="intel-back-button" data-translate-key="btn_back">CLOSE</button>
+        </footer>
+    </div>
+
+    <!-- TROPHIES SCREEN -->
+    <div id="trophies-container" style="display:none;" class="full-screen-overlay">
+        <header class="shop-header-compact">
+            <div class="shop-branding">
+                <span class="glitch-text" data-text="HALL OF FAME" data-translate-key="hub_hall_of_fame">HALL OF
+                    FAME</span>
+            </div>
+        </header>
+        <div id="trophies-list" class="shop-scroll-area padded-view">
+            <!-- Trophy Cards – injected by renderHallOfFame() -->
+        </div>
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="trophies-back-button" data-translate-key="btn_back">CLOSE</button>
+        </footer>
+    </div>
+
+
+    <!-- LEADERBOARD SCREEN -->
+    <div id="leaderboard-container" style="display:none;">
+        <header class="shop-header-compact">
+            <div class="shop-branding">
+                <span class="glitch-text" data-text="LEAGUE" data-translate-key="hub_leaderboard">LEAGUE</span>
+            </div>
+        </header>
+
+        <div id="epic-leaderboard-content" class="shop-scroll-area">
+            <!-- Dynamic Content Goes Here -->
+        </div>
+
+        <footer class="shop-footer-fixed">
+            <button class="epic-back-btn" id="leaderboard-back-button" data-translate-key="btn_back">BACK</button>
+        </footer>
+    </div>
+
+    <!-- SETTINGS SCREEN (NEW EPIC UI) -->
+    <div id="settings-container" style="display:none;">
+        <header class="shop-header-compact">
+            <div class="shop-branding">
+                <span class="glitch-text" data-text="SYSTEM" data-translate-key="hub_settings_system">SYSTEM</span>
+            </div>
+        </header>
+
+        <nav id="settings-tabs" class="shop-tabs-fixed">
+            <button class="shop-tab-btn active" data-tab="audio" data-translate-key="hub_settings_audio">AUDIO</button>
+            <button class="shop-tab-btn" data-tab="graphics" data-translate-key="hub_settings_visuals">VISUALS</button>
+            <button class="shop-tab-btn" data-tab="gameplay" data-translate-key="hub_settings_game">GAME</button>
+            <button class="shop-tab-btn" data-tab="controls" data-translate-key="hub_settings_input">INPUT</button>
+        </nav>
+
+        <div id="settings-content" class="shop-scroll-area">
+            <!-- AUDIO SETTINGS -->
+            <div id="settings-tab-audio" class="settings-tab-content active">
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_master_vol">MASTER VOLUME</label>
+                    <div class="slider-container">
+                        <input type="range" id="epic-volume-master" min="0" max="1" step="0.1" value="0.5">
+                        <span class="value-display" id="val-master">50%</span>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_music_vol">MUSIC VOLUME</label>
+                    <div class="slider-container">
+                        <input type="range" id="epic-volume-music" min="0" max="1" step="0.1" value="0.5">
+                        <span class="value-display" id="val-music">50%</span>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_sfx_vol">SFX VOLUME</label>
+                    <div class="slider-container">
+                        <input type="range" id="epic-volume-sfx" min="0" max="1" step="0.1" value="0.8">
+                        <span class="value-display" id="val-sfx">80%</span>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_ambience">AMBIENCE</label>
+                    <button class="retro-toggle-epic active" id="epic-toggle-ambience"
+                        data-translate-key="hub_on">ON</button>
+                </div>
+            </div>
+
+            <!-- GRAPHICS SETTINGS -->
+            <div id="settings-tab-graphics" class="settings-tab-content" style="display:none;">
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_crt">CRT EFFECT</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_crt_desc">Simulates retro monitor scanlines
+                        and curvature.</p>
+                    <button class="retro-toggle-epic" id="epic-toggle-crt" data-translate-key="hub_off">OFF</button>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_particles">PARTICLE QUALITY</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_particles_desc">Adjust number of debris and
+                        explosions.</p>
+                    <div class="multi-toggle">
+                        <button class="mt-btn" data-val="low" data-translate-key="hub_low_label">LOW</button>
+                        <button class="mt-btn active" data-val="high" data-translate-key="hub_high_label">HIGH</button>
+                        <button class="mt-btn" data-val="extreme" data-translate-key="hub_max_label">ULTRA</button>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_shake">SCREEN SHAKE</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_shake_desc">Camera impact intensity.</p>
+                    <div class="multi-toggle">
+                        <button class="mt-btn" data-val="off" data-translate-key="hub_off">OFF</button>
+                        <button class="mt-btn active" data-val="on" data-translate-key="hub_on">ON</button>
+                        <button class="mt-btn" data-val="extreme" data-translate-key="hub_max_label">MAX</button>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_bloom">GLOW / BLOOM</label>
+                    <button class="retro-toggle-epic active" id="epic-toggle-bloom"
+                        data-translate-key="hub_on">ON</button>
+                </div>
+            </div>
+
+            <!-- GAMEPLAY SETTINGS -->
+            <div id="settings-tab-gameplay" class="settings-tab-content" style="display:none;">
+                <div class="setting-group-epic">
+                    <label>LANGUAGE</label>
+                    <div class="multi-toggle">
+                        <button class="mt-btn active" data-lang="en">EN</button>
+                        <button class="mt-btn" data-lang="de">DE</button>
+                        <button class="mt-btn" data-lang="es">ES</button>
+                        <button class="mt-btn" data-lang="zh">ZH</button>
+                        <button class="mt-btn" data-lang="ja">JA</button>
+                        <button class="mt-btn" data-lang="it">IT</button>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_damage_numbers">DAMAGE NUMBERS</label>
+                    <button class="retro-toggle-epic active" id="epic-toggle-dmg"
+                        data-translate-key="hub_on">ON</button>
+                </div>
+
+                <div class="setting-group-epic danger-zone">
+                    <label style="color:#ff4136;" data-translate-key="hub_settings_danger_zone">DANGER ZONE</label>
+                    <button class="retro-btn danger" id="epic-btn-reset-save"
+                        data-translate-key="hub_settings_reset">RESET PROGRESS</button>
+                    <p class="setting-desc" style="color:#ff4136;" data-translate-key="hub_settings_reset_desc">Erases
+                        all coins, upgrades, and highscores.</p>
+                </div>
+            </div>
+
+            <!-- CONTROLS SETTINGS -->
+            <div id="settings-tab-controls" class="settings-tab-content" style="display:none;">
+                <div class="setting-group-epic" data-setting-id="autofire">
+                    <label data-translate-key="hub_settings_autofire">AUTO-FIRE (MOBILE)</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_autofire_desc">Automatically shoot when
+                        enemies are visible.</p>
+                    <div class="multi-toggle">
+                        <button class="mt-btn" data-val="off" data-translate-key="hub_off">OFF</button>
+                        <button class="mt-btn active" data-val="always" data-translate-key="hub_on">ON</button>
+                        <button class="mt-btn" data-val="move">MOVE</button>
+                    </div>
+                </div>
+                <div class="setting-group-epic">
+                    <label data-translate-key="hub_settings_vibration">VIBRATION</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_vibration_desc">Haptic feedback on impact.
+                    </p>
+                    <button class="retro-toggle-epic active" id="epic-toggle-vibration"
+                        data-translate-key="hub_on">ON</button>
+                </div>
+
+                <h3 class="pixel-subtitle" style="margin-top:20px; color:#0ff;" data-translate-key="hub_key_bindings">
+                    KEY BINDINGS</h3>
+
+                <div class="key-bind-row">
+                    <span data-translate-key="hub_key_move">MOVE</span>
+                    <div class="keys"><span class="kb">W</span><span class="kb">A</span><span class="kb">S</span><span
+                            class="kb">D</span></div>
+                </div>
+                <div class="key-bind-row">
+                    <span data-translate-key="hub_key_shoot">SHOOT</span>
+                    <div class="keys"><span class="kb wide">SPACE</span> <span class="kb">L-CLICK</span></div>
+                </div>
+                <div class="key-bind-row">
+                    <span data-translate-key="hub_key_special">SPECIAL</span>
+                    <div class="keys"><span class="kb">E</span></div>
+                </div>
+                <div class="key-bind-row">
+                    <span data-translate-key="hub_key_ultimate">ULTIMATE</span>
+                    <div class="keys"><span class="kb">Q</span></div>
+                </div>
+                <div class="key-bind-row">
+                    <span data-translate-key="hub_key_pause">PAUSE</span>
+                    <div class="keys"><span class="kb">ESC</span> <span class="kb">P</span></div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="shop-footer-fixed" style="flex-direction:column; gap:10px; height:auto; padding:15px;">
+            <button class="epic-back-btn" id="settings-back-button" data-translate-key="btn_back">BACK</button>
+            <span style="font-size:0.45rem; opacity:0.5; cursor:pointer; text-decoration:underline;"
+                id="open-legal-settings-btn" data-translate-key="legal_protocols_title">GALACTIC MANDATE & PRIVACY
+                PROTOCOLS</span>
+        </footer>
+    </div>
+
+    <!-- SPRACHAUSWAHL -->
+    <div id="language-select-screen"
+        style="display: none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+        <h1 style="color:#0ff; text-align:center; font-family:'Press Start 2P'; font-size:1rem; margin-bottom:30px;"
+            data-translate-key="lang_select_title">
+            SELECT LANGUAGE</h1>
+        <div class="language-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px;">
             <button class="lang-button" data-lang="en">English</button>
             <button class="lang-button" data-lang="de">Deutsch</button>
             <button class="lang-button" data-lang="es">Español</button>
@@ -50,208 +1010,238 @@
             <button class="lang-button" data-lang="ja">日本語</button>
             <button class="lang-button" data-lang="it">Italiano</button>
         </div>
-        <button class="menu-button" id="lang-back-button" data-translate-key="btn_back">Back</button>
+        <button id="lang-back-button"
+            style="margin-top:20px; padding:10px; background:transparent; border:1px solid #555; color:#555; font-family:'Press Start 2P'; font-size:0.6rem;"
+            data-translate-key="btn_back">BACK</button>
     </div>
 
-    <!-- Haupt-UI des Spiels -->
-    <div id="ui-panel">
-        <div class="left-stats">
-            <div id="mobile-pause-button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <rect x="25" y="25" width="15" height="50" fill="currentColor"/>
-                    <rect x="60" y="25" width="15" height="50" fill="currentColor"/>
-                </svg>
-            </div>
-            <div class="ui-item"><span data-translate-key="score">Score</span>: <span id="score">0</span></div>
-            <div class="ui-item" id="coin-display">
-                <img id="coin-icon" src="" alt="Coins"/>: <span id="coins">0</span>
-            </div>
-        </div>
-        <div class="right-stats">
-            <div class="ui-item" id="energy-display">
-                <div id="energy-bar-container"><div id="energy-bar"></div></div>
+    <!-- NFT MODAL -->
+    <div id="collectible-modal" class="modal-overlay" style="display: none;">
+        <div class="pixel-modal modal-content">
+            <button class="modal-close" id="collectible-modal-close">X</button>
+            <div class="modal-body">
+                <div class="skin-preview-large">
+                    <img id="modal-img" src="" alt="NFT Art" />
+                </div>
+                <div class="skin-info-col">
+                    <h2 id="modal-title" class="pixel-title"></h2>
+                    <p id="modal-story" class="pixel-text"></p>
+                    <div id="modal-bonus" class="skin-stats"></div>
+                </div>
             </div>
         </div>
-    </div>
-    
-    <div id="ui-panel-bottom">
-        <div class="left-stats">
-            <div class="ui-item" id="lives-display"></div>
-            <div class="ui-item" id="weapon-tier-display"></div>
-        </div>
-        <div class="right-stats">
-            <div class="ui-item">
-                <span data-translate-key="level">Level</span>: <span id="level">1</span>
-            </div>
-        </div>
-    </div>
-    
-    <canvas id="gameCanvas" width="800" height="750"></canvas>
-    
-    <div id="bottom-ui-container">
-        <div id="special-inventory"></div>
-        <div id="ultra-inventory"></div>
-    </div>
-    
-    <div id="level-display-container">
     </div>
 
-    <div id="weapon-status"></div>
-    
-    <!-- Menü-Container (für Pause und Hauptmenü) -->
-    <div id="menu-container" style="display: none;">
-        <div class="menu-header"><h1 data-translate-key="main_menu_title">GALAXY FALL</h1></div>
-        <div class="menu-tabs">
-            <button class="tab-button active" id="tab-spiel" data-translate-key="tab_spiel">Spiel</button>
-            <button class="tab-button" id="tab-galerie" data-translate-key="tab_galerie">Galerie</button>
-            <button class="tab-button" id="tab-arsenal" data-translate-key="tab_arsenal">Arsenal</button>
-            <button class="tab-button" id="tab-gegner" data-translate-key="tab_gegner">Gegner</button>
-            <button class="tab-button" id="tab-rangliste" data-translate-key="tab_rangliste">Rangliste</button>
-            <button class="tab-button" id="tab-einstellungen" data-translate-key="tab_einstellungen">Einstellungen</button>
+    <!-- SKIN DETAIL MODAL -->
+    <div id="skin-detail-modal" class="modal-overlay" style="display: none;">
+        <div class="pixel-modal">
+            <button class="modal-close" id="skin-modal-close">X</button>
+            <div class="modal-body">
+                <div class="skin-preview-large">
+                    <img id="skin-modal-img" src="" alt="Skin Preview">
+                </div>
+                <div class="skin-info-col">
+                    <h2 id="skin-modal-title" class="pixel-title">SKIN NAME</h2>
+                    <p id="skin-modal-desc" class="pixel-text">Skin description goes here.</p>
+                    <div class="skin-stats" id="skin-modal-stats"></div>
+                    <div class="nft-minting-area"></div>
+                    <div class="modal-actions">
+                        <button id="skin-modal-action-btn" class="retro-btn"
+                            data-translate-key="hub_equip">EQUIP</button>
+                    </div>
+                    <div class="nft-info-area"></div>
+                </div>
+            </div>
         </div>
-        
-        <div class="menu-content">
-            <div id="spiel-view" class="tab-pane active">
-                 <button class="menu-button" id="resume-button" data-translate-key="btn_resume">Fortsetzen</button>
-                 <button class="menu-button" id="shop-button" data-translate-key="btn_shop">Shop</button>
-                 <button class="menu-button" id="restart-button" data-translate-key="btn_start_game">Spiel starten</button>
-                 <button class="menu-button" id="exit-button" data-translate-key="btn_exit">SPIEL BEENDEN</button>
-                 <button class="menu-button" id="quit-button" data-translate-key="btn_quit">Zum Hauptmenü</button>
-                 <div id="menu-highscore">
-                    <span data-translate-key="highscore">Highscore</span>: <span id="highscore">0</span>
-                 </div>
+    </div>
+
+    <!-- TROPHY DETAIL MODAL -->
+    <div id="trophy-detail-modal" class="modal-overlay" style="display: none;">
+        <div class="pixel-modal" style="border-image: linear-gradient(45deg, #FFD700, #FFA500) 1;">
+            <button class="modal-close" id="trophy-modal-close">X</button>
+            <div class="modal-header" style="text-align:center; padding: 20px 0 10px;">
+                <div class="tier-label" id="trophy-modal-tier"
+                    style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: #FFD700; text-transform: uppercase;">
+                    GOLD</div>
             </div>
-            <div id="galerie-view" class="tab-pane">
-                 <div class="info-panel" id="galerie-list">
-                 </div>
+            <div class="modal-body">
+                <div class="skin-preview-large"
+                    style="background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);">
+                    <img id="trophy-modal-img" src="" alt="Trophy Preview" style="filter: drop-shadow(0 0 15px gold);">
+                </div>
+                <div class="skin-info-col">
+                    <h2 id="trophy-modal-title" class="pixel-title" style="color: gold;">TROPHY NAME</h2>
+                    <p id="trophy-modal-desc" class="pixel-text" style="color: #ccc;">How to get this trophy.</p>
+                    <div id="trophy-modal-date"
+                        style="font-family: 'Press Start 2P'; font-size: 0.4rem; color: #aaa; margin-top: 10px;"><span
+                            data-translate-key="hub_dated">DATED:</span>
+                        2026-03-08</div>
+                </div>
             </div>
-            <div id="arsenal-view" class="tab-pane">
-                 <div class="info-panel" id="arsenal-list"></div>
+        </div>
+    </div>
+
+    <!-- WELCOME BONUS OVERLAY -->
+    <div id="welcome-bonus-overlay" style="display:none;">
+        <canvas id="bonus-particle-canvas"></canvas>
+        <div id="welcome-bonus-inner">
+            <div id="welcome-bonus-rays"></div>
+            <div id="welcome-bonus-glow-ring"></div>
+
+            <div id="welcome-bonus-header">
+                <div id="welcome-bonus-badge" data-translate-key="hub_first_pioneer">✦ FIRST-TIME PIONEER ✦</div>
+                <h1 id="welcome-bonus-title" data-translate-key="hub_welcome_bonus_title">GALAXY FALL<br><span>WELCOME
+                        BONUS</span></h1>
             </div>
-            <div id="gegner-view" class="tab-pane">
-                 <div class="info-panel" id="gegner-list"></div>
+
+            <div id="welcome-bonus-pilot-name" data-translate-key="hub_loading_pilot">LOADING PILOT DATA...</div>
+
+            <div id="welcome-bonus-coin-display">
+                <div id="welcome-bonus-coin-icon">⬡</div>
+                <div id="welcome-bonus-amount-wrap">
+                    <span id="welcome-bonus-label" data-translate-key="hub_gfc_label">GALAXY FALL CREDITS</span>
+                    <div id="welcome-bonus-counter">0</div>
+                </div>
             </div>
-            <div id="rangliste-view" class="tab-pane">
-                 <div class="info-panel" id="leaderboard-content">
-                 </div>
+
+            <div id="welcome-bonus-desc">
+                Your account has been pre-loaded with<br>
+                <strong>31,415 GFC</strong> to begin your journey across the galaxy.
             </div>
-            <div id="einstellungen-view" class="tab-pane">
-                <div class="info-panel">
-                    <div class="settings-panel">
-                        <div class="setting-item">
-                            <span data-translate-key="settings_language_label">Sprache</span>
-                            <button class="menu-button" id="toggle-language">Deutsch</button>
+
+            <button id="welcome-bonus-claim-btn">
+                <span id="claim-btn-text" data-translate-key="hub_claim_credits">⚡ CLAIM YOUR CREDITS ⚡</span>
+            </button>
+
+            <div id="welcome-bonus-footer" data-translate-key="hub_secured_by_pi">SECURED BY PI NETWORK · ONE-TIME
+                REWARD</div>
+        </div>
+    </div>
+
+    <!-- LUCKY WHEEL MODAL -->
+    <div id="lucky-wheel-modal" class="modal-overlay" style="display: none; z-index: 10001;">
+        <div class="pixel-modal wheel-modal-content">
+            <button class="modal-close" id="wheel-modal-close">X</button>
+            <div class="wheel-panel">
+                <h2 class="pixel-title" data-translate-key="wheel_title"
+                    style="color:var(--cyan-glow); margin-bottom:15px; font-size:0.8rem;">LUCKY GALAXY WHEEL</h2>
+                <div class="wheel-main-container"
+                    style="position:relative; width:300px; height:300px; margin:0 auto; padding:10px;">
+                    <div id="wheel-pointer"
+                        style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:30px; height:30px; background:white; clip-path:polygon(0% 0%, 100% 0%, 50% 100%); z-index:10; filter:drop-shadow(0 0 5px cyan);">
+                    </div>
+                    <canvas id="wheel-canvas" width="300" height="300"
+                        style="display:block; border-radius:50%; filter:drop-shadow(0 0 15px rgba(0,255,255,0.3));"></canvas>
+                </div>
+                <div class="wheel-controls"
+                    style="margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                    <div id="wheel-status-text" class="pixel-text"
+                        style="font-size:0.5rem; text-align:center; min-height:1.2rem;"
+                        data-translate-key="wheel_ready">Ready for spin!</div>
+                    <button id="wheel-spin-btn" class="retro-btn big" style="width:200px;"></button>
+                    <!-- BOMB TIMER DISPLAY -->
+                    <div id="wheel-bomb-timer" style="
+                        display:none;
+                        flex-direction:column;
+                        align-items:center;
+                        gap:6px;
+                        background: #000;
+                        border: 2px solid #ff3300;
+                        border-radius: 8px;
+                        padding: 10px 18px;
+                        box-shadow: 0 0 20px rgba(255,50,0,0.6), inset 0 0 10px rgba(255,50,0,0.1);
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <!-- Scan line overlay -->
+                        <div
+                            style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);pointer-events:none;z-index:1;">
                         </div>
-                        <div class="setting-item">
-                            <span data-translate-key="settings_volume_label">Lautstärke</span>
-                            <input type="range" id="volume-master" min="0" max="1" step="0.1">
+                        <div id="wheel-timer-label" class="pixel-text"
+                            style="font-size:0.35rem; color:#ff3300; letter-spacing:2px; text-shadow:0 0 8px #ff3300; z-index:2;">
                         </div>
-                        <div class="setting-item">
-                            <span data-translate-key="settings_music_label">Musik</span>
-                            <button class="menu-button" id="toggle-music">AN</button>
+                        <div style="display:flex; align-items:center; gap:4px; z-index:2;">
+                            <!-- Hours -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-h1">0</div>
+                                <div class="bomb-digit" id="bt-h2">0</div>
+                            </div>
+                            <div class="bomb-colon" id="bt-colon1">:</div>
+                            <!-- Minutes -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-m1">0</div>
+                                <div class="bomb-digit" id="bt-m2">0</div>
+                            </div>
+                            <div class="bomb-colon" id="bt-colon2">:</div>
+                            <!-- Seconds -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-s1">0</div>
+                                <div class="bomb-digit" id="bt-s2">0</div>
+                            </div>
                         </div>
-                        <div class="setting-item">
-                            <span data-translate-key="settings_sfx_label">SFX</span>
-                            <button class="menu-button" id="toggle-sfx">AN</button>
-                        </div>
-                        <div class="setting-item">
-                            <span data-translate-key="settings_particles_label">Partikel</span>
-                            <button class="menu-button" id="toggle-particles">HOCH</button>
-                        </div>
-                        <div class="setting-item">
-                            <span data-translate-key="settings_shake_label">Bildwackeln</span>
-                            <button class="menu-button" id="toggle-shake">AN</button>
-                        </div>
+                        <div id="wheel-ads-left-display" class="pixel-text"
+                            style="font-size:0.33rem; color:#ff8800; letter-spacing:1px; z-index:2;"></div>
+                    </div>
+                    <!-- READY DISPLAY (shown when free spin available) -->
+                    <div id="wheel-ready-display"
+                        style="display:none; font-family:'Press Start 2P'; font-size:0.9rem; color:#00ff88; text-shadow:0 0 15px #00ff88, 0 0 30px #00ff88; animation: pulse-green 1s ease-in-out infinite alternate; letter-spacing:3px;">
+                    </div>
+                    <div id="wheel-timer-info" class="pixel-text" style="display:none; font-size:0.45rem; opacity:0.7;">
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- CONTAINER FÜR DIE SPIELMODUS-AUSWAHL -->
-    <div id="mode-select-container" style="display: none;">
-        <div class="menu">
-            <div class="menu-header">
-                <h1 data-translate-key="mode_select_title">Choose Mode</h1>
-            </div>
-            <div class="menu-content" style="flex-direction: column; gap: 15px; padding: 20px;">
-                <button id="select-campaign-button" class="menu-button" data-translate-key="btn_campaign">Campaign</button>
-                <button id="select-endless-button" class="menu-button" data-translate-key="btn_endless">Endless</button>
-            </div>
-        </div>
-    </div>
+    <!-- PI NETWORK SDK -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>
+        (function () {
+            const currentHostname = window.location.hostname;
 
-    <!-- KORRIGIERTER Container für den Game-Over-Bildschirm -->
-    <div id="game-over-container" style="display: none;">
-        <div class="menu">
-            <div class="menu-header">
-                <h1 data-translate-key="game_over_title">Game Over</h1>
-            </div>
-            <div class="final-score-container">
-                <span data-translate-key="game_over_final_score">Final Score</span>: <span id="final-score">0</span>
-            </div>
-            <div id="final-rank-display" class="final-rank"></div>
-            <button class="menu-button" id="restart-from-gameover-button" data-translate-key="btn_restart">Restart</button>
-            <button class="menu-button" id="quit-from-gameover-button" data-translate-key="btn_quit_to_menu">Quit to Menu</button>
-        </div>
-    </div>
+            // Sandbox-Modus für alle Domains AUßER der Haupt-Domain und www.
+            const isSandbox = !["galaxyfall.space", "www.galaxyfall.space"].includes(currentHostname);
 
-    <!-- ÜBERARBEITETER SHOP-CONTAINER -->
-    <div id="shop-container" style="display: none;">
-        <div class="shop-menu">
-            <div class="shop-header">
-                <h1 data-translate-key="shop_title">Arsenal-Shop</h1>
-                <div id="shop-coin-display">
-                    <img id="shop-coin-icon" src="" alt="Coins"/>
-                    <span id="shop-coins">0</span>
+            if (isSandbox && !currentHostname.includes('localhost') && !currentHostname.includes('127.0.0.1')) {
+                const badge = document.createElement('div');
+                badge.style.cssText = "position:fixed; top:0; left:50%; transform:translateX(-50%); background:rgba(255,165,0,0.9); padding:5px 15px; color:black; font-weight:bold; font-family:monospace; font-size:10px; z-index:10000; border-radius:0 0 5px 5px;";
+                badge.innerHTML = "⚠️ TESTNET EDITION";
+                document.body.appendChild(badge);
+            }
+
+            try {
+                // Initialisierung der SDK mit dynamischer Sandbox-Erkennung
+                Pi.init({ version: "2.0", sandbox: isSandbox });
+                console.log("Pi SDK v2.0 Initialized. Sandbox:", isSandbox);
+            } catch (e) {
+                console.error("Pi SDK Initialization failed:", e);
+            }
+        })();
+    </script>
+
+    <!-- HAUPTLOGIK -->
+    <script type="module" src="./index.js"></script>
+
+    <!-- CONNECTING OVERLAY (TOP LEVEL - position:fixed works correctly here) -->
+    <div id="connecting-overlay" class="connecting-overlay">
+        <div class="warp-ring-container">
+            <div class="warp-ring"></div>
+            <div class="warp-ring"></div>
+            <div class="warp-ring"></div>
+        </div>
+        <div class="connecting-content">
+            <div class="ship-loading-track">
+                <img src="./assets/images/player_tier1.png" class="ship-loading-img-overlay" alt="MK-I Pioneer">
+                <div class="neural-links">
+                    <div class="neural-fill"></div>
                 </div>
-                <div id="pi-user-display" style="display: none;">
-                    <span data-translate-key="connected_as">Verbunden als</span>: <span id="pi-username"></span>
-                </div>
             </div>
-
-            <div id="shop-tabs" class="menu-tabs">
-                <button class="tab-button active" data-tab="permanent" data-translate-key="shop_tab_permanent">Upgrades</button>
-                <button class="tab-button" data-tab="consumable" data-translate-key="shop_tab_consumable">Verbrauch</button>
-                <button class="tab-button" data-tab="skin" data-translate-key="shop_tab_skins">Skins</button>
-                <button class="tab-button" data-tab="cosmetic" data-translate-key="shop_tab_cosmetic">Optik</button>
-                <button class="tab-button" data-tab="pi_bundle" data-translate-key="shop_tab_pi_bundle">Pi Münzen</button>
-                <button class="tab-button" data-tab="collectible" data-translate-key="shop_tab_collectibles">NFT-Hangar</button>
-            </div>
-
-            <div id="shop-content" class="menu-content">
-            </div>
-
-            <button class="menu-button" id="shop-back-button" data-translate-key="btn_back">Zurück</button>
+            <div class="connecting-text" data-translate-key="hub_connecting">CONNECTING...</div>
+            <div class="connecting-subtext" data-translate-key="hub_neural_link">STABILIZING NEURAL LINK // BYPASSING
+                ENCRYPTION</div>
         </div>
     </div>
-
-    <div id="exit-screen" style="display: none;">
-        <div class="menu">
-            <h1 data-translate-key="exit_title">Bis bald!</h1>
-            <p data-translate-key="exit_message">Du kannst diesen Tab jetzt sicher schließen.</p>
-        </div>
-    </div>
-
-</div>
-
-<!-- NEU: Modal-Container für die vergrößerte Ansicht der Sammlerstücke -->
-<div id="collectible-modal">
-    <div class="modal-content">
-        <img id="modal-img" src="" alt="Collectible Artwork" />
-        <h2 id="modal-title"></h2>
-        <p id="modal-story"></p>
-        <p id="modal-bonus"></p>
-    </div>
-</div>
-
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
-<script>
-    Pi.init({ version: "2.0", sandbox: false });
-</script>
-
-
-<script type="module" src="./index.js?v=79"></script>
 
 </body>
+
 </html>

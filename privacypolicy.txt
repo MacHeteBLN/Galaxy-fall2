@@ -1,0 +1,192 @@
+*******************************************************************************
+*                 N E U R A L   D A T A   P R O T O C O L                     *
+*                         (PRIVACY POLICY)                                    *
+*                                                                             *
+*******************************************************************************
+[ STATUS: ENCRYPTION ACTIVE ]
+[ VERSION: 3.5.1-MULTILANG ]
+[ DATE: FEB 28, 2026 ]
+
+
+===============================================================================
+[ ENGLISH ]
+===============================================================================
+
+1. SECTOR CONTROL (CONTROLLER)
+Contact: danieldieske@icloud.com
+
+2. NEURAL SCANNING (DATA COLLECTION)
+The system collects only necessary data for the simulator:
+A. PI NETWORK AUTHENTICATION (Username, UID).
+B. LEADERBOARD DATA (Score, Waves, Mode).
+C. LOCAL STORAGE (Progress, Skins, Settings).
+
+3. THE MISSION (PURPOSE)
+Simulator operation, Pi SDK integration, and ranking comparisons.
+
+4. DATA TRANSMISSION
+No sale of data to aliens or megacorporations. Shared only with 
+Pi Network and Server Hosts for ranking management.
+
+5. SHIELD STRENGTH (SECURITY)
+SSL encryption for transmissions. Local data is the Pilot's 
+own responsibility.
+
+6. PILOT PRIVILEGES (RIGHTS)
+Access, correction, and deletion (Neural Purge).
+
+7. PROTOCOL UPDATE (CHANGES)
+Updates for enhanced security tech in the sector.
+
+===============================================================================
+[ DEUTSCH / GERMAN ]
+===============================================================================
+
+1. VERANTWORTLICHER (SECTOR CONTROL)
+Kontakt: danieldieske@icloud.com
+
+2. DATENERHEBUNG (NEURAL SCANNING)
+Das System erhebt nur notwendige Daten für den Simulator:
+A. PI NETWORK AUTHENTIFICATION (Username, UID).
+B. RANG LISTEN DATEN (Score, Waves, Modus).
+C. LOKAL GESPEICHERTE DATEN (Fortschritt, Skins, Sprache).
+
+3. NUTZUNGSZWECK (THE MISSION)
+Simulatorbetrieb, Pi SDK-Integration & Ranking-Vergleich.
+
+4. WEITERGABE (DATA TRANSMISSION)
+Kein Verkauf an Aliens oder Korporationen. Nur an Pi Network 
+und Server-Hosts zur Verwaltung der Rangliste.
+
+5. DATENSICHERHEIT (SHIELD STRENGTH)
+SSL-Verschlüsselung für Übertragungen. Lokale Daten unterliegen 
+deiner eigenen Verantwortung.
+
+6. DEINE RECHTE (PILOT PRIVILEGES)
+Auskunft, Berichtigung & Löschung (Neural Purge).
+
+7. ÄNDERUNGEN (PROTOCOL UPDATE)
+Anpassung bei neuen Sicherheitstechnologien im Sektor.
+
+===============================================================================
+[ ESPAÑOL / SPANISH ]
+===============================================================================
+
+1. CONTROL DE SECTOR (RESPONSABLE)
+Contacto: danieldieske@icloud.com
+
+2. ESCANEO NEURONAL (COLECCIÓN)
+El sistema solo recopila los datos necesarios para el simulador:
+A. AUTENTICACIÓN PI NETWORK (Nombre, UID).
+B. DATOS DE CLASIFICACIÓN (Puntos, Oleadas, Modo).
+C. ALMACENAMIENTO LOCAL (Progreso, Aspectos, Ajustes).
+
+3. LA MISIÓN (PROPÓSITO)
+Operación del simulador, integración del Pi SDK y comparaciones.
+
+4. TRANSMISIÓN DE DATOS
+No se venden datos a alienígenas ni megacorporaciones. Compartido solo 
+con Pi Network y servidores para la clasificación.
+
+5. POTENCIA DEL ESCUDO (SEGURIDAD)
+Cifrado SSL para transmisiones. Los datos locales son responsabilidad 
+del propio Piloto.
+
+6. PRIVILEGIOS DEL PILOTO
+Acceso, corrección y eliminación (Purga Neuronal).
+
+7. ACTUALIZACIÓN DEL PROTOCOLO
+Mejoras tecnológicas de seguridad en el sector.
+
+===============================================================================
+[ 简体中文 / CHINESE SIMPLIFIED ]
+===============================================================================
+
+1. 扇区控制 (负责人)
+联系方式：danieldieske@icloud.com
+
+2. 神经扫描 (数据收集)
+系统仅收集模拟器运行所必需的数据：
+A. PI NETWORK 身份验证 (用户名, UID)。
+B. 排行榜数据 (分数, 波数, 模式)。
+C. 本地存储 (进度, 皮肤, 设置)。
+
+3. 任务目标 (使命)
+模拟器运行、Pi SDK 集成以及排名对比。
+
+4. 数据传输
+绝不将数据出售给外星人或巨型企业。仅与 Pi Network 
+和服务器共享以管理排行榜。
+
+5. 护盾强度 (安全)
+SSL 通信加密。本地数据由飞行员自行负责。
+
+6. 飞行员特权
+访问、更正和删除（神经清除 - Neural Purge）。
+
+7. 协议更新
+扇区安全技术升级时的相应调整。
+
+===============================================================================
+[ 日本語 / JAPANESE ]
+===============================================================================
+
+1. セクター・コントロール
+連絡先：danieldieske@icloud.com
+
+2. ニューラル・スキャニング (データ収集)
+システムはシミュレーターに不可欠なデータのみを収集します：
+A. PI NETWORK 認証 (ユーザー名, UID)。
+B. リーダーボードデータ (スコア, ウェーブ, モード)。
+C. ローカルストレージ (進行状況, スキン, 設定)。
+
+3. ミッション (目的)
+シミュレーターの運用、Pi SDK 統合、およびランキング比較。
+
+4. データ転送
+エイリアンや巨大企業へのデータ売却は行いません。ランキング管理の
+ために Pi Network およびサーバーホストとのみ共有されます。
+
+5. シールド強度 (セキュリティ)
+通信には SSL 暗号化を使用。ローカルデータはパイロット自身の
+責任となります。
+
+6. パイロットの特権
+アクセス、訂正、および削除（ニューラル・パージ）。
+
+7. プロトコル・アップデート
+セクター内のセキュリティ技術向上に伴う更新。
+
+===============================================================================
+[ ITALIANO / ITALIAN ]
+===============================================================================
+
+1. CONTROLLO DI SETTORE
+Contatto: danieldieske@icloud.com
+
+2. SCANSIONE NEURALE (RACCOLTA DATI)
+Il sistema raccoglie solo i dati necessari per il simulatore:
+A. AUTENTICAZIONE PI NETWORK (Username, UID).
+B. DATI CLASSIFICA (Punteggio, Ondate, Modalità).
+C. STORAGE LOCALE (Progressi, Skin, Impostazioni).
+
+3. LA MISSIONE (SCOPO)
+Funzionamento simulatore, integrazione Pi SDK e confronti ranking.
+
+4. TRASMISSIONE DATI
+Nessuna vendita ad alieni o megacorporazioni. Condiviso solo con 
+Pi Network e Server Host per la gestione della classifica.
+
+5. POTENZA DELLO SCUDO (SICUREZZA)
+Crittografia SSL per le trasmissioni. I dati locali sono 
+responsabilità del Pilota.
+
+6. PRIVILEGI DEL PILOTO
+Accesso, rettifica e cancellazione (Epurazione Neurale).
+
+7. AGGIORNAMENTO DEL PROTOCOLLO
+Aggiornamenti per tecnologie di sicurezza nel settore.
+
+-------------------------------------------------------------------------------
+[ CONNECTION TERMINATED ]
+-------------------------------------------------------------------------------

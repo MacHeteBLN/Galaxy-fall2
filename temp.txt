@@ -1,0 +1,35 @@
+1878:             } else if (item.type === 'CONSUMABLE' && item.applyEffect) {
+1879:                 item.applyEffect(this.game);
+1880:             } else if (item.type === 'COSMETIC' || item.type === 'SKIN') {
+1881:                 this.playerCosmetics = data.cosmetics;
+1882:                 this.saveCosmetics();
+1883:                 this.equipCosmetic(item.id, item.cosmeticType as any);
+1884:             }
+1885: 
+1886:             // UI sofort aktualisieren
+1887:             if (this.game.uiManager.update) this.game.uiManager.update();
+1888:             this.game.uiManager.renderShop(); // Real-time sync for shop items
+1889:             if ((window as any).updateHubUI) (window as any).updateHubUI();
+1890: 
+1891:             // Sync with Hub context if active (to avoid old data overwrite on return)
+1892:             if ((window as any).dummyGameContext) {
+1893:                 const dummy = (window as any).dummyGameContext;
+1894:                 if (dummy.shopManager) {
+1895:                     dummy.shopManager.playerUpgrades = JSON.parse(JSON.stringify(this.playerUpgrades));
+1896:                     dummy.shopManager.playerCosmetics = JSON.parse(JSON.stringify(this.playerCosmetics));
+1897:                     dummy.shopManager.playerCollectibles = JSON.parse(JSON.stringify(this.playerCollectibles));
+1898:                     dummy.shopManager.saveUpgrades();
+1899:                     dummy.shopManager.saveCosmetics();
+1900:                     dummy.shopManager.saveCollectibles();
+1901:                 }
+1902:             }
+1903: 
+1904:             let maxLevelReached = false;
+1905:             if ((item.type === 'PERMANENT' || item.type === 'ULTIMATE') && item.maxLevel && this.playerUpgrades[item.id] >= item.maxLevel) {
+1906:                 maxLevelReached = true;
+1907:             }
+1908:             this.game.achievementManager.check('item_purchased', maxLevelReached ? 'max_level_reached' : undefined);
+1909: 
+1910:             return true;
+1911:         } catch (e) {
+1912:             console.error("Purchase failed", e);

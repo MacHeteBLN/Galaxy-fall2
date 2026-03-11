@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  
+
   server: {
     proxy: {
       // Jede Anfrage, die mit /api beginnt...
@@ -17,6 +17,7 @@ export default defineConfig({
   },
 
   build: {
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         // Diese Zeilen sorgen für einzigartige Dateinamen bei jedem Build
