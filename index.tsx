@@ -7825,7 +7825,7 @@ window.addEventListener('load', async function () {
         const t = (k: string) => globalLocalizationManager.translate(k);
         popup.className = 'trophy-claim-popup';
         popup.innerHTML = `
-            <div class="tcp-icon">${def?.icon || 'ðŸ†'}</div>
+            <div class="tcp-icon">${def?.icon || '🏆'}</div>
             <div class="tcp-text">
                 <div class="tcp-name">${def ? t(def.nameKey) : trophyId}</div>
                 <div class="tcp-reward">+${reward.toLocaleString()} ${t('msg_gfc_credited')}</div>
