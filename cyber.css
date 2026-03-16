@@ -670,6 +670,32 @@
     text-shadow: 0 0 10px #F8B230;
 }
 
+/* Jackpot panel refinements */
+.jackpot-pot-display {
+    margin-top: 6px;
+    font-size: 0.55rem;
+    color: #ffd700;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.jackpot-pot-label {
+    opacity: 0.8;
+}
+
+.jackpot-pot-value {
+    font-family: monospace;
+}
+
+.jackpot-info-text {
+    margin-top: 6px;
+    font-size: 0.45rem;
+    color: #aaa;
+    line-height: 1.4;
+    opacity: 0.85;
+}
+
 .game-over-actions {
     display: flex;
     flex-direction: column;
@@ -949,9 +975,9 @@
 }
 
 #pilot-gallery-root .gallery-item.selected {
-    border-color: var(--neon-cyan);
-    background: rgba(0, 255, 255, 0.1);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    border-color: var(--neon-green);
+    background: rgba(57, 255, 20, 0.1);
+    box-shadow: 0 0 10px var(--neon-green-glow);
 }
 
 #pilot-gallery-root .gallery-item-preview {

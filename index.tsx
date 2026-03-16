@@ -83,28 +83,60 @@ import collectibleKoopaKingSrc from './assets/images/collectible_koopa_king.png'
 let updateHubUI: () => void = () => { };
 
 //================================[ GFC-SYNC-MANAGER ]================================//
-// Zentrale Synchronisation fÃ¼r das GFC-Guthaben (MÃ¼nzen).
+// Zentrale Synchronisation für das GFC-Guthaben (Münzen).
 // Stellt sicher, dass Hub, Shop und Spiel immer denselben Stand anzeigen.
 const syncGlobalGFC = (amount: number, source?: any) => {
     const coins = Math.max(0, Math.floor(amount));
-    localStorage.setItem('galaxyFallCoins', coins.toString());
+    // localStorage.setItem('galaxyFallCoins', coins.toString()); // GELOESCHT FÜR MEHR SICHERHEIT
+
 
     // 1. Hub-UI aktualisieren (Hangar-Anzeige etc.)
     if (typeof updateHubUI === 'function') updateHubUI();
 
-    // 2. Shop-Anzeige aktualisieren (falls offen)
+    // 2. Shop-Anzeige aktualisieren
     const shopCoinsEl = document.getElementById('shop-coins');
     if (shopCoinsEl) shopCoinsEl.textContent = coins.toLocaleString();
 
-    // 3. Aktive Spielinstanz synchronisieren (ohne Endlosschleife)
+    // 3. Marktplatz-Anzeige (Panel Rechts)
+    const marketCoinsEl = document.querySelector('.coin-value-display');
+    if (marketCoinsEl) marketCoinsEl.textContent = coins.toLocaleString();
+
+    // 3b. Jackpot Bereich GFC Anzeige
+    const jackpotGfcEl = document.getElementById('jackpot-user-gfc');
+    if (jackpotGfcEl) jackpotGfcEl.textContent = coins.toLocaleString();
+
+    // 4. Aktive Spielinstanz synchronisieren
     if (window.game && window.game !== source) {
-        (window.game as any)._coins = coins;
+        window.game.coins = coins;
     }
-    // 4. Fallback fÃ¼r Hub-Kontext
+    // 5. Fallback für Hub-Kontext
     if ((window as any).dummyGameContext && (window as any).dummyGameContext !== source) {
         (window as any).dummyGameContext.coins = coins;
     }
 };
+
+// --- PREMIUM SYNC MANAGER ---
+const syncGlobalPremium = (hasPremium: boolean, source?: any) => {
+    console.log("🚀 Premium Sync:", hasPremium);
+    // localStorage.setItem('galaxyFallHasPremium', hasPremium ? '1' : '0'); // GELOESCHT FÜR MEHR SICHERHEIT
+
+
+    // 1. Game Instance (falls aktiv)
+    if (window.game && window.game !== source) {
+        window.game.hasPremiumLicense = hasPremium;
+    }
+
+    // 2. Hub Context (Dummy Game)
+    if ((window as any).dummyGameContext && (window as any).dummyGameContext !== source) {
+        (window as any).dummyGameContext.hasPremiumLicense = hasPremium;
+    }
+
+    // 3. UI-Refresh
+    if (typeof (window as any).refreshAllSelections === 'function') {
+        (window as any).refreshAllSelections();
+    }
+};
+(window as any).syncGlobalPremium = syncGlobalPremium;
 
 
 class LocalizationManager {
@@ -146,6 +178,9 @@ class LocalizationManager {
     }
 }
 const globalLocalizationManager = new LocalizationManager();
+let piManagerInstance: any;
+let achievementManager: any;
+let statsManager: any;
 
 
 declare global {
@@ -189,7 +224,7 @@ class StatsManager {
         this.roundStats = { kills: 0, coins: 0, playtime: 0, missions: 0 };
     }
 
-    // LÃ¤dt initial aus LocalStorage (NUR FÃœR GÃ„STE)
+    // Lädt initial aus LocalStorage (NUR FÜR GÄSTE)
     public loadStats(): void {
         const gid = localStorage.getItem('galaxy_fall_guest_id');
         const piUid = (window as any).piManagerInstance?.uid;
@@ -215,9 +250,9 @@ class StatsManager {
         this.roundStats = { kills: 0, coins: 0, playtime: 0, missions: 0 };
     }
 
-    // NEW: Substantielle Verbesserung fÃ¼r Finanz-Sync
+    // NEW: Substantielle Verbesserung für Finanz-Sync
     // Zieht nur das ab, was wir gerade erfolgreich an den Server gemeldet haben.
-    // Verhindert Race Conditions, wenn wÃ¤hrend des Fetch-Requests neue MÃ¼nzen gesammelt wurden.
+    // Verhindert Race Conditions, wenn während des Fetch-Requests neue Münzen gesammelt wurden.
     public subtractFromSession(delta: any): void {
         if (!delta) return;
         this.sessionStats.kills = Math.max(0, this.sessionStats.kills - (delta.kills_added || 0));
@@ -226,7 +261,7 @@ class StatsManager {
         this.sessionStats.missions = Math.max(0, this.sessionStats.missions - (delta.missions_completed_added || 0));
     }
 
-    // WICHTIG: Daten vom Server Ã¼bernehmen
+    // WICHTIG: Daten vom Server übernehmen
     public updateFromServer(serverData: any): void {
         this.stats.total_kills = serverData.total_kills || 0;
         this.stats.total_coins_collected = serverData.total_coins_collected || 0;
@@ -251,7 +286,7 @@ class StatsManager {
         };
     }
 
-    // Client-seitige Addition fÃ¼r Offline-Support oder sofortiges Feedback
+    // Client-seitige Addition für Offline-Support oder sofortiges Feedback
     public applySessionToTotal(): void {
         this.stats.total_kills += this.sessionStats.kills;
         this.stats.total_coins_collected += this.sessionStats.coins;
@@ -287,7 +322,7 @@ class AchievementManager {
             { id: 'galaxy_savior', nameKey: 'ach_galaxy_savior_name', descKey: 'ach_galaxy_savior_desc', icon: playerImgSrcGold, evaluate: (g, e) => e === 'state_change' && g.gameState === 'WIN' },
             { id: 'deep_diver', nameKey: 'ach_deep_diver_name', descKey: 'ach_deep_diver_desc', icon: iconProjRainbowSrc, evaluate: (g, e) => (e === 'level_start' || e === 'level_cleared') && g.level >= 25 },
 
-            // Score & WÃ¤hrung
+            // Score & Währung
             { id: 'high_score_hero', nameKey: 'ach_high_score_hero_name', descKey: 'ach_high_score_hero_desc', icon: powerupScoreBoostSrc, evaluate: (g, e) => e === 'score_update' && g.score >= 100000 },
             { id: 'millionaire_pilot', nameKey: 'ach_millionaire_pilot_name', descKey: 'ach_millionaire_pilot_desc', icon: piCoin2ImgSrc, evaluate: (g, e) => e === 'score_update' && g.score >= 1000000 },
             { id: 'coin_collector', nameKey: 'ach_coin_collector_name', descKey: 'ach_coin_collector_desc', icon: piCoinImgSrc, evaluate: (g, e) => (e === 'coin_update' || e === 'game_over') && g.coins >= 10000 },
@@ -330,7 +365,7 @@ class AchievementManager {
         if (!this.game) return;
         const alreadyInSet = this.unlockedAchievements.has(achievement.id);
         this.unlockedAchievements.add(achievement.id);
-        // Persistenz erfolgt nur noch serverseitig Ã¼ber awardTrophy
+        // Persistenz erfolgt nur noch serverseitig über awardTrophy
 
         if (!skipNotification && !alreadyInSet) {
             this.game.uiManager.showAchievementToast(achievement);
@@ -532,7 +567,11 @@ const initializeImages = async () => {
         'shop_proj_purple_name': scaledIcon3,
         'shop_proj_rainbow_name': scaledIcon4,
         'trail_default_name': playerImg1,
-        'shop_trail_rainbow_name': scaledIcon4
+        'shop_trail_rainbow_name': scaledIcon4,
+        'shop_trail_fire_name': scaledIcon2,
+        'shop_trail_void_name': scaledIcon3,
+        'shop_trail_gold_name': scaledIcon1,
+        'shop_trail_toxic_name': scaledIcon1
     };
 
     (window as any).galleryImageMap = galleryImageMap;
@@ -617,6 +656,8 @@ class PiManager {
     public uid: string = '';
     public isSandbox: boolean = false;
     private localizationManager = globalLocalizationManager;
+    private ws: WebSocket | null = null;
+
 
     private _authPromise: Promise<any> | null = null;
 
@@ -625,10 +666,29 @@ class PiManager {
         const productionDomain = "galaxyfall.space";
         const currentHostname = window.location.hostname;
 
-        // Sandbox-Modus fÃ¼r alle Domains AUÃŸER der Haupt-Domain und www Subdomain.
+        // Sandbox-Modus für alle Domains AUßER der Haupt-Domain und www Subdomain.
         this.isSandbox = !["galaxyfall.space", "www.galaxyfall.space"].includes(currentHostname);
 
         console.log(`ðŸ›  PI MANAGER geladen. Modus: ${this.isSandbox ? "SANDBOX" : "MAINNET"} | Domain: ${currentHostname}`);
+    }
+
+    /**
+     * Generates a link to the Pi Block Explorer for a given transaction ID.
+     * Respects sandbox mode or explicit network via metadata.
+     */
+    public getExplorerUrl(txid: string, networkOverride?: string): string {
+        const network = (networkOverride || (this.isSandbox ? "pi_testnet" : "pi_mainnet")).toLowerCase();
+        const isTestnet = network.includes("testnet");
+        const baseUrl = isTestnet ? "https://minepi.com/blockexplorer/testnet" : "https://minepi.com/blockexplorer";
+        return txid ? `${baseUrl}/tx/${txid}` : baseUrl;
+    }
+
+    /**
+     * Generates a link to the Pi Block Explorer for an account address.
+     */
+    public getAccountExplorerUrl(address: string): string {
+        const baseUrl = this.isSandbox ? "https://minepi.com/blockexplorer/testnet" : "https://minepi.com/blockexplorer";
+        return `${baseUrl}/accounts/${address}`;
     }
 
     private get sdk() {
@@ -672,15 +732,23 @@ class PiManager {
                 if (this.game) {
                     await this.game.loadPlayerDataFromServer();
                     this.game.uiManager.updatePiUserDisplay();
+                } else if ((window as any).dummyGameContext) {
+                    // Hub-Synchronisation: Sofort nach dem Login alle Cloud-Daten ziehen
+                    await (window as any).dummyGameContext.loadPlayerDataFromServer();
                 }
 
                 if (typeof updateHubUI === 'function') updateHubUI();
 
+                // Connect WebSocket for real-time features
+                if ((window as any).connectSocialWS) {
+                    (window as any).connectSocialWS(this.uid);
+                }
+
                 return authResult.user;
+
             } catch (err: any) {
                 console.error(`âŒ Pi Auth ERROR:`, err);
                 this.isAuthenticated = false;
-                if (!silent) throw err;
                 return null;
             } finally {
                 this._authPromise = null;
@@ -710,19 +778,77 @@ class PiManager {
         }
     }
 
-    public createPayment(item: any) {
+    // NOTE: Pi/Stellar memos are very short. Keep it ASCII + <= 28 chars so it can be explorer-visible.
+    private buildPublicMemo(bundleId: string): string {
+        const uid = String(this.uid || '');
+        const uidTail = uid ? uid.slice(-8) : 'anon';
+
+        let type = 'X';
+        let short = String(bundleId || '');
+
+        if (short === 'premium_license') {
+            type = 'P';
+            short = 'premium';
+        } else if (short.startsWith('pi_bundle_')) {
+            type = 'B';
+            short = short.replace('pi_bundle_', 'b');
+        } else if (short.startsWith('mint_')) {
+            type = 'M';
+            short = short.replace('mint_', '').replace(/^collectible_/, '');
+        } else if (short.startsWith('collectible_')) {
+            type = 'C';
+            short = short.replace('collectible_', '');
+        }
+
+        short = short.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const prefix = `GF|${type}|`;
+        const suffix = `|u:${uidTail}`;
+        const maxLen = 28;
+        const avail = Math.max(0, maxLen - prefix.length - suffix.length);
+        const shortClamped = short.slice(0, avail);
+        return `${prefix}${shortClamped}${suffix}`;
+    }
+
+    public async createPayment(item: any) {
         if (!this.isAuthenticated) {
             alert(this.localizationManager.translate('msg_login_required'));
             return;
         }
 
-        // WICHTIG: Metadata Werte mÃ¼ssen immer Strings oder Zahlen sein (flach)
+        // WICHTIG: Metadata Werte müssen immer Strings oder Zahlen sein (flach)
+        // Precheck on server: block duplicate collectible purchases and illegal minting before creating a Pi payment.
+        try {
+            const pre = await fetch(`/api/can-purchase?pi_uid=${encodeURIComponent(this.uid)}&bundle_id=${encodeURIComponent(item.id)}`);
+            if (!pre.ok) {
+                alert(this.localizationManager.translate('msg_network_err'));
+                return;
+            }
+            const preData = await pre.json();
+            if (preData && preData.allowed === false) {
+                const reason = String(preData.reason || '');
+                const key =
+                    reason === 'already_owned' ? 'err_collectible_already_owned' :
+                        reason === 'already_premium' ? 'err_premium_already_owned' :
+                            reason === 'not_owned' ? 'err_mint_requires_purchase' :
+                                reason === 'already_minted' ? 'err_mint_already_done' :
+                                    reason === 'license_required' ? 'err_license_required_mint' :
+                                        'err_purchase_not_allowed';
+                alert(this.localizationManager.translate(key));
+                if (this.game && this.game.uiManager) this.game.uiManager.renderShop();
+                return;
+            }
+        } catch (e) {
+            alert(this.localizationManager.translate('msg_network_err'));
+            return;
+        }
+
         const paymentData = {
             amount: item.pi_cost,
-            memo: `Galaxy Fall: ${item.id}`,
+            memo: this.buildPublicMemo(String(item.id)),
             metadata: {
                 bundleId: item.id,
-                coins: item.coin_reward || 0
+                coins: item.coin_reward || 0,
+                userId: this.uid // Kennzeichnung mit UserID auf Blockchain-Ebene
             },
         };
 
@@ -761,29 +887,19 @@ class PiManager {
                     if (response.ok || data.error === 'already_completed') {
                         console.log("ðŸ’° Kauf erfolgreich verbucht. Premium:", data.has_premium_license);
 
-                        // Direkt aus Server-Antwort: Premium-Status setzen (absolute Wahrheit vom Server)
-                        const serverPremium = !!data.has_premium_license;
+                        // Premium sofort global synchronisieren (absolute Wahrheit vom Server)
+                        syncGlobalPremium(!!data.has_premium_license, null);
+
+                        if (data.newBalance !== undefined) {
+                            syncGlobalGFC(data.newBalance, null);
+                        }
 
                         if (this.game) {
                             // â”€â”€ GAME AKTIV PATH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             if (this.game.shopManager) this.game.shopManager.pendingPiPurchase = null;
 
-                            // Premium sofort aus Server-Response setzen, VOR loadPlayerDataFromServer
-                            this.game.hasPremiumLicense = serverPremium;
-                            if (data.newBalance !== undefined) {
-                                this.game.coins = data.newBalance;
-                                syncGlobalGFC(data.newBalance, null);
-                            }
-
                             // Dann vollstÃ¤ndigen Server-Reload fÃ¼r NFTs/Collectibles
                             await this.game.loadPlayerDataFromServer();
-
-                            // Shop UI sofort aktualisieren
-                            const ui = (this.game as any).uiManager;
-                            if (ui) {
-                                if (typeof ui.renderShop === 'function') ui.renderShop();
-                                if (typeof ui.populateGalerie === 'function') ui.populateGalerie();
-                            }
                         } else {
                             // â”€â”€ HUB FALLBACK PATH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                             const ctx = (window as any).dummyGameContext;
@@ -791,38 +907,13 @@ class PiManager {
 
                             if (hsm) hsm.pendingPiPurchase = null;
 
-                            // Premium sofort aus Server-Response setzen
-                            if (ctx) ctx.hasPremiumLicense = serverPremium;
-                            if (data.newBalance !== undefined) {
-                                syncGlobalGFC(data.newBalance, null);
-                            }
-
-                            // VollstÃ¤ndiger Server-Reload fÃ¼r alle Daten
+                            // Vollständiger Server-Reload für alle Daten
                             if (ctx && typeof ctx.loadPlayerDataFromServer === 'function') {
                                 await ctx.loadPlayerDataFromServer();
-                            } else if (hsm) {
-                                try {
-                                    const r = await fetch(`/api/load-data?pi_uid=${this.uid}`);
-                                    if (r.ok) {
-                                        const hubData = await r.json();
-                                        hsm.playerUpgrades = hubData.upgrades || {};
-                                        hsm.playerCosmetics = hubData.cosmetics || {};
-                                        hsm.playerCollectibles = hubData.collectibles || {};
-                                        hsm.saveUpgrades();
-                                        hsm.saveCosmetics();
-                                        hsm.saveCollectibles();
-                                        if (ctx) ctx.hasPremiumLicense = !!hubData.has_premium_license;
-                                    }
-                                } catch (e) { console.warn("Hub Sync Error:", e); }
-                            }
-
-                            if (typeof (window as any).refreshAllSelections === 'function') {
-                                (window as any).refreshAllSelections();
                             }
                         }
 
-                        // Beide FÃ¤lle: Hub UI updaten
-                        if (typeof updateHubUI === 'function') updateHubUI();
+                        // UI Refresh happens via syncGlobalPremium's call to refreshAllSelections
                         alert(this.localizationManager.translate('msg_purchase_success'));
                     } else {
                         console.error("âŒ Server Error:", data);
@@ -972,7 +1063,53 @@ class Vector2D { public x: number; public y: number; constructor(x: number, y: n
 class Entity { public game: Game; public pos: Vector2D; public width: number; public height: number; public family: string = 'none'; public type: string = 'NONE'; protected _isGarbage: boolean = false; public inFormation: boolean = false; constructor(game: Game, x: number, y: number, w: number, h: number) { this.game = game; this.pos = new Vector2D(x, y); this.width = w; this.height = h; } update(dt: number): void { } draw(ctx: CanvasRenderingContext2D): void { } isAlive(): boolean { return !this._isGarbage; } destroy(): void { this._isGarbage = true; } }
 class EntityFamily extends Entity { constructor(game: Game, x: number, y: number, w: number, h: number, family: string, type: string) { super(game, x, y, w, h); this.family = family; this.type = type; } }
 
-class Particle extends Entity { private vel: Vector2D; private size: number; private life: number; private color: string; private initialLife: number; constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) { super(game, x, y, 0, 0); this.family = 'effect'; this.type = 'PARTICLE'; if (vel) { this.vel = vel; } else { this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50); } this.size = Math.random() * size + 1; this.life = Math.random() * life; this.initialLife = this.life; this.color = color; } update(dt: number): void { const dt_s = dt / 1000; this.pos.x += this.vel.x * dt_s; this.pos.y += this.vel.y * dt_s; this.life -= dt_s; if (this.life <= 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { ctx.save(); ctx.globalAlpha = this.life / this.initialLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+class Particle extends Entity {
+    private vel: Vector2D;
+    private size: number;
+    private life: number;
+    private color: string;
+    private initialLife: number;
+    private initialSize: number;
+
+    constructor(game: Game, x: number, y: number, color: string, life: number = 0.5, size: number = 2, vel?: Vector2D) {
+        super(game, x, y, 0, 0);
+        this.family = 'effect';
+        this.type = 'PARTICLE';
+        if (vel) {
+            this.vel = vel;
+        } else {
+            this.vel = new Vector2D((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+        }
+        this.initialSize = Math.random() * size + 2;
+        this.size = this.initialSize;
+        this.initialLife = life * (0.8 + Math.random() * 0.4);
+        this.life = this.initialLife;
+        this.color = color;
+    }
+
+    update(dt: number): void {
+        const dt_s = dt / 1000;
+        this.pos.x += this.vel.x * dt_s;
+        this.pos.y += this.vel.y * dt_s;
+        this.life -= dt_s;
+        this.size = this.initialSize * (this.life / this.initialLife);
+        if (this.life <= 0) this.destroy();
+    }
+
+    draw(ctx: CanvasRenderingContext2D): void {
+        const alpha = this.life / this.initialLife;
+        if (alpha <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.shadowBlur = 12 * alpha;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
 class Explosion extends EntityFamily { private particles: IParticle[] = []; constructor(game: Game, x: number, y: number, color: string = '#FFA500', countMultiplier: number = 1) { super(game, x, y, 0, 0, 'effect', 'EXPLOSION'); const count = (this.game.uiManager.settings.particles === 2 ? 20 : (this.game.uiManager.settings.particles === 1 ? 10 : 0)) * countMultiplier; for (let i = 0; i < count; i++) { this.particles.push({ pos: new Vector2D(x, y), vel: new Vector2D(Math.random() * 360 - 180, Math.random() * 360 - 180), size: Math.random() * 4 + 1, life: 0.7, color: color }); } } update(dt: number): void { const dt_s = dt / 1000; this.particles.forEach(p => { p.pos.x += p.vel.x * dt_s; p.pos.y += p.vel.y * dt_s; p.life -= dt_s; }); this.particles = this.particles.filter(p => p.life > 0); if (this.particles.length === 0) this.destroy(); } draw(ctx: CanvasRenderingContext2D): void { this.particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.life / 0.7; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); } }
 class ImpactEffect extends EntityFamily {
     private particles: IParticle[] = [];
@@ -1319,7 +1456,7 @@ class PowerUpManager {
     }
 }
 class Player extends EntityFamily {
-    public speed: number; public lives: number; public maxLives: number; public energy: number; public maxEnergy: number; public fireCooldown: number = 0; public homingCooldown: number = 0; public powerUpManager: PowerUpManager; public drones: Drone[] = []; public laser: LaserBeam | null = null; public droneAngle: number = 0; public isChargingBlackHole: boolean = false; public blackHoleChargeSlot: number | null = null; public availableReviveCrystals: ('BLUE' | 'YELLOW' | 'PURPLE')[] = []; private particleSpawnTimer: number = 0; private readonly PARTICLE_SPAWN_INTERVAL: number = 35; private steeringDirection: number = 0; public isShooting: boolean = false;
+    public speed: number; public lives: number; public maxLives: number; public energy: number; public maxEnergy: number; public fireCooldown: number = 0; public homingCooldown: number = 0; public powerUpManager: PowerUpManager; public drones: Drone[] = []; public laser: LaserBeam | null = null; public droneAngle: number = 0; public isChargingBlackHole: boolean = false; public blackHoleChargeSlot: number | null = null; public availableReviveCrystals: ('BLUE' | 'YELLOW' | 'PURPLE')[] = []; private particleSpawnTimer: number = 0; private readonly PARTICLE_SPAWN_INTERVAL: number = 20; private steeringDirection: number = 0; public isShooting: boolean = false;
     constructor(game: Game, initialStats: { lives: number, energy: number, speed: number, maxEnergy: number }) { super(game, game.width / 2 - 25, game.height - (game.isMobile ? 180 : 80), 50, 40, 'player', 'PLAYER'); this.lives = initialStats.lives; this.maxLives = 3 + game.shopManager.getUpgradeLevel('start_lives'); this.energy = initialStats.energy; this.maxEnergy = initialStats.maxEnergy; this.speed = initialStats.speed; this.powerUpManager = new PowerUpManager(this); this.initializeReviveCrystals(); }
     public initializeReviveCrystals(): void { this.availableReviveCrystals = []; const reviveLevel = this.game.shopManager.getUpgradeLevel('revive_chance'); if (reviveLevel >= 1) this.availableReviveCrystals.push('BLUE'); if (reviveLevel >= 2) this.availableReviveCrystals.push('YELLOW'); if (reviveLevel >= 3) this.availableReviveCrystals.push('PURPLE'); }
     update(dt: number): void {
@@ -1355,8 +1492,58 @@ class Player extends EntityFamily {
         this.pos.x = Math.max(0, Math.min(this.pos.x, this.game.width - this.width));
         this.pos.y = Math.max(0, Math.min(this.pos.y, this.game.height - this.height - (this.game.isMobile ? 120 : 0)));
 
-        this.particleSpawnTimer -= dt;
-        if (this.particleSpawnTimer <= 0) { this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL; const dx = this.pos.x - oldX; const dy = this.pos.y - oldY; const mag = Math.hypot(dx, dy); if (mag > 1) { const PARTICLE_SPEED = 80; const SPREAD = 20; const baseVelX = -(dx / mag) * PARTICLE_SPEED; const baseVelY = -(dy / mag) * PARTICLE_SPEED; const spawnLeftX = this.pos.x + this.width * 0.1; const spawnRightX = this.pos.x + this.width * 0.9; const engineBaseY = this.pos.y + this.height * 0.9; const spawnY = engineBaseY + 20; const velLeft = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD); const velRight = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD); const equippedTrail = this.game.shopManager.playerCosmetics.equipped_trail; if (equippedTrail === 'trail_rainbow') { const colors = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#EE82EE']; const colorLeft = colors[Math.floor(Math.random() * colors.length)]!; const colorRight = colors[Math.floor(Math.random() * colors.length)]!; this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, colorLeft, 0.4, 3.5, velLeft)); this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, colorRight, 0.4, 3.5, velRight)); } else { this.game.addEntity(new Particle(this.game, spawnLeftX, spawnY, '#00FFFF', 0.3, 3, velLeft)); this.game.addEntity(new Particle(this.game, spawnRightX, spawnY, '#00FFFF', 0.3, 3, velRight)); } } }
+        if (this.particleSpawnTimer <= 0) {
+            this.particleSpawnTimer = this.PARTICLE_SPAWN_INTERVAL;
+            const dx = this.pos.x - oldX;
+            const dy = this.pos.y - oldY;
+            const mag = Math.hypot(dx, dy);
+            
+            const isMovingFast = mag > 1;
+            const spawnCount = isMovingFast ? 3 : 1; 
+            
+            for (let i = 0; i < spawnCount; i++) {
+                const PARTICLE_SPEED = isMovingFast ? 140 : 60;
+                const SPREAD = isMovingFast ? 40 : 20;
+                
+                const baseVelX = isMovingFast ? -(dx / mag) * PARTICLE_SPEED : 0;
+                const baseVelY = isMovingFast ? -(dy / mag) * PARTICLE_SPEED : 80;
+                
+                const spawnLeftX = this.pos.x + this.width * 0.1;
+                const spawnRightX = this.pos.x + this.width * 0.9;
+                const engineY = this.pos.y + this.height * 1.3;
+                
+                const velLeft = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
+                const velRight = new Vector2D(baseVelX + (Math.random() - 0.5) * SPREAD, baseVelY + (Math.random() - 0.5) * SPREAD);
+                const equippedTrail = this.game.shopManager.playerCosmetics.equipped_trail;
+
+                if (equippedTrail === 'trail_rainbow') {
+                    const colors = ['#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#EE82EE'];
+                    const colorLeft = colors[Math.floor(Math.random() * colors.length)]!;
+                    const colorRight = colors[Math.floor(Math.random() * colors.length)]!;
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, colorLeft, 0.6, 4, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, colorRight, 0.6, 4, velRight));
+                } else if (equippedTrail === 'trail_fire') {
+                    const color = Math.random() > 0.4 ? '#FF4136' : (Math.random() > 0.5 ? '#FF851B' : '#FFCC00');
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, color, 0.7, 5, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, color, 0.7, 5, velRight));
+                } else if (equippedTrail === 'trail_void') {
+                    const color = Math.random() > 0.6 ? '#B10DC9' : '#001f3f';
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, color, 0.5, 4, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, color, 0.5, 4, velRight));
+                    if (Math.random() > 0.8) this.game.addEntity(new Particle(this.game, (spawnLeftX + spawnRightX) / 2, engineY, '#7FDBFF', 0.3, 2, velLeft));
+                } else if (equippedTrail === 'trail_gold') {
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, '#FFDC00', 0.4, 3, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, '#FFDC00', 0.4, 3, velRight));
+                    if (Math.random() > 0.7) this.game.addEntity(new Particle(this.game, (spawnLeftX + spawnRightX) / 2 + (Math.random()-0.5)*10, engineY, '#FFFFFF', 0.2, 1, velLeft));
+                } else if (equippedTrail === 'trail_toxic') {
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, '#2ECC40', 0.6, 5, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, '#2ECC40', 0.6, 5, velRight));
+                } else {
+                    this.game.addEntity(new Particle(this.game, spawnLeftX, engineY, '#00FFFF', 0.4, 3, velLeft));
+                    this.game.addEntity(new Particle(this.game, spawnRightX, engineY, '#00FFFF', 0.4, 3, velRight));
+                }
+            }
+        }
 
         const autoSetting = typeof this.game.uiManager.settings.autoFire === 'string' ? this.game.uiManager.settings.autoFire : (this.game.uiManager.settings.autoFire ? 'always' : 'off');
         const manualFire = this.game.keys['Space'] === true;
@@ -1373,6 +1560,7 @@ class Player extends EntityFamily {
             // Usually Specials keep firing, but Black Hole charging is a special state.
         }
 
+        if (this.particleSpawnTimer > 0) this.particleSpawnTimer -= dt;
         if (this.fireCooldown > 0) this.fireCooldown -= dt;
         if (this.homingCooldown > 0) this.homingCooldown -= dt;
         this.droneAngle += 3 * dt_s; this.powerUpManager.update(dt); this.drones.forEach(d => d.update(dt));
@@ -1396,9 +1584,17 @@ class Player extends EntityFamily {
         const engineRightX = this.pos.x + this.width * 0.9;
         const engineY = drawY + visualHeight * 0.75;
 
+        const flameColor = this.game.uiManager.settings.flameColor || '#00FFFF';
+        let flameGlowColor = flameColor;
+        const equippedTrailId = this.game.shopManager.playerCosmetics.equipped_trail;
+        
+        // Rainbow flames if rainbow trail is equipped? 
+        // User said "STRICTLY SEPARATE", so I will stick to the flameColor setting.
+        // However, if the user chose a color, they probably want to see IT in the flames.
+
         const drawFlame = (x: number, y: number) => {
             ctx.save();
-            const baseLength = 25, baseWidth = 9, swayAmount = 8;
+            const baseLength = 25, baseWidth = 13, swayAmount = 8;
             const STEERING_FLAME_OFFSET = 15;
             for (let i = 0; i < 3; i++) {
                 const currentLength = baseLength + Math.random() * 10;
@@ -1414,8 +1610,8 @@ class Player extends EntityFamily {
                 const controlY2 = y + currentLength * 0.5;
                 const gradient = ctx.createLinearGradient(nozzleX, nozzleY, nozzleX, tipY);
                 gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.7)');
-                gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+                gradient.addColorStop(0.5, flameColor + 'B3'); // B3 is approx 0.7 alpha
+                gradient.addColorStop(1, flameColor + '00'); // 00 is 0 alpha
                 ctx.fillStyle = gradient;
                 ctx.globalAlpha = 0.5;
                 ctx.beginPath();
@@ -1428,7 +1624,7 @@ class Player extends EntityFamily {
             ctx.restore();
         };
 
-        ctx.shadowColor = '#00FFFF';
+        ctx.shadowColor = flameGlowColor;
         ctx.shadowBlur = 20;
         drawFlame(engineLeftX, engineY);
         drawFlame(engineRightX, engineY);
@@ -1689,6 +1885,10 @@ class ShopManager {
             { id: 'proj_purple', type: 'COSMETIC', nameKey: 'shop_proj_purple_name', descKey: 'shop_proj_purple_desc', iconSrc: iconProjVoidSrc, cost: [7500], cosmeticType: 'projectile_style' },
             { id: 'proj_rainbow', type: 'COSMETIC', nameKey: 'shop_proj_rainbow_name', descKey: 'shop_proj_rainbow_desc', iconSrc: iconProjRainbowSrc, cost: [15000], cosmeticType: 'projectile_style' },
             { id: 'trail_rainbow', type: 'COSMETIC', nameKey: 'shop_trail_rainbow_name', descKey: 'shop_trail_rainbow_desc', iconSrc: iconTrailRainbowSrc, cost: [12000], cosmeticType: 'engine_trail' },
+            { id: 'trail_fire', type: 'COSMETIC', nameKey: 'shop_trail_fire_name', descKey: 'shop_trail_fire_desc', iconSrc: iconProjFireballSrc, cost: [15000], cosmeticType: 'engine_trail' },
+            { id: 'trail_void', type: 'COSMETIC', nameKey: 'shop_trail_void_name', descKey: 'shop_trail_void_desc', iconSrc: iconProjVoidSrc, cost: [15000], cosmeticType: 'engine_trail' },
+            { id: 'trail_gold', type: 'COSMETIC', nameKey: 'shop_trail_gold_name', descKey: 'shop_trail_gold_desc', iconSrc: piCoin2ImgSrc, cost: [25000], cosmeticType: 'engine_trail' },
+            { id: 'trail_toxic', type: 'COSMETIC', nameKey: 'shop_trail_toxic_name', descKey: 'shop_trail_toxic_desc', iconSrc: iconProjGreenSrc, cost: [15000], cosmeticType: 'engine_trail' },
 
             // --- PI BUNDLES & LICENSES ---
             { id: 'premium_license', type: 'PI_BUNDLE', nameKey: 'shop_premium_license_name', descKey: 'shop_premium_license_desc', iconSrc: piCoin2ImgSrc, pi_cost: 2.0, coin_reward: 0 },
@@ -1703,37 +1903,37 @@ class ShopManager {
                 id: 'collectible_paradise', type: 'COLLECTIBLE',
                 nameKey: 'collectible_paradise_name', descKey: 'collectible_paradise_bonus_desc',
                 storyKey: 'collectible_paradise_story', iconSrc: collectibleParadiseSrc,
-                pi_cost: 10, bonusKey: 'COIN_BOOST'
+                pi_cost: 5, bonusKey: 'COIN_BOOST'
             },
             {
                 id: 'collectible_sporestrike', type: 'COLLECTIBLE',
                 nameKey: 'collectible_sporestrike_name', descKey: 'collectible_sporestrike_bonus_desc',
                 storyKey: 'collectible_sporestrike_story', iconSrc: collectibleSporestrikeSrc,
-                pi_cost: 10, bonusKey: 'LUCK_BOOST'
+                pi_cost: 5, bonusKey: 'LUCK_BOOST'
             },
             {
                 id: 'collectible_potassium', type: 'COLLECTIBLE',
                 nameKey: 'collectible_potassium_name', descKey: 'collectible_potassium_bonus_desc',
                 storyKey: 'collectible_potassium_story', iconSrc: collectiblePotassiumSrc,
-                pi_cost: 10, bonusKey: 'DURATION_BOOST'
+                pi_cost: 5, bonusKey: 'DURATION_BOOST'
             },
             {
                 id: 'collectible_retrogamer', type: 'COLLECTIBLE',
                 nameKey: 'collectible_retrogamer_name', descKey: 'collectible_retrogamer_bonus_desc',
                 storyKey: 'collectible_retrogamer_story', iconSrc: collectibleRetrogamerSrc,
-                pi_cost: 10, bonusKey: 'START_POWERUP'
+                pi_cost: 5, bonusKey: 'START_POWERUP'
             },
             {
                 id: 'collectible_mazerunner', type: 'COLLECTIBLE',
                 nameKey: 'collectible_mazerunner_name', descKey: 'collectible_mazerunner_bonus_desc',
                 storyKey: 'collectible_mazerunner_story', iconSrc: collectibleMazeRunnerSrc,
-                pi_cost: 10, bonusKey: 'GHOST_CHANCE'
+                pi_cost: 5, bonusKey: 'GHOST_CHANCE'
             },
             {
                 id: 'collectible_koopaking', type: 'COLLECTIBLE',
                 nameKey: 'collectible_koopaking_name', descKey: 'collectible_koopaking_bonus_desc',
                 storyKey: 'collectible_koopaking_story', iconSrc: collectibleKoopaKingSrc,
-                pi_cost: 10, bonusKey: 'MAX_ENERGY_BOOST'
+                pi_cost: 5, bonusKey: 'MAX_ENERGY_BOOST'
             }
         ];
     }
@@ -2146,7 +2346,10 @@ class UIManager {
     private levelDisplayContainer: HTMLElement;
     private gameOverContainer: HTMLElement;
     private modeSelectContainer: HTMLElement;
-    private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; crt: boolean; autoFire: string; vibration: boolean; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
+    private langSelectScreen: HTMLElement; private langBackButton: HTMLElement; private tabButtons: { [key: string]: HTMLButtonElement }; private tabPanes: { [key: string]: HTMLElement }; public settings: { masterVolume: number; music: boolean; sfx: boolean; particles: number; screenShake: boolean; crt: boolean; autoFire: string; vibration: boolean; flameColor: string; }; public soundManager: SoundManager; public localizationManager: LocalizationManager; private langSelectSource: 'startup' | 'settings' = 'startup'; private mainMenuElements: { resume: HTMLElement, restart: HTMLElement, quit: HTMLElement, header: HTMLElement };
+    private settingsUpdatedAt: number = 0;
+    private localSettingsPresent: boolean = false;
+    private settingsSyncTimer: ReturnType<typeof setTimeout> | null = null;
     private bombTimerInterval: ReturnType<typeof setInterval> | null = null;
     private hubBombTimerInterval: ReturnType<typeof setInterval> | null = null;
     private shopContainer: HTMLElement;
@@ -2166,6 +2369,9 @@ class UIManager {
     private modalTitleEl: HTMLElement;
     private modalStoryEl: HTMLElement;
     private modalBonusEl: HTMLElement;
+    private collectibleModalActionBtn: HTMLButtonElement;
+    private collectibleMintArea: HTMLElement;
+    private collectibleInfoArea: HTMLElement;
 
     // SKIN MODAL ELEMENTS
     private skinModalEl: HTMLElement;
@@ -2174,6 +2380,14 @@ class UIManager {
     private skinModalDesc: HTMLElement;
     private skinModalStats: HTMLElement;
     private skinModalActionBtn: HTMLButtonElement;
+
+    // EXPLORER MODAL ELEMENTS
+    private explorerModalEl: HTMLElement;
+    private explorerIframe: HTMLIFrameElement;
+    private explorerCloseBtn: HTMLButtonElement;
+    private explorerNetworkVal: HTMLElement;
+    private explorerExternalLink: HTMLAnchorElement;
+    private explorerLoadingSpinner: HTMLElement;
 
     // TROPHY MODAL ELEMENTS
     private trophyModalEl: HTMLElement;
@@ -2191,6 +2405,13 @@ class UIManager {
     private languageSelect: HTMLSelectElement;
     public dailyDeal: { skinId: string, discountedPrice: number, originalPrice: number, msRemaining: number, endTime?: number } | null = null;
     public dailyDealInterval: any = null;
+    
+    // COLOR WHEEL PROPS
+    private wheelCanvas: HTMLCanvasElement | null = null;
+    private wheelCtx: CanvasRenderingContext2D | null = null;
+    private previewCanvas: HTMLCanvasElement | null = null;
+    private previewCtx: CanvasRenderingContext2D | null = null;
+    private previewAnimationFrame: number | null = null;
 
     constructor(game: Game, ui: IUIElements) {
         this.game = game;
@@ -2243,12 +2464,15 @@ class UIManager {
             mainCoinIcon.src = piCoin2ImgSrc;
         }
 
-        // --- MODAL FÃœR COLLECTIBLES ---
+        // --- MODAL FÜR COLLECTIBLES ---
         this.collectibleModalEl = document.getElementById('collectible-modal')!;
         this.modalImgEl = document.getElementById('modal-img') as HTMLImageElement;
         this.modalTitleEl = document.getElementById('modal-title')!;
         this.modalStoryEl = document.getElementById('modal-story')!;
         this.modalBonusEl = document.getElementById('modal-bonus')!;
+        this.collectibleModalActionBtn = document.getElementById('collectible-modal-action-btn') as HTMLButtonElement;
+        this.collectibleMintArea = this.collectibleModalEl.querySelector('.nft-minting-area') as HTMLElement;
+        this.collectibleInfoArea = this.collectibleModalEl.querySelector('.nft-info-area') as HTMLElement;
 
         // --- SKIN MODAL INIT ---
         this.skinModalEl = document.getElementById('skin-detail-modal')!;
@@ -2264,8 +2488,22 @@ class UIManager {
         this.trophyModalTitle = document.getElementById('trophy-modal-title')!;
         this.trophyModalDesc = document.getElementById('trophy-modal-desc')!;
         this.trophyModalTier = document.getElementById('trophy-modal-tier')!;
-        const trophyClose = document.getElementById('trophy-modal-close');
-        if (trophyClose) trophyClose.onclick = () => { this.trophyModalEl.style.display = 'none'; };
+
+        // --- EXPLORER MODAL INIT ---
+        this.explorerModalEl = document.getElementById('explorer-modal')!;
+        this.explorerIframe = document.getElementById('explorer-iframe') as HTMLIFrameElement;
+        this.explorerCloseBtn = document.getElementById('explorer-close-btn') as HTMLButtonElement;
+        this.explorerNetworkVal = document.getElementById('explorer-network-val')!;
+        this.explorerExternalLink = document.getElementById('explorer-external-link') as HTMLAnchorElement;
+        this.explorerLoadingSpinner = document.getElementById('explorer-loading-spinner')!;
+
+        if (this.explorerCloseBtn) {
+            this.explorerCloseBtn.addEventListener('click', () => {
+                this.soundManager.play('uiClick');
+                this.explorerModalEl.style.display = 'none';
+                this.explorerIframe.src = 'about:blank';
+            });
+        }
 
         // --- METHODEN BINDING ---
         this.toggleMainMenu = this.toggleMainMenu.bind(this);
@@ -2557,7 +2795,7 @@ class UIManager {
                 <div class="tier-badge tier-${tier}">${tier.toUpperCase()}</div>
                 <div class="trophy-visual">
                     ${iconHtml}
-                    ${!isUnlocked ? '<div class="lock-overlay">ðŸ”’</div>' : ''}
+                    ${!isUnlocked ? '<div class="lock-overlay">🔒</div>' : ''}
                 </div>
                 <div class="trophy-info">
                     <div class="trophy-status-tag">${isUnlocked ? t('trophy_unlocked_hint') : t('trophy_locked_hint')}</div>
@@ -2662,6 +2900,30 @@ class UIManager {
 
         // The CSS animation handles the rest (pop, hold, vanish)
         setTimeout(() => toast.remove(), 2600);
+    }
+
+    public showExplorerModal(url: string, networkInfo: string = 'PI_NETWORK'): void {
+        if (!this.explorerModalEl) return;
+
+        this.explorerNetworkVal.textContent = networkInfo.toUpperCase();
+        this.explorerExternalLink.href = url;
+        this.explorerLoadingSpinner.style.display = 'flex';
+        this.explorerModalEl.style.display = 'flex';
+
+        // Set iframe source
+        this.explorerIframe.src = url;
+
+        // Hide spinner when loaded
+        this.explorerIframe.onload = () => {
+            this.explorerLoadingSpinner.style.display = 'none';
+        };
+
+        // Fallback: hide spinner after 5 seconds anyway if loading takes too long
+        setTimeout(() => {
+            if (this.explorerLoadingSpinner.style.display !== 'none') {
+                this.explorerLoadingSpinner.style.display = 'none';
+            }
+        }, 5000);
     }
 
     public toggleMainMenu(show: boolean, initialTab: string = 'spiel'): void {
@@ -2773,6 +3035,11 @@ class UIManager {
     }
     public toggleShopScreen(show: boolean): void {
         if (show) {
+            // New: Sync with server on every shop open to ensure correct balance & purchase states
+            if (this.game && typeof this.game.loadPlayerDataFromServer === 'function') {
+                this.game.loadPlayerDataFromServer();
+            }
+
             this.renderShop();
             this.localizationManager.applyTranslationsToUI();
             this.shopContainer.style.display = 'flex';
@@ -2983,22 +3250,19 @@ class UIManager {
     private createNftInfoBoxHTML(): string {
         const t = (key: string) => this.localizationManager.translate(key);
         return `
-        <div class="nft-info-box">
-            <h3>${t('nft_info_title')}</h3>
-            <div class="nft-timeline">
-                <div class="timeline-step">
-                    <div class="icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill='%23F8B230'%3E%3Cpath d=%22M12 2.25c-5.376 0-9.75 4.374-9.75 9.75s4.374 9.75 9.75 9.75 9.75-4.374 9.75-9.75S17.376 2.25 12 2.25zm.094 16.516a.75.75 0 01-1.061-1.06L14.439 12 11.03 8.59a.75.75 0 011.06-1.061l4.256 4.25a.75.75 0 010 1.061l-4.25 4.25zM8.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H9a.75.75 0 01-.75-.75z%22/%3E%3C/svg%3E')"></div>
-                    <h4>${t('nft_phase1_title')}</h4>
-                    <p>${t('nft_phase1_desc')}</p>
-                </div>
-                <div class="timeline-step">
-                    <div class="icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill='%23B10DC9'%3E%3Cpath fill-rule=%22evenodd%22 d=%22M12.96 6.09a.75.75 0 01.939-.506l6.25 2.5a.75.75 0 010 .832l-6.25 2.5a.75.75 0 01-.939-.506V6.09zm-2.015 0a.75.75 0 01.37.052l6.25 2.5a.75.75 0 010 .832l-6.25 2.5a.75.75 0 01-1.03-.616V6.142a.75.75 0 01.66-.552zm-2.16 7.625a.75.75 0 01.547.721v.058l-.001 2.474a.75.75 0 01-1.498.058l.001-2.474a.75.75 0 01.951-.779zm9.023-.058a.75.75 0 00-1.498.058l.001 2.474a.75.75 0 00.547.721l.06.01a.75.75 0 00.832-.832l-.001-2.474a.75.75 0 00-.058-.499zM12 2.25A.75.75 0 0112.75 3v1.522a.75.75 0 01-1.5 0V3A.75.75 0 0112 2.25zm-4.125 1.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm8.25 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zM4.06 7.18a.75.75 0 01.53 1.28L3.06 9.988a.75.75 0 01-1.06-1.06l1.53-1.53a.75.75 0 01.53-.217zm15.88 0a.75.75 0 01.53.217l1.53 1.53a.75.75 0 01-1.06 1.06l-1.53-1.528a.75.75 0 01.53-1.28z%22 clip-rule=%22evenodd%22/%3E%3C/svg%3E')"></div>
-                    <h4>${t('nft_phase2_title')}</h4>
-                    <p>${t('nft_phase2_desc')}</p>
-                </div>
+        <div class="nft-info-box neon-cyan-box">
+            <h3 style="color: var(--cyan-glow); font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 10px;">
+                ${t('nft_mint_title')}
+            </h3>
+            <p style="font-size: 0.5rem; color: #fff; line-height: 1.4; margin-bottom: 15px;">
+                ${t('nft_mint_desc')}
+            </p>
+            <div class="nft-fee-badge" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 255, 255, 0.1); border: 1px solid var(--cyan-glow); padding: 5px 10px; border-radius: 4px;">
+                <span style="font-size: 0.4rem; color: var(--cyan-glow); font-family: 'Press Start 2P';">MINTING FEE</span>
+                <span style="font-size: 0.6rem; color: #0f0; font-family: 'Orbitron'; font-weight: bold;">0,10 Pi</span>
             </div>
         </div>
-    `;
+        `;
     }
 
     public showSkinDetails(targetItem: IShopItem): void {
@@ -3028,9 +3292,7 @@ class UIManager {
                     const txid = meta ? meta.txid : '---';
                     const shortTxid = txid !== '---' ? `${txid.substring(0, 8)}...${txid.substring(txid.length - 8)}` : 'UNKNOWN';
                     const network = (meta?.network || 'pi_testnet').toUpperCase();
-                    const explorerUrl = network.includes('MAINNET')
-                        ? `https://minepi.com/blockexplorer/tx/${txid}`
-                        : `https://minepi.com/blockexplorer/testnet/tx/${txid}`;
+                    const explorerUrl = this.game.piManager.getExplorerUrl(txid, network);
 
                     mintArea.innerHTML = `
                         <div class="cyber-divider"></div>
@@ -3044,7 +3306,7 @@ class UIManager {
                                 <div>NET: <span style="color:${network.includes('MAINNET') ? '#0f0' : '#ffea00'};">${network}</span></div>
                                 <div style="grid-column: span 2;">TX HASH: <span style="color:#0ff; font-family:monospace;">${shortTxid}</span></div>
                             </div>
-                            <a href="${explorerUrl}" target="_blank" class="retro-btn mini" style="width:100%; margin-top:10px; font-size:0.35rem; border-color:#0ff; color:#0ff; text-align:center; display:block; text-decoration:none;">
+                            <a href="javascript:void(0)" onclick="openExplorer('${explorerUrl}', '${network}')" class="retro-btn mini" style="width:100%; margin-top:10px; font-size:0.35rem; border-color:#0ff; color:#0ff; text-align:center; display:block; text-decoration:none;">
                                 VIEW ON EXPLORER
                             </a>
                         </div>
@@ -3055,7 +3317,7 @@ class UIManager {
                         <div style="margin-top:15px; background:rgba(255,215,0,0.05); border:1px solid var(--pi-yellow); padding:10px; border-radius:10px; display:flex; flex-direction:column; gap:8px;">
                             <div style="font-size:0.5rem; color:var(--pi-yellow); font-family:'Orbitron', sans-serif; display:flex; justify-content:space-between;">
                                 <span>${t('nft_mint_title')}</span>
-                                <span style="color:#0f0;">0.50 Ï€ FEE</span>
+                                <span style="color:#0f0;">0,10 Pi FEE</span>
                             </div>
                             <p style="font-size:0.35rem; color:#aaa; line-height:1.2; margin:0;">${t('nft_mint_desc')}</p>
                             
@@ -3073,7 +3335,7 @@ class UIManager {
                         this.soundManager.play('uiClick');
                         this.game.piManager.createPayment({
                             id: `mint_${targetItem.id}`,
-                            pi_cost: 0.50,
+                            pi_cost: 0.10,
                             nameKey: `Mint: ${t(targetItem.nameKey)}`,
                             type: 'NFT_MINT'
                         } as any);
@@ -3119,7 +3381,9 @@ class UIManager {
                     : false;
 
                 const isEquipped = (targetItem.type === 'COLLECTIBLE' && sm.playerCollectibles.equipped_collectible === targetItem.id) ||
-                    (targetItem.type !== 'COLLECTIBLE' && (sm.playerCosmetics.equipped_skin === targetItem.id || sm.playerCosmetics.equipped_projectile === targetItem.id || sm.playerCosmetics.equipped_trail === targetItem.id));
+                    (targetItem.cosmeticType === 'player_skin' && sm.playerCosmetics.equipped_skin === targetItem.id) ||
+                    (targetItem.cosmeticType === 'projectile_style' && sm.playerCosmetics.equipped_projectile === targetItem.id) ||
+                    (targetItem.cosmeticType === 'engine_trail' && sm.playerCosmetics.equipped_trail === targetItem.id);
 
                 if (isUnlocked) {
                     if (isEquipped) {
@@ -3179,7 +3443,7 @@ class UIManager {
                     const isPi = !!targetItem.pi_cost;
 
                     if (isPi) {
-                        newBtn.textContent = `BUY ${targetItem.pi_cost} Ï€`;
+                        newBtn.textContent = `BUY ${targetItem.pi_cost} Pi`;
                         newBtn.disabled = !this.game.piManager.isAuthenticated;
                     } else {
                         newBtn.textContent = (targetItem.type === 'PERMANENT' || targetItem.type === 'ULTIMATE') ? `UPGRADE ${cost}` : `BUY ${cost}`;
@@ -3252,15 +3516,18 @@ class UIManager {
         const isUnlocked = (item.type === 'SKIN' || item.type === 'COSMETIC' || item.type === 'COLLECTIBLE')
             ? (item.type === 'COLLECTIBLE' ? unlockedArray.includes(item.id) : sm.isCosmeticUnlocked(item.id, item.cosmeticType as any))
             : (item.id === 'premium_license' ? this.game.hasPremiumLicense : false);
-
         if (isUnlocked) {
             let isEquipped = false;
             if (item.id === 'premium_license') {
                 isEquipped = true;
             } else if (item.type === 'COLLECTIBLE') {
                 isEquipped = sm.playerCollectibles.equipped_collectible === item.id;
-            } else {
-                isEquipped = (sm.playerCosmetics.equipped_skin === item.id || sm.playerCosmetics.equipped_projectile === item.id || sm.playerCosmetics.equipped_trail === item.id);
+            } else if (item.cosmeticType === 'player_skin') {
+                isEquipped = sm.playerCosmetics.equipped_skin === item.id;
+            } else if (item.cosmeticType === 'projectile_style') {
+                isEquipped = sm.playerCosmetics.equipped_projectile === item.id;
+            } else if (item.cosmeticType === 'engine_trail') {
+                isEquipped = sm.playerCosmetics.equipped_trail === item.id;
             }
 
             if (isEquipped) {
@@ -3288,7 +3555,7 @@ class UIManager {
 
         const priceHtml = (!isUnlocked && !isMaxed) ? `
         <div class="price-tag">
-            ${isPiPrice ? `<span style="color:var(--pi-yellow)">Ï€</span> ${item.pi_cost}` :
+            ${isPiPrice ? `<span style="color:var(--pi-yellow)">Pi</span> ${item.pi_cost}` :
                 (isDailyDeal ?
                     `<span style="color:#ff4444; font-size:0.4rem; text-decoration:line-through; margin-right:5px;">${cost}</span> <img src="${piCoin2ImgSrc}"> ${displayCost?.toLocaleString()}` :
                     `<img src="${piCoin2ImgSrc}"> ${cost?.toLocaleString()}`)}
@@ -3593,6 +3860,78 @@ class UIManager {
         const toggleCrt = document.getElementById('toggle-crt');
         if (toggleCrt) toggleCrt.addEventListener('click', () => { this.soundManager.play('uiClick'); this.settings.crt = !this.settings.crt; this.applySettings(); this.saveSettings(); });
 
+        // --- MODERN COLOR WHEEL LOGIC ---
+        this.wheelCanvas = document.getElementById('flame-color-wheel') as HTMLCanvasElement;
+        this.previewCanvas = document.getElementById('flame-preview-canvas') as HTMLCanvasElement;
+        
+        if (this.wheelCanvas) {
+            this.wheelCtx = this.wheelCanvas.getContext('2d');
+            this.drawHueWheel();
+
+            const handleWheelMove = (e: MouseEvent | TouchEvent) => {
+                if (!this.wheelCanvas) return;
+                const rect = this.wheelCanvas.getBoundingClientRect();
+                const clientX = 'touches' in e ? e.touches[0]!.clientX : e.clientX;
+                const clientY = 'touches' in e ? e.touches[0]!.clientY : e.clientY;
+                
+                // Scale factor if canvas CSS size != attribute size
+                const scaleX = this.wheelCanvas.width / rect.width;
+                const scaleY = this.wheelCanvas.height / rect.height;
+                
+                const x = (clientX - rect.left) * scaleX - this.wheelCanvas.width / 2;
+                const y = (clientY - rect.top) * scaleY - this.wheelCanvas.height / 2;
+                
+                const angle = Math.atan2(y, x);
+                const hue = (angle * 180 / Math.PI + 360) % 360;
+                
+                // Store as HEX to remain compatible with alpha-concatenation logic in Player.draw
+                this.settings.flameColor = this.hslToHex(hue, 100, 50);
+                
+                this.applySettings();
+                this.saveSettings();
+                this.updateWheelCursor();
+            };
+
+            let isDraggingWheel = false;
+            this.wheelCanvas.addEventListener('mousedown', (e) => { 
+                isDraggingWheel = true; 
+                handleWheelMove(e); 
+            });
+            window.addEventListener('mousemove', (e) => { 
+                if (isDraggingWheel) handleWheelMove(e); 
+            });
+            window.addEventListener('mouseup', () => { 
+                isDraggingWheel = false; 
+            });
+            
+            // Touch support
+            this.wheelCanvas.addEventListener('touchstart', (e) => { 
+                isDraggingWheel = true; 
+                handleWheelMove(e); 
+            }, {passive: false});
+            window.addEventListener('touchmove', (e) => { 
+                if (isDraggingWheel) handleWheelMove(e); 
+            }, {passive: false});
+            window.addEventListener('touchend', () => { 
+                isDraggingWheel = false; 
+            });
+        }
+
+        if (this.previewCanvas) {
+            this.previewCtx = this.previewCanvas.getContext('2d');
+            this.startFlamePreviewLoop();
+        }
+
+        const resetFlameBtn = document.getElementById('btn-reset-flame-color');
+        if (resetFlameBtn) {
+            resetFlameBtn.addEventListener('click', () => {
+                this.soundManager.play('uiClick');
+                this.settings.flameColor = '#00FFFF';
+                this.updateWheelCursor();
+                this.saveSettings();
+            });
+        }
+
         // Language Toggle
         const toggleLang = document.getElementById('toggle-language');
         if (toggleLang) toggleLang.addEventListener('click', () => {
@@ -3629,9 +3968,15 @@ class UIManager {
         }
 
         // Skin Modal Events
-        const skinModalClose = document.getElementById('skin-modal-close');
-        if (skinModalClose) skinModalClose.addEventListener('click', () => { this.soundManager.play('uiClick'); this.skinModalEl.style.display = 'none'; });
-        if (this.skinModalEl) this.skinModalEl.addEventListener('click', (e) => { if (e.target === this.skinModalEl) { this.skinModalEl.style.display = 'none'; } });
+        if (this.skinModalEl) {
+            this.skinModalEl.addEventListener('click', (e) => {
+                if (e.target === this.skinModalEl) { this.skinModalEl.style.display = 'none'; }
+            });
+            const skinModalContent = this.skinModalEl.querySelector('.pixel-modal');
+            if (skinModalContent) {
+                skinModalContent.addEventListener('click', (e) => e.stopPropagation());
+            }
+        }
 
         // In-Game "Back to Hub"
         const backHubBtn = document.getElementById('back-to-hub-button');
@@ -3640,11 +3985,11 @@ class UIManager {
             window.dispatchEvent(new CustomEvent('returnToHubRequested'));
         });
 
-        // Modal close
-        this.collectibleModalEl.addEventListener('click', () => this.hideCollectibleModal());
-        const collectibleModalClose = document.getElementById('collectible-modal-close');
-        if (collectibleModalClose) collectibleModalClose.addEventListener('click', () => this.hideCollectibleModal());
-        const modalContent = this.collectibleModalEl.querySelector('.modal-content');
+        // Modal close (Handle click outside)
+        this.collectibleModalEl.addEventListener('click', (e) => {
+            if (e.target === this.collectibleModalEl) this.hideCollectibleModal();
+        });
+        const modalContent = this.collectibleModalEl.querySelector('.pixel-modal');
         if (modalContent) {
             modalContent.addEventListener('click', (e) => e.stopPropagation());
         }
@@ -3674,11 +4019,287 @@ class UIManager {
         }
         if (this.settings.crt) document.body.classList.add('crt-enabled'); else document.body.classList.remove('crt-enabled');
 
+        this.updateWheelCursor();
         this.soundManager.setVolume(this.settings.masterVolume); this.soundManager.toggleMusic(this.settings.music);
     }
+
+    private drawHueWheel() {
+        if (!this.wheelCtx || !this.wheelCanvas) return;
+        const ctx = this.wheelCtx;
+        const cx = this.wheelCanvas.width / 2;
+        const cy = this.wheelCanvas.height / 2;
+        const outerRadius = this.wheelCanvas.width / 2 - 5;
+        const innerRadius = outerRadius - 30;
+
+        for (let angle = 0; angle < 360; angle += 1) {
+            const startAngle = (angle - 0.5) * Math.PI / 180;
+            const endAngle = (angle + 0.5) * Math.PI / 180;
+            ctx.beginPath();
+            ctx.arc(cx, cy, (outerRadius + innerRadius) / 2, startAngle, endAngle);
+            ctx.lineWidth = outerRadius - innerRadius;
+            ctx.strokeStyle = `hsl(${angle}, 100%, 50%)`;
+            ctx.stroke();
+        }
+    }
+
+    private updateWheelCursor() {
+        const cursor = document.getElementById('color-wheel-cursor');
+        if (!cursor || !this.wheelCanvas) return;
+
+        let hue = 180;
+        const color = this.settings.flameColor;
+        if (color.startsWith('hsl')) {
+            const match = color.match(/\d+/);
+            if (match) hue = parseInt(match[0]!);
+        } else if (color.startsWith('#')) {
+            hue = this.hexToHue(color);
+        }
+
+        const angle = hue * Math.PI / 180;
+        const radius = this.wheelCanvas.width / 2 - 15;
+        
+        // Match cursor position to adjusted internal coordinate system
+        const x = this.wheelCanvas.width / 2 + Math.cos(angle) * radius;
+        const y = this.wheelCanvas.height / 2 + Math.sin(angle) * radius;
+
+        // Convert canvas coords back to CSS pixels for the absolute-positioned cursor
+        const rect = this.wheelCanvas.getBoundingClientRect();
+        const cursorX = (x / this.wheelCanvas.width) * rect.width;
+        const cursorY = (y / this.wheelCanvas.height) * rect.height;
+
+        cursor.style.left = `${cursorX}px`;
+        cursor.style.top = `${cursorY}px`;
+    }
+
+    private hslToHex(h: number, s: number, l: number) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = (n: number) => {
+            const k = (n + h / 30) % 12;
+            const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+    }
+
+    private hexToHue(hex: string) {
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0;
+        if (max === min) h = 0;
+        else if (max === r) h = (g - b) / (max - min) + (g < b ? 6 : 0);
+        else if (max === g) h = (b - r) / (max - min) + 2;
+        else if (max === b) h = (r - g) / (max - min) + 4;
+        return Math.round(h * 60) % 360;
+    }
+
+    private startFlamePreviewLoop() {
+        const frame = () => {
+            if (this.settingsContainer.style.display !== 'none') {
+                this.drawFlamePreview();
+            }
+            this.previewAnimationFrame = requestAnimationFrame(frame);
+        };
+        this.previewAnimationFrame = requestAnimationFrame(frame);
+    }
+
+    private drawFlamePreview() {
+        if (!this.previewCtx || !this.previewCanvas) return;
+        const ctx = this.previewCtx;
+        const w = this.previewCanvas.width;
+        const h = this.previewCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const x = w / 2;
+        const y = h * 0.2;
+        const color = this.settings.flameColor;
+
+        ctx.save();
+        const baseLength = 70, baseWidth = 25, swayAmount = 15;
+        for (let i = 0; i < 3; i++) {
+            const currentLength = baseLength + Math.random() * 20;
+            const currentWidth = baseWidth + Math.random() * 10;
+            const tipSway = (Math.random() - 0.5) * swayAmount;
+            
+            const nozzleX = x, nozzleY = y;
+            const tipX = x + tipSway;
+            const tipY = y + currentLength;
+            
+            const controlX1 = x - currentWidth;
+            const controlY1 = y + currentLength * 0.5;
+            const controlX2 = x + currentWidth;
+            const controlY2 = y + currentLength * 0.5;
+
+            const gradient = ctx.createLinearGradient(nozzleX, nozzleY, nozzleX, tipY);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.4, color);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.globalAlpha = 0.6;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            
+            ctx.beginPath();
+            ctx.moveTo(nozzleX, nozzleY);
+            ctx.quadraticCurveTo(controlX1, controlY1, tipX, tipY);
+            ctx.quadraticCurveTo(controlX2, controlY2, nozzleX, nozzleY);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    private getDefaultSettings() {
+        return {
+            masterVolume: 0.5,
+            music: true,
+            sfx: true,
+            particles: 1,
+            screenShake: true,
+            crt: false,
+            autoFire: 'always',
+            vibration: true,
+            flameColor: '#00FFFF'
+        };
+    }
+
+    private sanitizeSettings(input: any) {
+        const d = this.getDefaultSettings();
+        const out = { ...d };
+        if (!input || typeof input !== 'object') return out;
+
+        try {
+            if (typeof input.masterVolume === 'number' && isFinite(input.masterVolume)) out.masterVolume = Math.max(0, Math.min(1, input.masterVolume));
+            if (typeof input.music === 'boolean') out.music = input.music;
+            if (typeof input.sfx === 'boolean') out.sfx = input.sfx;
+            if (typeof input.particles === 'number' && isFinite(input.particles)) out.particles = Math.max(0, Math.min(2, Math.floor(input.particles)));
+            if (typeof input.screenShake === 'boolean') out.screenShake = input.screenShake;
+            if (typeof input.crt === 'boolean') out.crt = input.crt;
+            if (typeof input.vibration === 'boolean') out.vibration = input.vibration;
+
+            let af = (input as any).autoFire;
+            if (typeof af === 'boolean') af = af ? 'always' : 'off';
+            if (typeof af === 'string' && ['always', 'move', 'off'].includes(af)) out.autoFire = af;
+
+            if (typeof input.flameColor === 'string' && /^#[0-9A-F]{6}$/i.test(input.flameColor)) out.flameColor = input.flameColor;
+        } catch { }
+
+        return out;
+    }
+
+    private refreshSettingsControls(): void {
+        const masterSlider = document.getElementById('epic-volume-master') as HTMLInputElement | null;
+        const masterVal = document.getElementById('val-master');
+        if (masterSlider) masterSlider.value = this.settings.masterVolume.toString();
+        if (masterVal) masterVal.textContent = Math.round(this.settings.masterVolume * 100) + '%';
+
+        const musicSlider = document.getElementById('epic-volume-music') as HTMLInputElement | null;
+        const musicVal = document.getElementById('val-music');
+        if (musicSlider) musicSlider.value = this.settings.music ? '0.5' : '0';
+        if (musicVal) musicVal.textContent = this.settings.music ? this.localizationManager.translate('hub_on') : this.localizationManager.translate('hub_off');
+
+        const sfxSlider = document.getElementById('epic-volume-sfx') as HTMLInputElement | null;
+        const sfxVal = document.getElementById('val-sfx');
+        if (sfxSlider) sfxSlider.value = this.settings.sfx ? '0.8' : '0';
+        if (sfxVal) sfxVal.textContent = this.settings.sfx ? this.localizationManager.translate('hub_on') : this.localizationManager.translate('hub_off');
+
+        const simpleVol = document.getElementById('volume-slider') as HTMLInputElement | null;
+        if (simpleVol) simpleVol.value = this.settings.masterVolume.toString();
+
+        this.updateWheelCursor();
+    }
+
+    public applySettingsFromServer(serverSettings: any, serverUpdatedAt: any): void {
+        const serverTs = Number(serverUpdatedAt) || 0;
+        const localTs = this.settingsUpdatedAt || 0;
+        const serverSanitized = this.sanitizeSettings(serverSettings);
+        const serverHasSettings = !!(serverSettings && typeof serverSettings === 'object' && Object.keys(serverSettings).length > 0);
+
+        // Server wins if it's newer or if we have no reliable timestamps but server has explicit settings.
+        if (serverTs > localTs || (serverTs === 0 && localTs === 0 && serverHasSettings)) {
+            this.settings = serverSanitized;
+            this.settingsUpdatedAt = serverTs;
+            this.localSettingsPresent = true;
+            localStorage.setItem('galaxyFallSettings', JSON.stringify(this.settings));
+            localStorage.setItem('galaxyFallSettingsUpdatedAt', String(this.settingsUpdatedAt));
+            this.applySettings();
+            this.refreshSettingsControls();
+            return;
+        }
+
+        // If local is newer (or we have local-only legacy settings), push them to server.
+        if (localTs > serverTs || (serverTs === 0 && localTs === 0 && this.localSettingsPresent && !serverHasSettings)) {
+            if (serverTs === 0 && localTs === 0) {
+                this.settingsUpdatedAt = Date.now();
+                localStorage.setItem('galaxyFallSettingsUpdatedAt', String(this.settingsUpdatedAt));
+            }
+            this.scheduleSettingsSync(0);
+        }
+    }
+
+    private scheduleSettingsSync(delayMs: number = 600): void {
+        if (this.settingsSyncTimer) clearTimeout(this.settingsSyncTimer);
+        this.settingsSyncTimer = setTimeout(() => {
+            this.syncSettingsToServer().catch(err => console.error('Settings sync failed', err));
+        }, Math.max(0, delayMs));
+    }
+
+    private async syncSettingsToServer(): Promise<void> {
+        this.settingsSyncTimer = null;
+        const { uid, username } = this.game.getPlayerIdentity();
+        if (!uid || uid === 'UNREGISTERED') return;
+
+        const outgoingTs = this.settingsUpdatedAt || Date.now();
+        const payload = {
+            pi_uid: uid,
+            username: username,
+            settings: this.sanitizeSettings(this.settings),
+            settings_updated_at: outgoingTs
+        };
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/save-settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (data && data.settings_updated_at) {
+                    this.settingsUpdatedAt = Number(data.settings_updated_at) || this.settingsUpdatedAt;
+                    localStorage.setItem('galaxyFallSettingsUpdatedAt', String(this.settingsUpdatedAt));
+                }
+                return;
+            }
+
+            if (res.status === 409) {
+                // Another device wrote newer settings. Pull latest from server.
+                const _ = await res.json().catch(() => null);
+                const loadRes = await fetch(`${API_BASE_URL}/load-data?pi_uid=${uid}`);
+                if (loadRes.ok) {
+                    const loadData = await loadRes.json();
+                    this.applySettingsFromServer(loadData.settings || {}, loadData.settings_updated_at || 0);
+                }
+            }
+        } catch (e) {
+            console.error('Settings sync network error', e);
+        }
+    }
+
     public saveSettings(): void {
+        this.settings = this.sanitizeSettings(this.settings);
+        this.settingsUpdatedAt = Date.now();
+        this.localSettingsPresent = true;
         localStorage.setItem('galaxyFallSettings', JSON.stringify(this.settings));
+        localStorage.setItem('galaxyFallSettingsUpdatedAt', String(this.settingsUpdatedAt));
         this.applySettings();
+        this.refreshSettingsControls();
+        this.scheduleSettingsSync(600);
     }
 
     public vibrate(ms: number): void {
@@ -3687,34 +4308,28 @@ class UIManager {
         }
     }
     public loadSettings() {
-        // Default settings
-        const defaultSettings = {
-            masterVolume: 0.5, music: true, sfx: true, particles: 1,
-            screenShake: true, crt: false, autoFire: 'always', vibration: true
-        };
+        const defaultSettings = this.getDefaultSettings();
+
+        const tsStr = localStorage.getItem('galaxyFallSettingsUpdatedAt');
+        const ts = tsStr ? parseInt(tsStr, 10) : 0;
+        this.settingsUpdatedAt = Number.isFinite(ts) ? ts : 0;
 
         const saved = localStorage.getItem('galaxyFallSettings');
-        if (!saved || saved === 'undefined') {
+        this.localSettingsPresent = !!(saved && saved !== 'undefined' && saved !== 'null');
+        if (!this.localSettingsPresent) {
             this.settings = { ...defaultSettings };
             return this.settings;
         }
 
         try {
-            const parsed = JSON.parse(saved);
-
-            // Migration / Sanity Check: Default to 'always' if missing or old boolean format
-            if (typeof parsed.autoFire === 'boolean') {
-                parsed.autoFire = parsed.autoFire ? 'always' : 'off';
-            }
-            if (!parsed.autoFire || (parsed.autoFire !== 'always' && parsed.autoFire !== 'move' && parsed.autoFire !== 'off')) {
-                parsed.autoFire = 'always';
-            }
-
-            this.settings = { ...defaultSettings, ...parsed };
-        } catch (e) {
+            const parsed = JSON.parse(saved as string);
+            this.settings = this.sanitizeSettings(parsed);
+        } catch {
             this.settings = { ...defaultSettings };
         }
 
+        // Persist sanitized version (also helps legacy boolean autoFire migration).
+        localStorage.setItem('galaxyFallSettings', JSON.stringify(this.settings));
         return this.settings;
     }
     public populateAllTranslatedContent() { this.populateProfile(); this.populateGalerie(); this.populateArsenal(); this.populateGegner(); this.localizationManager.applyTranslationsToUI(); this.applySettings(); if (this.wheelModalActive) this.drawWheel(); }
@@ -3895,6 +4510,9 @@ class UIManager {
 
         // If timer just expired, refresh full UI
         if (!canFree && diff === 0) this.updateWheelUI();
+
+        // Always draw mini wheel on hub every tick for animation/visibility
+        this.drawMiniWheel();
     }
 
 
@@ -3922,27 +4540,44 @@ class UIManager {
         const canvas = document.getElementById('hub-wheel-mini-canvas') as HTMLCanvasElement;
         if (!canvas) return;
         const ctx = canvas.getContext('2d')!;
-        ctx.clearRect(0, 0, 100, 100);
-        const centerX = 50, centerY = 50, radius = 45;
+
+        // Ensure proper resolution
+        if (canvas.width !== 200) {
+            canvas.width = 200;
+            canvas.height = 200;
+        }
+
+        ctx.clearRect(0, 0, 200, 200);
+        const centerX = 100, centerY = 100, radius = 90;
         const rewards = [
             { c: '#00ffff' }, { c: '#5555ff' }, { c: '#ff00ff' }, { c: '#00ff00' },
             { c: '#ffaa00' }, { c: '#ff5555' }, { c: '#ffff00' }, { c: '#ffffff' }
         ];
+
+        // Spin slowly in the hub
+        const hubRotation = (Date.now() / 4000) % (Math.PI * 2);
+
         const sliceAngle = (Math.PI * 2) / 8;
         rewards.forEach((r, i) => {
-            const angle = i * sliceAngle + this.wheelRotation;
+            const angle = i * sliceAngle + hubRotation;
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
             ctx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
             ctx.fillStyle = r.c;
             ctx.fill();
             ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 2;
             ctx.stroke();
         });
+
+        // Center hub
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#222';
+        ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+        ctx.fillStyle = '#111';
         ctx.fill();
+        ctx.strokeStyle = '#0ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     private wheelRotation = 0;
@@ -4392,6 +5027,11 @@ class UIManager {
 
         const isMinted = equippedCollectibleId ? (sm.playerCollectibles.minted_collectibles || []).includes(equippedCollectibleId) : false;
 
+        const totalCollectibles = (sm.playerCollectibles.unlocked_collectibles || []).length;
+        const totalMinted = (sm.playerCollectibles.minted_collectibles || []).length;
+        const ownerName = this.game.piManager.username || 'GUEST_PILOT';
+        const ownerId = this.game.piManager.uid || 'N/A';
+
         let html = `
             <div class="profile-dashboard">
                 <div class="pilot-identity-header">
@@ -4400,11 +5040,32 @@ class UIManager {
                         ${isMinted ? '<div class="minted-badge-mini">NFT</div>' : ''}
                     </div>
                     <div class="pilot-header-info">
-                        <div class="pilot-name-display">${this.game.piManager.username || 'GUEST PILOT'}</div>
+                        <div class="pilot-name-display">${ownerName}</div>
                         <div class="pilot-rank-display">${rankTitle} <span class="lvl-tag">LVL ${level}</span></div>
-                        <div class="xp-bar-container">
-                            <div class="xp-bar-fill" style="width: ${xpProgress}%"></div>
-                            <span class="xp-label">${xpProgress}% TO NEXT LEVEL</span>
+                        <div style="font-size:0.35rem; color:#666; font-family:monospace; margin-top:2px;">PILOT ID: ${ownerId}</div>
+                    </div>
+                </div>
+
+                <!-- XP Bar (Refined) -->
+                <div class="xp-bar-container" style="margin:15px 0;">
+                    <div class="xp-bar-fill" style="width: ${xpProgress}%"></div>
+                    <span class="xp-label">${xpProgress}% XP TO NEXT LEVEL</span>
+                </div>
+
+                <!-- ASSET PORTFOLIO -->
+                <div style="margin: 20px 0; background:rgba(0,255,255,0.02); border:1px solid rgba(0,255,255,0.1); padding:15px; border-radius:12px;">
+                    <div style="font-family:'Orbitron', sans-serif; font-size:0.5rem; color:var(--cyan-glow); margin-bottom:12px; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:4px; height:12px; background:var(--cyan-glow);"></span>
+                        BLOCKCHAIN ASSET PORTFOLIO
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                        <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <div style="font-size:0.35rem; color:#888; margin-bottom:4px;">COLLECTIBLES</div>
+                            <div style="font-family:'Orbitron', sans-serif; font-size:1rem; color:#fff;">${totalCollectibles}</div>
+                        </div>
+                        <div style="background:rgba(255,234,0,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,234,0,0.1); text-align:center;">
+                            <div style="font-size:0.35rem; color:#888; margin-bottom:4px;">MINTED NFTs</div>
+                            <div style="font-family:'Orbitron', sans-serif; font-size:1rem; color:#ffea00;">${totalMinted}</div>
                         </div>
                     </div>
                 </div>
@@ -4418,7 +5079,7 @@ class UIManager {
                         </div>
                     </div>
                     <div class="stat-card-epic">
-                        <div class="card-icon">ðŸ’°</div>
+                        <div class="card-icon">\uD83D\uDCB0</div>
                         <div class="card-content">
                             <div class="card-label">${t("hub_wallet")}</div>
                             <div class="card-value">${totalCoins.toLocaleString()}</div>
@@ -4439,7 +5100,7 @@ class UIManager {
                         </div>
                     </div>
                     <div class="stat-card-epic">
-                        <div class="card-icon">ðŸš€</div>
+                        <div class="card-icon">\uD83D\uDE80</div>
                         <div class="card-content">
                             <div class="card-label">${t("hub_missions")}</div>
                             <div class="card-value">${gamesPlayed}</div>
@@ -4454,7 +5115,7 @@ class UIManager {
                     </div>
                 </div>
                 <div class="wheel-promo-card" style="margin-top:20px; background:rgba(0,255,255,0.05); border:1px solid rgba(0,255,255,0.2); border-radius:10px; padding:15px; text-align:center;">
-                    <div style="font-family:'Press Start 2P'; font-size:0.55rem; color:var(--cyan-glow); margin-bottom:12px;">ðŸŽ¡ ${t('wheel_title')}</div>
+                    <div style="font-family:'Press Start 2P'; font-size:0.55rem; color:var(--cyan-glow); margin-bottom:12px;">\uD83C\uDFA1 ${t('wheel_title')}</div>
                     <button id="hub-open-wheel-btn" class="retro-btn glow-cyan" style="width:100%; font-size:0.5rem; padding:10px;">OPEN WHEEL</button>
                 </div>
             `;
@@ -4503,11 +5164,40 @@ class UIManager {
 
         listEl.innerHTML = html;
 
+        // Edit Profile Button Handler
+        const editBtn = document.createElement('button');
+        editBtn.className = 'hub-button secondary';
+        editBtn.style.marginTop = '20px';
+        editBtn.style.padding = '15px';
+        editBtn.style.fontSize = '0.7rem';
+        editBtn.innerHTML = '⚙️ EDIT PILOT DOSSIER';
+        editBtn.onclick = async () => {
+            if (!(window as any).requireLogin()) return;
+            const { uid } = (window as any).getHubPlayerIdentity();
+            if (!uid || uid === 'UNREGISTERED') return;
+
+            this.soundManager.play('uiClick');
+            editBtn.disabled = true;
+            editBtn.textContent = 'ACCESSING DATA...';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile?pi_uid=${encodeURIComponent(uid)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                (window as any).openOwnProfileEditor?.(data, uid);
+            } catch (e) {
+                console.error('Profile fetch failed', e);
+                editBtn.disabled = false;
+                editBtn.textContent = '⚙️ EDIT PILOT DOSSIER';
+            }
+        };
+        listEl.appendChild(editBtn);
+
         // Wheel Button Handler
         const openBtn = document.getElementById('hub-open-wheel-btn');
         if (openBtn) openBtn.onclick = () => this.showLuckyWheel();
 
-        // Modal Close Handler (Check if already set once?)
+        // Modal Close Handler
         const closeBtn = document.getElementById('wheel-modal-close');
         if (closeBtn) closeBtn.onclick = () => this.hideLuckyWheel();
     }
@@ -4594,6 +5284,19 @@ class UIManager {
         if (!galleryEl) return;
         galleryEl.innerHTML = '';
 
+        // Add Premium Header for the Main Overlays
+        if (targetId === 'galerie-list' || targetId === 'gallery-content') {
+            const header = document.createElement('div');
+            header.className = 'gallery-pro-header';
+            header.innerHTML = `
+                <h2 class="glitch-text" data-text="${t('tab_galerie')}">${t('tab_galerie')}</h2>
+                <div class="gallery-subtitle">NEURAL ARCHIVE // COSMETIC DATA VAULT</div>
+            `;
+            galleryEl.appendChild(header);
+        }
+
+        const sm = this.game.shopManager;
+
         const createItemElement = (item: IShopItem, type: 'player_skin' | 'projectile_style' | 'engine_trail' | 'collectible') => {
             let isUnlocked = false;
             let equippedItem: string | null = null;
@@ -4601,49 +5304,50 @@ class UIManager {
             itemEl.className = 'gallery-item';
 
             if (type === 'collectible') {
-                isUnlocked = (this.game.shopManager.playerCollectibles.unlocked_collectibles || []).includes(item.id);
-                equippedItem = this.game.shopManager.playerCollectibles.equipped_collectible;
+                isUnlocked = (sm.playerCollectibles.unlocked_collectibles || []).includes(item.id);
+                equippedItem = sm.playerCollectibles.equipped_collectible;
                 if (isUnlocked) {
-                    const isMinted = (this.game.shopManager.playerCollectibles.minted_collectibles || []).includes(item.id);
+                    const isMinted = (sm.playerCollectibles.minted_collectibles || []).includes(item.id);
                     const badge = document.createElement('div');
                     badge.className = isMinted ? 'nft-badge minted' : 'nft-badge';
                     badge.textContent = isMinted ? 'MINTED' : 'COLL.';
                     itemEl.appendChild(badge);
                 }
             } else {
-                isUnlocked = this.game.shopManager.isCosmeticUnlocked(item.id, type);
-                equippedItem = type === 'player_skin' ? this.game.shopManager.playerCosmetics.equipped_skin :
-                    type === 'projectile_style' ? this.game.shopManager.playerCosmetics.equipped_projectile :
-                        this.game.shopManager.playerCosmetics.equipped_trail;
+                isUnlocked = sm.isCosmeticUnlocked(item.id, type);
+                equippedItem = type === 'player_skin' ? sm.playerCosmetics.equipped_skin :
+                    type === 'projectile_style' ? sm.playerCosmetics.equipped_projectile :
+                        sm.playerCosmetics.equipped_trail;
             }
 
             if (isUnlocked) {
                 if (item.id === equippedItem) { itemEl.classList.add('selected'); }
                 itemEl.addEventListener('click', (e) => {
+                    // Prevent equip trigger if clicking the preview on collectibles (which opens modal)
                     if ((e.target as HTMLElement).closest('.gallery-item-preview') && type === 'collectible') return;
 
                     if (type === 'collectible') {
-                        this.game.shopManager.equipCollectible(item.id);
-                        this.game.shopManager.equipCosmetic('skin_default', 'player_skin');
+                        sm.equipCollectible(item.id);
+                        sm.equipCosmetic('skin_default', 'player_skin');
                     } else if (type === 'player_skin') {
-                        this.game.shopManager.equipCosmetic(item.id, 'player_skin');
-                        this.game.shopManager.equipCollectible(null);
+                        sm.equipCosmetic(item.id, 'player_skin');
+                        sm.equipCollectible(null);
                     } else {
-                        this.game.shopManager.equipCosmetic(item.id, type as 'player_skin' | 'projectile_style' | 'engine_trail');
+                        sm.equipCosmetic(item.id, type as 'player_skin' | 'projectile_style' | 'engine_trail');
                     }
                     this.soundManager.play('uiClick');
 
-                    const galleryList = document.getElementById(targetId);
-                    const scrollPos = galleryList ? galleryList.scrollTop : 0;
+                    const scrollPos = galleryEl.scrollTop;
                     this.populateGalerie(targetId);
-                    const newGalleryList = document.getElementById(targetId);
-                    if (newGalleryList) newGalleryList.scrollTop = scrollPos;
+                    galleryEl.scrollTop = scrollPos;
                 });
             } else {
                 itemEl.classList.add('locked');
             }
 
-            let innerHTML = `<div class="gallery-item-preview"><img src="${item.iconSrc}" alt="${t(item.nameKey)}"></div><div class="gallery-item-name">${t(item.nameKey)}</div>`;
+            let nameHtml = `<div class="gallery-item-name">${t(item.nameKey)}</div>`;
+            let descHtml = item.descKey ? `<div class="gallery-item-desc">${t(item.descKey)}</div>` : '';
+            let innerHTML = `<div class="gallery-item-preview"><img src="${item.iconSrc}" alt="${t(item.nameKey)}"></div>${nameHtml}${descHtml}`;
             if (!isUnlocked) { innerHTML += `<div class="locked-icon"></div>`; }
             itemEl.innerHTML += innerHTML;
 
@@ -4659,37 +5363,39 @@ class UIManager {
 
         const createSection = (titleKey: string, items: IShopItem[], type: 'player_skin' | 'projectile_style' | 'engine_trail' | 'collectible') => {
             const section = document.createElement('div');
-            section.className = 'gallery-section';
-            const title = document.createElement('h3');
-            title.textContent = `- ${t(titleKey)} -`;
-            const grid = document.createElement('div');
-            grid.className = 'gallery-grid';
+            section.className = 'gallery-section-pro';
+            section.innerHTML = `
+                <div class="section-title">
+                    <span>${t(titleKey).toUpperCase()}</span>
+                    <div class="title-line"></div>
+                </div>
+                <div class="gallery-grid"></div>
+            `;
+            const grid = section.querySelector('.gallery-grid')!;
             items.forEach(item => { grid.appendChild(createItemElement(item, type)); });
-            section.appendChild(title);
-            section.appendChild(grid);
             galleryEl.appendChild(section);
         };
 
-        const allSkins = this.game.shopManager.shopItems.filter(item => item.type === 'SKIN');
-        const defaultSkin = { id: 'skin_default', nameKey: 'shop_skin_default_name', iconSrc: playerImgSrc1, type: 'SKIN' } as IShopItem;
+        // Data processing for all gallery sections
+        const allSkins = sm.shopItems.filter(item => item.type === 'SKIN');
+        const defaultSkin = { id: 'skin_default', nameKey: 'shop_skin_default_name', descKey: 'shop_skin_default_desc', iconSrc: playerImgSrc1, type: 'SKIN' } as IShopItem;
         allSkins.unshift(defaultSkin);
 
-        const allProjectiles = this.game.shopManager.shopItems.filter(item => item.cosmeticType === 'projectile_style');
-        const defaultProj = { id: 'default', nameKey: 'proj_default_name', iconSrc: powerUpImageSources['WEAPON_UP'], type: 'COSMETIC', cosmeticType: 'projectile_style' } as IShopItem;
+        const allProjectiles = sm.shopItems.filter(item => item.cosmeticType === 'projectile_style');
+        const defaultProj = { id: 'default', nameKey: 'proj_default_name', descKey: 'proj_default_desc', iconSrc: powerupWeaponUpSrc, type: 'COSMETIC', cosmeticType: 'projectile_style' } as IShopItem;
         allProjectiles.unshift(defaultProj);
 
-        const allTrails = this.game.shopManager.shopItems.filter(item => item.cosmeticType === 'engine_trail');
-        const defaultTrail = { id: 'default', nameKey: 'trail_default_name', iconSrc: playerImgSrc1, type: 'COSMETIC', cosmeticType: 'engine_trail' } as IShopItem;
+        const allTrails = sm.shopItems.filter(item => item.cosmeticType === 'engine_trail');
+        const defaultTrail = { id: 'default', nameKey: 'trail_default_name', descKey: 'trail_default_desc', iconSrc: playerImgSrc1, type: 'COSMETIC', cosmeticType: 'engine_trail' } as IShopItem;
         allTrails.unshift(defaultTrail);
 
-        const allCollectibles = this.game.shopManager.shopItems.filter(item => item.type === 'COLLECTIBLE');
+        const allCollectibles = sm.shopItems.filter(item => item.type === 'COLLECTIBLE');
 
-        if (allCollectibles.length > 0) {
-            createSection('gallery_collectibles_header', allCollectibles, 'collectible');
-        }
+        // Populate Sections
         createSection('gallery_skins_header', allSkins, 'player_skin');
         createSection('gallery_projectiles_header', allProjectiles, 'projectile_style');
         createSection('gallery_trails_header', allTrails, 'engine_trail');
+        createSection('gallery_collectibles_header', allCollectibles, 'collectible');
     }
 
     public async populateNetwork(targetId: string = 'pilot-network-root', bustCache = false): Promise<void> {
@@ -4703,11 +5409,11 @@ class UIManager {
         // Loading
         networkEl.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:100px;color:#0ff;padding:20px;">
-                <div style="font-size:1.4rem;animation:pulse-green 0.8s alternate infinite;">â›“</div>
+                <div style="font-size:1.4rem;animation:pulse-green 0.8s alternate infinite;">⛓</div>
                 <div style="font-size:0.5rem;letter-spacing:3px;">CONNECTING TO PI NODE...</div>
             </div>`;
 
-        // â”€â”€ Parallel fetch aller Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Parallel fetch aller Endpoints ────────────────────────────
         const qs = bustCache ? `?t=${Date.now()}` : '';
         const safeJson = async (res: Response) => res.ok ? res.json() : null;
         let [stats, feeStats, networkFeed, validatorInfo, playerData] = await Promise.all([
@@ -4720,34 +5426,34 @@ class UIManager {
 
         networkEl.innerHTML = '';
 
-        // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Helpers ───────────────────────────────────────────────────
         const timeAgo = (iso: string) => {
-            if (!iso) return 'â€”';
+            if (!iso) return '—';
             const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
             if (s < 60) return `${s}s ago`;
             if (s < 3600) return `${Math.floor(s / 60)}m ago`;
             return `${Math.floor(s / 3600)}h ago`;
         };
-        const fmt = (v: any, suf = '') => (v !== null && v !== undefined) ? `${v}${suf}` : 'â€”';
+        const fmt = (v: any, suf = '') => (v !== null && v !== undefined) ? `${v}${suf}` : '—';
         const mk = (cls: string, html = '') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
         const row = (label: string, value: string) =>
             `<div class="network-stat-row"><span class="label">${label}</span><span class="value">${value}</span></div>`;
 
-        // â”€â”€ Refresh + Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Refresh + Header ──────────────────────────────────────────
         const hdr = document.createElement('div');
         hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
         const srcLabel = stats?.data_source === 'local'
-            ? '<span style="color:#00ff88;font-size:0.38rem;">â¬¢ LOCAL NODE</span>'
-            : '<span style="color:#facc15;font-size:0.38rem;">â˜ PUBLIC API</span>';
+            ? '<span style="color:#00ff88;font-size:0.38rem;">• LOCAL NODE</span>'
+            : '<span style="color:#facc15;font-size:0.38rem;">☁ PUBLIC API</span>';
         hdr.innerHTML = `<div style="font-size:0.38rem;color:#444;">${srcLabel}</div>`;
         const refreshBtn = document.createElement('button');
         refreshBtn.style.cssText = 'font-size:0.38rem;background:transparent;border:1px solid #333;color:#666;padding:2px 8px;cursor:pointer;font-family:monospace;';
-        refreshBtn.textContent = 'âŸ³ REFRESH';
+        refreshBtn.textContent = '⟳ REFRESH';
         refreshBtn.onclick = () => this.populateNetwork(targetId, true);
         hdr.appendChild(refreshBtn);
         networkEl.appendChild(hdr);
 
-        // â”€â”€ SECTION 1: NODE STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── SECTION 1: NODE STATUS ───────────────────────────────────
         const nodeSection = mk('network-section');
         nodeSection.innerHTML = `
             <h3>PI NETWORK STATUS <span class="status-indicator ${stats?.block_height ? 'online' : 'offline'}"></span></h3>
@@ -4756,22 +5462,22 @@ class UIManager {
         `;
         networkEl.appendChild(nodeSection);
 
-        // â”€â”€ SECTION 2: BLOCKCHAIN STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── SECTION 2: BLOCKCHAIN STATUS ──────────────────────────────
         const isOnline = !!(stats?.block_height);
         const chainSection = mk('network-section');
         chainSection.innerHTML = `
             <h3>${t('net_blockchain_status')} <span class="status-indicator ${isOnline ? 'online' : 'offline'}"></span></h3>
-            ${row(t('net_block_height'), isOnline ? `<span style="color:#0ff;font-family:monospace;">#${Number(stats.block_height).toLocaleString()}</span>` : 'â€”')}
-            ${row('LAST.BLOCK', stats?.close_time ? timeAgo(stats.close_time) : 'â€”')}
+            ${row(t('net_block_height'), isOnline ? `<span style="color:#0ff;font-family:monospace;">#${Number(stats.block_height).toLocaleString()}</span>` : '—')}
+            ${row('LAST.BLOCK', stats?.close_time ? timeAgo(stats.close_time) : '—')}
             ${row('TXS/LEDGER', fmt(stats?.tx_count))}
             ${row('OPS/LEDGER', fmt(stats?.op_count))}
-            ${row('BASE.FEE', stats?.base_fee ? (Number(stats.base_fee) / 1e7).toFixed(5) + ' PI' : 'â€”')}
+            ${row('BASE.FEE', stats?.base_fee ? (Number(stats.base_fee) / 1e7).toFixed(5) + ' PI' : '—')}
             ${row('NETWORK', `<span style="color:${stats?.network === 'MAINNET' ? '#0f0' : '#facc15'}">${fmt(stats?.network)}</span>`)}
-            ${!isOnline ? '<div style="margin-top:8px;font-size:0.4rem;color:#ff6666;text-align:center;">âš  HORIZON NICHT ERREICHBAR</div>' : ''}
+            ${!isOnline ? '<div style="margin-top:8px;font-size:0.4rem;color:#ff6666;text-align:center;">⚠ HORIZON UNREACHABLE</div>' : ''}
         `;
         networkEl.appendChild(chainSection);
 
-        // â”€â”€ SECTION 3: FEE MARKET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── SECTION 3: FEE MARKET ──────────────────────────────────────
         const feeSection = mk('network-section');
         const capacity = feeStats?.ledger_capacity_usage ? parseFloat(feeStats.ledger_capacity_usage) : 0;
         const capPercent = Math.round(capacity * 100);
@@ -4784,15 +5490,15 @@ class UIManager {
                     <div style="width:${capPercent}%;height:100%;background:${capColor};transition:width 0.5s;"></div>
                 </div>
             </div>
-            ${row('BASE.FEE', feeStats?.last_ledger_base_fee ? (Number(feeStats.last_ledger_base_fee) / 1e7).toFixed(5) + ' PI' : 'â€”')}
-            ${row('MIN.FEE', feeStats?.min_accepted_fee ? (Number(feeStats.min_accepted_fee) / 1e7).toFixed(5) + ' PI' : 'â€”')}
-            ${row('AVG.FEE (p50)', feeStats?.p50_fee ? (Number(feeStats.p50_fee) / 1e7).toFixed(5) + ' PI' : 'â€”')}
-            ${row('PEAK.FEE (p99)', feeStats?.p99_fee ? (Number(feeStats.p99_fee) / 1e7).toFixed(5) + ' PI' : 'â€”')}
+            ${row('BASE.FEE', feeStats?.last_ledger_base_fee ? (Number(feeStats.last_ledger_base_fee) / 1e7).toFixed(5) + ' PI' : '—')}
+            ${row('MIN.FEE', feeStats?.min_accepted_fee ? (Number(feeStats.min_accepted_fee) / 1e7).toFixed(5) + ' PI' : '—')}
+            ${row('AVG.FEE (p50)', feeStats?.p50_fee ? (Number(feeStats.p50_fee) / 1e7).toFixed(5) + ' PI' : '—')}
+            ${row('PEAK.FEE (p99)', feeStats?.p99_fee ? (Number(feeStats.p99_fee) / 1e7).toFixed(5) + ' PI' : '—')}
             ${feeStats?.source ? `<div style="margin-top:4px;font-size:0.35rem;color:#333;">SRC: ${feeStats.source.toUpperCase()}</div>` : ''}
         `;
         networkEl.appendChild(feeSection);
 
-        // â”€â”€ SECTION 4: LIVE OPERATIONS FEED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── SECTION 4: LIVE OPERATIONS FEED ───────────────────────────
         const feedSection = mk('network-section');
         const ops = networkFeed?.ops || [];
         const opTypeColor: Record<string, string> = {
@@ -4804,111 +5510,78 @@ class UIManager {
         const opsHtml = ops.length > 0
             ? ops.map((op: any) => {
                 const color = opTypeColor[op.type] || opTypeColor.default;
-                return `<li style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.38rem;">
-                    <span style="color:${color}">${op.type.replace(/_/g, ' ').toUpperCase()}</span>
+                const net = (stats?.network || 'TESTNET').toLowerCase();
+                const txHash = op.transaction_hash_full || op.transaction_hash;
+                const expUrl = `https://minepi.com/blockexplorer/${net}/transactions/${txHash}`;
+
+                return `<li style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.38rem;cursor:pointer;" onclick="openExplorer('${expUrl}', 'PI_${net.toUpperCase()}')">
+                    <span style="color:${color};text-decoration:underline;">${op.type.replace(/_/g, ' ').toUpperCase()}</span>
                     <span style="color:#555;font-family:monospace;">${timeAgo(op.created_at)}</span>
                 </li>`;
             }).join('')
             : '<li style="font-size:0.4rem;color:#444;text-align:center;padding:8px 0;">NO DATA</li>';
         feedSection.innerHTML = `
-            <h3>LIVE OPS FEED ${networkFeed?.source === 'local' ? '<span style="color:#00ff88;font-size:0.38rem;">â¬¢ LOCAL</span>' : ''}</h3>
+            <h3>LIVE OPS FEED ${networkFeed?.source === 'local' ? '<span style="color:#00ff88;font-size:0.38rem;">• LOCAL</span>' : ''}</h3>
             <ul style="list-style:none;padding:0;margin:0;max-height:120px;overflow-y:auto;">${opsHtml}</ul>
             ${networkFeed?.fetched_at ? `<div style="margin-top:4px;font-size:0.35rem;color:#333;">SYNC: ${new Date(networkFeed.fetched_at).toLocaleTimeString()}</div>` : ''}
         `;
         networkEl.appendChild(feedSection);
 
-        // â”€â”€ SECTION 5: VALIDATOR IDENTITY (Premium locked) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        const validatorSection = mk('network-section');
-        validatorSection.style.position = 'relative';
-        const nodeKey = stats?.node_key || '';
-        const shortNodeKey = nodeKey ? nodeKey.substring(0, 6) + '...' + nodeKey.slice(-4) : 'â€”';
-        validatorSection.innerHTML = `<h3>VALIDATOR IDENTITY</h3>`;
 
-        const validatorContent = document.createElement('div');
-        const vNotFound = validatorInfo?.not_found;
-        validatorContent.innerHTML = `
-            <div style="font-size:0.38rem;color:#555;margin-bottom:6px;letter-spacing:1px;">â–¸ PI NODE KEY</div>
-            ${row('NODE.KEY', `<span style="font-family:monospace;font-size:0.36rem;">${shortNodeKey}</span>`)}
-            ${!vNotFound && validatorInfo?.sequence ? row('SEQUENCE', validatorInfo.sequence) : ''}
-            ${!vNotFound && validatorInfo?.subentry_count !== undefined ? row('ENTRIES', validatorInfo.subentry_count) : ''}
-            ${!vNotFound && validatorInfo?.home_domain ? row('DOMAIN', validatorInfo.home_domain) : ''}
-            ${vNotFound ? '<div style="font-size:0.4rem;color:#555;text-align:center;margin-top:6px;">NODE KEY: NOT AN ACCOUNT</div>' : ''}
-            <div style="margin-top:8px;">
-                <a href="https://explorer.minepi.com/accounts/${nodeKey}" target="_blank" rel="noopener" class="ledger-explorer-link" style="width:100%;display:block;text-align:center;padding:6px 0;box-sizing:border-box;">
-                    ðŸ”‘ VIEW NODE ON EXPLORER
-                </a>
-            </div>
-        `;
-
-        if (!hasPremium) {
-            const lock = mk('premium-lock-overlay', `
-                <div style="font-size:1.5rem;margin-bottom:8px;">ðŸ”’</div>
-                <div style="font-size:0.5rem;font-weight:bold;color:#0ff;margin-bottom:6px;">PREMIUM REQUIRED</div>
-                <p>${t('net_premium_lock_msg')}</p>
-            `);
-            validatorSection.appendChild(lock);
-        }
-        validatorSection.appendChild(validatorContent);
-        networkEl.appendChild(validatorSection);
-
-        // â”€â”€ SECTION 6: APP WALLET + PILOT STATS (Premium locked) â”€â”€â”€â”€â”€â”€
+        // ── SECTION 6: APP WALLET + PILOT STATS (Premium locked) ──────
         const walletSection = mk('network-section');
         walletSection.style.position = 'relative';
         const appWalletKey = stats?.app_wallet || '';
-        const shortWallet = appWalletKey ? appWalletKey.substring(0, 6) + '...' + appWalletKey.slice(-4) : 'â€”';
+        const shortWallet = appWalletKey ? appWalletKey.substring(0, 6) + '...' + appWalletKey.slice(-4) : '—';
         const walletExists = stats?.app_wallet_exists === true;
         const balanceText = stats?.app_balance ?? (walletExists ? '0.0000 PI' : 'NOT ON-CHAIN');
         const gfcCoins = playerData?.coins ?? this.game.coins ?? 0;
         const isPrem = playerData?.has_premium !== undefined ? playerData.has_premium : hasPremium;
 
-        const txsHtml = stats?.recent_txs?.length > 0
-            ? `<div style="margin-top:8px;">
-                <div style="font-size:0.38rem;color:#888;margin-bottom:4px;letter-spacing:1px;">APP TRANSACTIONS</div>
-                <ul class="tx-list">
-                    ${stats.recent_txs.map((tx: any) => `
-                    <li class="tx-item">
-                        <span class="type" style="font-family:monospace;">${tx.id}</span>
-                        <span class="amount">${timeAgo(tx.created_at)}</span>
-                    </li>`).join('')}
-                </ul>
-            </div>`
-            : `<div style="margin-top:6px;font-size:0.38rem;color:#444;text-align:center;">${walletExists ? 'NO TXS FOUND' : 'WALLET NOT ON-CHAIN'}</div>`;
-
         walletSection.innerHTML = `<h3>${t('net_wallet_neural_link')}</h3>`;
         const walletContent = document.createElement('div');
         walletContent.className = 'neural-link-card';
 
-        // App-Wallet Chain-TXs (von Horizon — letzten 5 TXs der App Wallet)
-        const chainTxsHtml = stats?.recent_txs?.length > 0
+        // App-Wallet Chain-TXs (Horizon)
+        const chainTxsHtml = (stats?.recent_txs || []).length > 0
             ? `<div style="margin-top:8px;">
                 <div style="font-size:0.38rem;color:#888;margin-bottom:4px;letter-spacing:1px;">APP WALLET TXS (CHAIN)</div>
                 <ul class="tx-list">
-                    ${stats.recent_txs.map((tx: any) => `
-                    <li class="tx-item">
-                        <span class="type" style="font-family:monospace;font-size:0.33rem;">${tx.id}</span>
-                        <span class="amount">${timeAgo(tx.created_at)}</span>
-                    </li>`).join('')}
+                    ${stats.recent_txs.map((tx: any) => {
+                const net = (stats?.network || 'TESTNET').toLowerCase();
+                const txHash = tx.hash || tx.id;
+                const expUrl = `https://minepi.com/blockexplorer/${net}/transactions/${txHash}`;
+                return `
+                        <li class="tx-item" style="cursor:pointer;" onclick="openExplorer('${expUrl}', 'PI_${net.toUpperCase()}')">
+                            <span class="type" style="font-family:monospace;font-size:0.33rem;color:#0ff;text-decoration:underline;">${tx.id}</span>
+                            <span class="amount">${timeAgo(tx.created_at)}</span>
+                        </li>`;
+            }).join('')}
                 </ul>
             </div>`
             : `<div style="margin-top:6px;font-size:0.38rem;color:#444;text-align:center;">${walletExists ? 'NO TXS ON CHAIN' : 'WALLET NOT ON-CHAIN'}</div>`;
 
-        // Spieler eigene TX-Historie aus DB (mit TXIDs von Blockchain-Käufen)
+        // Player own TX History from DB
         const playerTxs = playerData?.payments || [];
         const playerTxsHtml = playerTxs.length > 0
             ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,255,255,0.1);">
                 <div style="font-size:0.38rem;color:#0ff;margin-bottom:4px;letter-spacing:1px;">⛓ DEINE TX-HISTORIE</div>
                 <ul style="list-style:none;padding:0;margin:0;">
-                    ${playerTxs.map((p: any) => `
-                    <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
-                            <span style="font-size:0.38rem;color:#facc15;">${(p.bundle_id || 'TX').replace(/_/g, ' ').toUpperCase()}</span>
-                            <span style="font-size:0.35rem;color:#555;">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <a href="${p.explorer_url}" target="_blank" rel="noopener" style="font-family:monospace;font-size:0.33rem;color:#0ff;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;" title="${p.txid}">🔗 ${p.txid_short || p.txid}</a>
-                            <span style="font-size:0.33rem;color:#555;text-transform:uppercase;">[${p.network || '?'}]</span>
-                        </div>
-                    </li>`).join('')}
+                    ${playerTxs.map((p: any) => {
+                const netStr = (p.network || 'testnet').toLowerCase();
+                const expUrl = `https://minepi.com/blockexplorer/${netStr}/transactions/${p.txid}`;
+                return `
+                        <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                                <span style="font-size:0.38rem;color:#facc15;">${(p.bundle_id || 'TX').replace(/_/g, ' ').toUpperCase()}</span>
+                                <span style="font-size:0.35rem;color:#555;">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="openExplorer('${expUrl}', 'PI_${netStr.toUpperCase()}')">
+                                <span style="font-family:monospace;font-size:0.33rem;color:#0ff;text-decoration:underline;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">🔗 ${p.txid_short || p.txid}</span>
+                                <span style="font-size:0.33rem;color:#555;text-transform:uppercase;">[${netStr}]</span>
+                            </div>
+                        </li>`;
+            }).join('')}
                 </ul>
             </div>`
             : `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,255,255,0.1);font-size:0.38rem;color:#444;text-align:center;">KEINE TXS — NOCH KEIN KAUF</div>`;
@@ -4934,137 +5607,302 @@ class UIManager {
             `);
             walletSection.appendChild(lock);
         }
-
         walletSection.appendChild(walletContent);
         networkEl.appendChild(walletSection);
 
-        // ── Explorer Links ─────────────────────────────────────────────
         if (appWalletKey) {
             const explorerSection = mk('network-section');
             explorerSection.innerHTML = `
                 <h3>${t('net_nft_verifier')}</h3>
-                <a href="https://explorer.minepi.com/accounts/${appWalletKey}" target="_blank" rel="noopener" class="ledger-explorer-link" style="width:100%;display:block;text-align:center;padding:8px 0;box-sizing:border-box;margin-bottom:6px;">
-                    💼 APP WALLET — PI EXPLORER
+                <div style="font-size:0.38rem;color:#888;margin-bottom:8px;text-align:center;">
+                    System wallet for rewards and NFT minting operations.
+                </div>
+                <a href="javascript:void(0)" onclick="openExplorer('${this.game.piManager.getAccountExplorerUrl(appWalletKey)}', 'PI_BLOCKCHAIN')" class="ledger-explorer-link" style="width:100%;display:block;text-align:center;padding:8px 0;box-sizing:border-box;margin-bottom:6px;">
+                    💼 ${t('net_view_system_wallet')}
                 </a>
-                <div style="font-size:0.35rem;color:#333;text-align:center;word-break:break-all;">${appWalletKey.substring(0, 30)}...</div>
+                <div style="font-size:0.35rem;color:#333;text-align:center;word-break:break-all;font-family:monospace;">${appWalletKey}</div>
             `;
             networkEl.appendChild(explorerSection);
         }
     }
     public showCollectibleModal(item: IShopItem): void {
+        const sm = this.game.shopManager;
+        const t = (k: string) => this.localizationManager.translate(k);
+        const hasPremium = this.game.hasPremiumLicense;
+        const isUnlocked = (sm.playerCollectibles.unlocked_collectibles || []).includes(item.id);
+
         this.modalImgEl.src = item.iconSrc;
-        this.modalTitleEl.textContent = this.localizationManager.translate(item.nameKey);
+        this.modalTitleEl.textContent = t(item.nameKey).toUpperCase();
+        this.modalStoryEl.textContent = t(item.storyKey || '');
 
-        const story = this.localizationManager.translate(item.storyKey!);
-        this.modalStoryEl.textContent = story;
+        // Populate Hull Type (flavor data)
+        const hullEl = document.getElementById('modal-hull-type');
+        if (hullEl) hullEl.textContent = item.id.includes('boss') ? 'ELITE_COMMAND' : 'TACTICAL_STRIKER';
 
-        const bonusLabel = this.localizationManager.translate('hub_bonus') || 'BONUS';
-        const bonusText = this.localizationManager.translate(item.descKey);
+        const bonusLabel = t('hub_bonus') || 'BONUS';
+        const bonusText = t(item.descKey);
 
-        // Minted status (if available in player collectibles)
-        const sm = this.game?.shopManager;
-        const minted = !!sm && (sm.playerCollectibles?.minted_collectibles || []).includes(item.id);
-        const meta = minted ? sm?.playerCollectibles?.minted_metadata?.[item.id] : null;
-        const txid = meta?.txid ? String(meta.txid) : '';
-        const shortTxid = txid ? `${txid.substring(0, 8)}...${txid.substring(txid.length - 8)}` : '';
+        // --- MINTING STATUS ---
+        const minted = (sm.playerCollectibles.minted_collectibles || []).includes(item.id);
+        const meta = minted ? sm.playerCollectibles.minted_metadata?.[item.id] : null;
 
         this.modalBonusEl.innerHTML = `
             <div class="collectible-bonus-box">
-                <div class="collectible-bonus-header">
-                    <span class="cb-title">${bonusLabel}</span>
-                    ${minted ? `<span class="cb-status minted">NFT</span>` : `<span class="cb-status">OFF-CHAIN</span>`}
-                </div>
+                <span class="cb-title">${bonusLabel}</span>
                 <div class="collectible-bonus-text">${bonusText}</div>
-                ${minted && shortTxid ? `
-                    <div class="collectible-mint-meta">
-                        <span class="cb-meta-label">TX</span>
-                        <span class="cb-meta-val">${shortTxid}</span>
-                    </div>
-                ` : ''}
             </div>
         `;
 
+        // --- BLOCKCHAIN AREA ---
+        if (this.collectibleMintArea) {
+            if (minted) {
+                const dateStr = meta ? new Date(meta.minted_at).toLocaleDateString() : '---';
+                const txid = meta ? String(meta.txid) : '---';
+                const shortTxid = txid !== '---' ? `${txid.substring(0, 8)}...${txid.substring(txid.length - 8)}` : 'UNKNOWN';
+                const network = (meta?.network || 'pi_testnet').toUpperCase();
+                const explorerUrl = this.game.piManager.getExplorerUrl(txid, network);
+
+                // Kennzeichnung mit UserID & Username
+                const ownerName = this.game.piManager.username || 'PILOT';
+                const ownerId = this.game.piManager.uid || 'UNKNOWN_ID';
+                const serialNum = txid !== '---' ? `GF-${txid.substring(0, 4).toUpperCase()}-${Math.floor(Math.random() * 9999)}` : 'GF-PENDING';
+
+                this.collectibleMintArea.innerHTML = `
+                    <div class="nft-certificate-box">
+                        <div class="scanning-line"></div>
+                        <div class="nft-cert-header">
+                            <span class="nft-cert-label">BLOCKCHAIN VERIFIED OWNERSHIP</span>
+                            <span class="nft-cert-tag">LEGENDARY</span>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px; padding: 10px; background: rgba(0, 255, 255, 0.05); border: 1px solid rgba(0, 255, 255, 0.1); border-radius: 4px;">
+                            <div style="font-size: 0.4rem; color: #666; text-transform: uppercase; margin-bottom: 4px;">REGISTERED PILOT / OWNER</div>
+                            <div style="font-family: 'Orbitron', sans-serif; font-size: 0.7rem; color: var(--cyan-glow); text-shadow: 0 0 5px var(--cyan-glow);">${ownerName}</div>
+                            <div style="font-size: 0.35rem; color: #444; font-family: monospace; overflow-wrap: break-word;">${ownerId}</div>
+                        </div>
+
+                        <div class="nft-cert-grid">
+                            <div class="nft-cert-item">
+                                <span class="nft-cert-key">SERIAL NUMBER</span>
+                                <span class="nft-cert-val" style="color: #ffea00;">${serialNum}</span>
+                            </div>
+                            <div class="nft-cert-item">
+                                <span class="nft-cert-key">MINT DATE</span>
+                                <span class="nft-cert-val">${dateStr}</span>
+                            </div>
+                            <div class="nft-cert-item">
+                                <span class="nft-cert-key">NETWORK</span>
+                                <span class="nft-cert-val" style="color:#0f0">${network}</span>
+                            </div>
+                            <div class="nft-cert-item">
+                                <span class="nft-cert-key">ENCRYPTION</span>
+                                <span class="nft-cert-val">AES-256-PI</span>
+                            </div>
+                            <div class="nft-cert-item" style="grid-column: span 2;">
+                                <span class="nft-cert-key">TRANSACTION HASH</span>
+                                <span class="nft-cert-val" style="color:#0ff; font-size:0.45rem;">${txid}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; font-size: 0.35rem; color: #555; font-family: 'Press Start 2P'; display:flex; justify-content:space-between; align-items:center;">
+                            <span>SIGNAL: STABLE</span>
+                            <span style="color:#0f0;">PROVENANCE SECURE</span>
+                        </div>
+
+                        <a href="javascript:void(0)" onclick="openExplorer('${explorerUrl}', '${network}')" class="retro-btn mini" style="width:100%; margin-top:20px; font-size:0.4rem; border-color:#0ff; color:#0ff; text-align:center; display:block; text-decoration:none; background:rgba(0,255,255,0.05);">
+                            VERIFY ON PI BLOCK EXPLORER
+                        </a>
+                    </div>
+                `;
+            } else if (isUnlocked) {
+                this.collectibleMintArea.innerHTML = `
+                    <div class="cyber-divider"></div>
+                    <div class="collectible-bonus-box" style="border-left-color:#ffea00; background:rgba(255,234,0,0.03);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                            <div>
+                                <span class="cb-title" style="color:#ffea00; margin:0;">BLOCKCHAIN MINTING</span>
+                                <p style="font-size:0.35rem; color:#aaa; margin:5px 0 0 0;">${t('nft_mint_desc')}</p>
+                            </div>
+                            <span style="color:#0f0; font-family:monospace; font-size:0.5rem; background:rgba(0,255,0,0.1); padding:2px 6px; border-radius:3px;">0.10 Pi</span>
+                        </div>
+                        <button id="btn-mint-collectible" class="retro-btn big glow-yellow" style="width:100%; margin-top:5px;" ${!hasPremium ? 'disabled' : ''}>
+                            ${t('btn_mint_nft')}
+                        </button>
+                        ${!hasPremium ? `<div style="color:#ff4444; font-size:0.3rem; text-align:center; margin-top:8px;">${t('err_license_required_mint')}</div>` : ''}
+                    </div>
+                `;
+                const mintBtn = this.collectibleMintArea.querySelector('#btn-mint-collectible');
+                if (mintBtn) {
+                    mintBtn.addEventListener('click', () => {
+                        this.soundManager.play('uiClick');
+                        this.game.piManager.createPayment({
+                            id: `mint_${item.id}`,
+                            pi_cost: 0.10,
+                            nameKey: `Mint: ${t(item.nameKey)}`,
+                            type: 'NFT_MINT'
+                        } as any);
+                    });
+                }
+            } else {
+                this.collectibleMintArea.innerHTML = '';
+            }
+        }
+
+        // --- INFO AREA ---
+        if (this.collectibleInfoArea) {
+            this.collectibleInfoArea.innerHTML = this.createNftInfoBoxHTML();
+            this.collectibleInfoArea.style.display = 'block';
+        }
+
+        // --- ACTION BUTTON ---
+        const actionBtn = this.collectibleModalActionBtn;
+        if (actionBtn) {
+            const newBtn = actionBtn.cloneNode(true) as HTMLButtonElement;
+            actionBtn.parentNode?.replaceChild(newBtn, actionBtn);
+            this.collectibleModalActionBtn = newBtn;
+
+            const equippedItem = sm.playerCollectibles.equipped_collectible;
+            const isEquipped = item.id === equippedItem;
+
+            if (isUnlocked) {
+                newBtn.textContent = isEquipped ? t('btn_equipped') : t('btn_equip');
+                newBtn.className = isEquipped ? 'retro-btn big disabled' : 'retro-btn big glow-cyan';
+                newBtn.disabled = isEquipped;
+
+                if (!isEquipped) {
+                    newBtn.onclick = () => {
+                        this.soundManager.play('uiClick');
+                        sm.equipCollectible(item.id);
+                        sm.equipCosmetic('skin_default', 'player_skin');
+                        this.showCollectibleModal(item);
+                        this.populateGalerie();
+                    };
+                }
+            } else {
+                const cost = sm.getCost(item);
+                newBtn.textContent = `${t('btn_buy')} (${cost} PI)`;
+                newBtn.className = 'retro-btn big glow-yellow';
+                newBtn.onclick = () => {
+                    this.soundManager.play('uiClick');
+                    this.game.piManager.createPayment({
+                        id: item.id,
+                        pi_cost: cost,
+                        nameKey: t(item.nameKey),
+                        type: 'COLLECTIBLE'
+                    } as any);
+                };
+            }
+        }
+
+        this.collectibleModalEl.style.display = 'flex';
         this.collectibleModalEl.classList.add('active');
     }
     public hideCollectibleModal(): void { this.collectibleModalEl.classList.remove('active'); }
 
-    public populateGegner(): void { const enemyList = [{ nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low', image: gruntImg }, { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low', image: weaverImg }, { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium', image: tankImg }, { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium', image: shooterImg }, { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high', image: teleporterImg }, { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high', image: bossSentinelPrimeImg }, { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme', image: bossVoidSerpentSrc }, { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic', image: bossOmegaNexusBaseImg }, { nameKey: "gegner_nexus_prime_name", descKey: "gegner_nexus_prime_desc", type: 'BOSS_NEXUS_PRIME', strengthKey: 'strength_final', image: bossNexusPrimeImg },]; const t = (key: string) => this.localizationManager.translate(key); const listEl = document.getElementById('gegner-list')!; listEl.innerHTML = `< h3 > - ${ t('tab_gegner') } -</h3 > `; enemyList.forEach(e => { const iconSrc = this.createEnemyIcon(e.type, e.image); const strengthClass = e.strengthKey.split('_')[1]; listEl.innerHTML += ` < div class="powerup-entry" ><img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/><div class="powerup-info"><div class="powerup-title"><span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div> <div class="powerup-desc">${t(e.descKey)}</div> </div> </div > `; }); }
-    public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise < void> {
-    const t = (key: string) => this.localizationManager.translate(key);
-    // Ensure content element is correct
-    if(!this.leaderboardContent) this.leaderboardContent = document.getElementById('epic-leaderboard-content')!;
-    const contentEl = this.leaderboardContent;
-
-    // 1. Determine Environment
-    let type = 'mainnet';
-    let badgeClass = 'badge-mainnet';
-    let badgeText = t('hub_mainnet');
-
-    if(!this.game.piManager.isAuthenticated) {
-    type = 'guest';
-    badgeClass = 'badge-guest';
-    badgeText = t('hub_guest_zone');
-} else if (this.game.piManager.isSandbox) {
-    type = 'testnet';
-    badgeClass = 'badge-testnet';
-    badgeText = t('hub_testnet');
-}
-
-// 2. Build Epic UI Skeleton
-contentEl.innerHTML = `
-    < div class="leaderboard-epic-container" >
-                <div class="network-indicator-badge ${badgeClass}">${badgeText}</div>
-                
-                <div class="header-section">
-                    <h2 class="pixel-subtitle" style="margin:0; font-size:1rem; color:#fff;">LEADERBOARD</h2>
-                    <div class="epic-tabs">
-                        <button class="epic-tab-btn ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
-                        <button class="epic-tab-btn ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button>
+    public populateGegner(): void {
+        const enemyList = [
+            { nameKey: "gegner_grunt_name", descKey: "gegner_grunt_desc", type: 'GRUNT', strengthKey: 'strength_low', image: gruntImgSrc },
+            { nameKey: "gegner_weaver_name", descKey: "gegner_weaver_desc", type: 'WEAVER', strengthKey: 'strength_low', image: weaverImgSrc },
+            { nameKey: "gegner_tank_name", descKey: "gegner_tank_desc", type: 'TANK', strengthKey: 'strength_medium', image: tankImgSrc },
+            { nameKey: "gegner_shooter_name", descKey: "gegner_shooter_desc", type: 'SHOOTER', strengthKey: 'strength_medium', image: shooterImgSrc },
+            { nameKey: "gegner_teleporter_name", descKey: "gegner_teleporter_desc", type: 'TELEPORTER', strengthKey: 'strength_high', image: teleporterImgSrc },
+            { nameKey: "gegner_sentinel_prime_name", descKey: "gegner_sentinel_prime_desc", type: 'BOSS_SENTINEL_PRIME', strengthKey: 'strength_high', image: bossSentinelPrimeSrc },
+            { nameKey: "gegner_void_serpent_name", descKey: "gegner_void_serpent_desc", type: 'BOSS_VOID_SERPENT', strengthKey: 'strength_extreme', image: bossVoidSerpentSrc },
+            { nameKey: "gegner_omega_nexus_name", descKey: "gegner_omega_nexus_desc", type: 'BOSS_OMEGA_NEXUS', strengthKey: 'strength_apocalyptic', image: bossOmegaNexusBaseSrc },
+            { nameKey: "gegner_nexus_prime_name", descKey: "gegner_nexus_prime_desc", type: 'BOSS_NEXUS_PRIME', strengthKey: 'strength_final', image: bossNexusPrimeSrc }
+        ];
+        const t = (key: string) => this.localizationManager.translate(key);
+        const listEl = document.getElementById('gegner-list')!;
+        listEl.innerHTML = `<h3>- ${t('tab_gegner')} -</h3>`;
+        enemyList.forEach(e => {
+            const iconSrc = e.image; // Assume imported
+            const strengthClass = e.strengthKey.split('_')[1];
+            listEl.innerHTML += `
+                <div class="powerup-entry">
+                    <img src="${iconSrc}" class="arsenal-icon" alt="${t(e.nameKey)} icon"/>
+                    <div class="powerup-info">
+                        <div class="powerup-title"><span>${t(e.nameKey)}</span> <span class="strength-indicator strength-${strengthClass}">${t(e.strengthKey)}</span> </div>
+                        <div class="powerup-desc">${t(e.descKey)}</div>
                     </div>
-                </div>
+                </div>`;
+        });
+    }
+    public async populateLeaderboard(mode: 'campaign' | 'endless'): Promise<void> {
+        const t = (key: string) => this.localizationManager.translate(key);
+        // Ensure content element is correct
+        if (!this.leaderboardContent) this.leaderboardContent = document.getElementById('epic-leaderboard-content')!;
+        const contentEl = this.leaderboardContent;
 
-                <div id="leaderboard-status" style="margin-top:20px; text-align:center;">
-                    <p class="blink-text">${t('leaderboard_loading')}...</p>
-                </div>
-                
-                <div id="leaderboard-list-area" class="epic-rank-list"></div>
-            </div >
+        // 1. Determine Environment
+        let type = 'mainnet';
+        let badgeClass = 'badge-mainnet';
+        let badgeText = t('hub_mainnet');
+
+        if (!this.game.piManager.isAuthenticated) {
+            type = 'guest';
+            badgeClass = 'badge-guest';
+            badgeText = t('hub_guest_zone');
+        } else if (this.game.piManager.isSandbox) {
+            type = 'testnet';
+            badgeClass = 'badge-testnet';
+            badgeText = t('hub_testnet');
+        }
+
+        // 2. Build Epic UI Skeleton
+        contentEl.innerHTML = `
+    <div class="leaderboard-epic-container">
+        <div class="network-indicator-badge ${badgeClass}">${badgeText}</div>
+        
+        <div class="header-section">
+            <h2 class="pixel-subtitle" style="margin:0; font-size:1rem; color:#fff;">LEADERBOARD</h2>
+            <div class="epic-tabs">
+                <button class="epic-tab-btn ${mode === 'campaign' ? 'active' : ''}" id="lb-btn-campaign">${t('btn_campaign')}</button>
+                <button class="epic-tab-btn ${mode === 'endless' ? 'active' : ''}" id="lb-btn-endless">${t('btn_endless')}</button>
+            </div>
+        </div>
+
+        <div id="leaderboard-status" style="margin-top:20px; text-align:center;">
+            <p class="blink-text">${t('leaderboard_loading')}...</p>
+        </div>
+        
+        <div id="leaderboard-list-area" class="epic-rank-list"></div>
+    </div>
     `;
 
-this.attachLeaderboardControlEvents();
-const statusEl = document.getElementById('leaderboard-status')!;
-const listArea = document.getElementById('leaderboard-list-area')!;
+        this.attachLeaderboardControlEvents();
+        const statusEl = document.getElementById('leaderboard-status')!;
+        const listArea = document.getElementById('leaderboard-list-area')!;
 
-try {
-    const response = await fetch(`${ API_BASE_URL }/leaderboard?mode=${mode}&type=${type}`);
-if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        try {
+            const response = await fetch(`${API_BASE_URL}/leaderboard?mode=${mode}&type=${type}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-const data: ILeaderboardEntry[] = await response.json();
+            const data: ILeaderboardEntry[] = await response.json();
 
-if (!data || data.length === 0) {
-    statusEl.innerHTML = `<p style="color:#888;">${t('leaderboard_no_entries')}</p>`;
-    return;
-}
+            if (!data || data.length === 0) {
+                statusEl.innerHTML = `<p style="color:#888;">${t('leaderboard_no_entries')}</p>`;
+                return;
+            }
 
-statusEl.style.display = 'none';
-let listHTML = '';
+            statusEl.style.display = 'none';
+            let listHTML = '';
 
-data.forEach((entry, index) => {
-    const rank = index + 1;
-    let cardClass = 'epic-rank-card';
-    if (rank === 1) cardClass += ' top-1';
-    if (rank === 2) cardClass += ' top-2';
-    if (rank === 3) cardClass += ' top-3';
+            data.forEach((entry, index) => {
+                const rank = index + 1;
+                let cardClass = 'epic-rank-card';
+                if (rank === 1) cardClass += ' top-1';
+                if (rank === 2) cardClass += ' top-2';
+                if (rank === 3) cardClass += ' top-3';
 
-    // Highlight Local User
-    if (this.game.lastGameResult &&
-        entry.username === this.game.lastGameResult.username &&
-        entry.score === this.game.lastGameResult.score) {
-        cardClass += ' is-me';
-    }
+                // Highlight Local User
+                if (this.game.lastGameResult &&
+                    entry.username === this.game.lastGameResult.username &&
+                    entry.score === this.game.lastGameResult.score) {
+                    cardClass += ' is-me';
+                }
 
-    const uidAttr = (entry as any).pi_uid ? `data-uid="${(entry as any).pi_uid}"` : '';
-    listHTML += `
+                const uidAttr = (entry as any).pi_uid ? `data-uid="${(entry as any).pi_uid}"` : '';
+                listHTML += `
                     <div class="${cardClass}" ${uidAttr}>
                         <div class="rank-pos">#${rank}</div>
                         <div class="player-info">
@@ -5077,87 +5915,87 @@ data.forEach((entry, index) => {
                         </div>
                     </div>
                 `;
-});
+            });
 
-listArea.innerHTML = listHTML;
+            listArea.innerHTML = listHTML;
 
-// Attach click-to-profile
-listArea.querySelectorAll('.epic-rank-card[data-uid]').forEach(card => {
-    card.addEventListener('click', async () => {
-        const uid = (card as HTMLElement).getAttribute('data-uid');
-        if (!uid) return;
-        if (typeof (window as any).openPublicProfile === 'function') {
-            (window as any).openPublicProfile(uid);
+            // Attach click-to-profile
+            listArea.querySelectorAll('.epic-rank-card[data-uid]').forEach(card => {
+                card.addEventListener('click', async () => {
+                    const uid = (card as HTMLElement).getAttribute('data-uid');
+                    if (!uid) return;
+                    if (typeof (window as any).openPublicProfile === 'function') {
+                        (window as any).openPublicProfile(uid);
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error("Leaderboard Error:", error);
+            statusEl.innerHTML = `<p style="color:#ff4444;">${t('leaderboard_error')}</p>`;
         }
-    });
-});
-
-} catch (error) {
-    console.error("Leaderboard Error:", error);
-    statusEl.innerHTML = `<p style="color:#ff4444;">${t('leaderboard_error')}</p>`;
-}
     }
 
     private attachLeaderboardControlEvents(): void {
-    document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign'));
-    document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless'));
-}
+        document.getElementById('lb-btn-campaign')?.addEventListener('click', () => this.populateLeaderboard('campaign'));
+        document.getElementById('lb-btn-endless')?.addEventListener('click', () => this.populateLeaderboard('endless'));
+    }
     public drawLevelMessage(): void { const ctx = this.ctx; const scaleFactor = this.game.width / this.game.baseWidth; const fontSize = Math.max(16, 30 * scaleFactor); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, this.game.height / 2 - 50, this.game.width, 100); ctx.fillStyle = '#FFFF00'; ctx.font = `${fontSize}px 'Press Start 2P'`; ctx.fillText(this.game.levelMessage, this.game.width / 2, this.game.height / 2 + 10, this.game.width * 0.95); }
     public drawGameOver(): void { const ctx = this.ctx; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, this.game.width, this.game.height); }
     public drawWinScreen(): void {
-    const ctx = this.ctx;
-    const t = (key: string) => this.localizationManager.translate(key);
+        const ctx = this.ctx;
+        const t = (key: string) => this.localizationManager.translate(key);
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, this.game.width, this.game.height);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, this.game.width, this.game.height);
 
-    const scaleFactor = this.game.width / this.game.baseWidth;
-    const titleSize = Math.max(24, 50 * scaleFactor);
-    const scoreSize = Math.max(16, 28 * scaleFactor);
-    const rankSize = Math.max(14, 24 * scaleFactor);
-    const promptSize = Math.max(12, 20 * scaleFactor);
-    const yOffset = this.game.height * 0.1;
-    const maxWidth = this.game.width * 0.9;
+        const scaleFactor = this.game.width / this.game.baseWidth;
+        const titleSize = Math.max(24, 50 * scaleFactor);
+        const scoreSize = Math.max(16, 28 * scaleFactor);
+        const rankSize = Math.max(14, 24 * scaleFactor);
+        const promptSize = Math.max(12, 20 * scaleFactor);
+        const yOffset = this.game.height * 0.1;
+        const maxWidth = this.game.width * 0.9;
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-    ctx.fillStyle = '#FFD700';
-    ctx.font = `${titleSize}px 'Press Start 2P'`;
-    ctx.shadowColor = '#FFA500';
-    ctx.shadowBlur = 15;
-    ctx.fillText(t('victory_title_epic'), this.game.width / 2, this.game.height / 2 - yOffset * 2.5, maxWidth);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `${titleSize}px 'Press Start 2P'`;
+        ctx.shadowColor = '#FFA500';
+        ctx.shadowBlur = 15;
+        ctx.fillText(t('victory_title_epic'), this.game.width / 2, this.game.height / 2 - yOffset * 2.5, maxWidth);
 
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#FFF';
-    ctx.font = `${scoreSize}px 'Press Start 2P'`;
-    ctx.fillText(`${t('victory_final_score')}: ${this.game.score.toLocaleString()}`, this.game.width / 2, this.game.height / 2 - yOffset, maxWidth);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#FFF';
+        ctx.font = `${scoreSize}px 'Press Start 2P'`;
+        ctx.fillText(`${t('victory_final_score')}: ${this.game.score.toLocaleString()}`, this.game.width / 2, this.game.height / 2 - yOffset, maxWidth);
 
-    ctx.font = `${rankSize}px 'Press Start 2P'`;
-    switch(this.game.rankStatus) {
+        ctx.font = `${rankSize}px 'Press Start 2P'`;
+        switch (this.game.rankStatus) {
             case 'success':
-    ctx.fillStyle = '#00FFFF';
-    if (this.game.lastGameResult) {
-        ctx.fillText(`${t('leaderboard_rank_label')}: #${this.game.lastGameResult.rank}`, this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
-    }
-    break;
+                ctx.fillStyle = '#00FFFF';
+                if (this.game.lastGameResult) {
+                    ctx.fillText(`${t('leaderboard_rank_label')}: #${this.game.lastGameResult.rank}`, this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                }
+                break;
             case 'error':
-    ctx.fillStyle = '#FF4136';
-    ctx.fillText(t('leaderboard_error'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
-    break;
+                ctx.fillStyle = '#FF4136';
+                ctx.fillText(t('leaderboard_error'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                break;
             case 'fetching':
             default:
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(t('leaderboard_fetching_rank'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
-    break;
-}
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(t('leaderboard_fetching_rank'), this.game.width / 2, this.game.height / 2 + yOffset * 0.5, maxWidth);
+                break;
+        }
 
-ctx.fillStyle = '#FFF';
-ctx.font = `${promptSize}px 'Press Start 2P'`;
-const promptKey = this.game.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
-ctx.fillText(t(promptKey), this.game.width / 2, this.game.height / 2 + yOffset * 2.5, maxWidth);
+        ctx.fillStyle = '#FFF';
+        ctx.font = `${promptSize}px 'Press Start 2P'`;
+        const promptKey = this.game.isMobile ? 'intro_prompt_mobile' : 'intro_prompt';
+        ctx.fillText(t(promptKey), this.game.width / 2, this.game.height / 2 + yOffset * 2.5, maxWidth);
     }
-    public drawOverlay(): void { if(this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
+    public drawOverlay(): void { if (this.game.isBossActive) { const boss = this.game.entities.find(e => (e as Enemy).isBoss) as Enemy; if (boss) { const barY = 55; this.ctx.fillStyle = 'red'; this.ctx.fillRect(10, barY, this.game.width - 20, 15); this.ctx.fillStyle = 'green'; this.ctx.fillRect(10, barY, (this.game.width - 20) * (boss.health / boss.maxHealth), 15); } } }
 }
 
 const LEVELS: ILevelDefinition[] = [
@@ -5219,6 +6057,7 @@ class Game {
     private _coins: number = 0;
     public get coins(): number { return this._coins; }
     public set coins(v: number) {
+        if (this._coins === v) return;
         this._coins = v;
         syncGlobalGFC(v, this);
     }
@@ -5232,7 +6071,15 @@ class Game {
     public isSessionDataProcessed: boolean = false;
     public hasUsedReviveAd: boolean = false;
     public isWaitingForResumeInput: boolean = false;
-    public hasPremiumLicense: boolean = false;
+    private _hasPremiumLogo = false; // Internal flag
+    public get hasPremiumLicense(): boolean { return this._hasPremium; }
+    public set hasPremiumLicense(v: boolean) {
+        if (this._hasPremium === v) return;
+        this._hasPremium = v;
+        syncGlobalPremium(v, this);
+    }
+    private _hasPremium: boolean = false;
+
 
     constructor(canvas: HTMLCanvasElement, ui: IUIElements, achievementManager: AchievementManager, statsManager: StatsManager, piManager: PiManager) {
         this.achievementManager = achievementManager;
@@ -5285,11 +6132,10 @@ class Game {
             if (response.ok) {
                 const data = await response.json();
 
-                // 1. Absoluten Kontostand, Highscore und Lizenz vom Server Ã¼bernehmen
-                this.coins = data.coins || 0;
+                // 1. Absoluten Kontostand, Highscore und Lizenz vom Server übernehmen
                 this.highscore = data.highscore || 0;
+                this.coins = data.coins || 0;
                 this.hasPremiumLicense = !!data.has_premium_license;
-                localStorage.setItem('galaxyFallHasPremium', this.hasPremiumLicense ? '1' : '0');
 
                 // 2. WICHTIGSTER FIX: Session-Coins resetten!
                 // Da wir gerade den echten Stand vom Server geladen haben, 
@@ -5316,11 +6162,15 @@ class Game {
                     this.uiManager.populateAllTranslatedContent();
                 }
 
+                // 4c. Settings vom Server übernehmen (Audio/Particles/Shake/CRT/Vibration/Autofire)
+                this.uiManager.applySettingsFromServer(data.settings || {}, data.settings_updated_at || 0);
+
                 // 5. Lokal im Browser sichern
-                localStorage.setItem('galaxyFallCoins', this.coins.toString());
+                // localStorage.setItem('galaxyFallCoins', ...) ENTFERNT FÜR SICHERHEIT
                 this.shopManager.saveUpgrades();
                 this.shopManager.saveCosmetics();
                 this.shopManager.saveCollectibles();
+
 
                 console.log("âœ… Server-Daten geladen. Aktueller Kontostand:", this.coins);
 
@@ -5469,10 +6319,13 @@ class Game {
 
         // Orientation Blocker logic (Mandated by US-PROTOCOL-9)
         const blocker = document.getElementById('orientation-warning');
-        if (this.isMobile && this.width > this.height) {
+        const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+        
+        if (this.isMobile && this.width > this.height && !isInputActive) {
             if (blocker) blocker.style.display = 'flex';
             if (this.gameState === 'PLAYING' && !this.isPaused) this.togglePause();
         } else {
+            // Hide blocker if in portrait OR if keyboard is open
             if (blocker) blocker.style.display = 'none';
         }
 
@@ -5625,20 +6478,11 @@ class Game {
     }
     public loadGameData(): void {
         const piUid = this.piManager?.uid || (window as any).piManagerInstance?.uid;
-        const premiumFlag = localStorage.getItem('galaxyFallHasPremium');
-        if (premiumFlag !== null) {
-            this.hasPremiumLicense = premiumFlag === '1';
-        }
+        // Premium-Status wird nur vom Server oder über syncGlobalPremium gesetzt
 
-        // 1. Wir laden den dedizierten, gesicherten GFC-Speicher (synchronisiert vom Server)
-        const savedCoins = localStorage.getItem('galaxyFallCoins');
-        if (savedCoins) {
-            const amount = parseInt(savedCoins) || 0;
-            // Wir nehmen den hÃ¶heren Wert (entweder schon im Speicher oder aus dem Cache)
-            if (amount > this._coins) {
-                this._coins = amount;
-            }
-        }
+        // 1. Wir laden den internen GFC-Stand (synchronisiert vom Server)
+        // localStorage Abfragen entfernt für mehr Sicherheit
+
 
         // 2. Wenn ein PI User da ist, ignorieren wir den manipulierbaren 'galaxyFallSave' Speicher komplett
         if (piUid && piUid !== 'UNREGISTERED') {
@@ -5647,10 +6491,8 @@ class Game {
 
         const savedStats = localStorage.getItem('galaxyFallSave');
 
-        // 2. PrioritÃ¤t: Der dedizierte GFC-Speicher
-        if (savedCoins) {
-            this._coins = parseInt(savedCoins) || 0;
-        }
+        // Alt-Abfragen entfernt (Zentralisierung über Server-Load)
+
 
         // 2. SekundÃ¤r: Highscore und Fallback-Coins aus dem Save-Objekt
         if (savedStats && savedStats !== 'undefined' && savedStats !== 'null') {
@@ -6212,15 +7054,17 @@ class Game {
             this.entities.forEach(e => {
                 if (e.family !== 'player' && e.family !== 'effect' && e.family !== 'projectile') e.draw(this.ctx);
             });
-            this.entities.forEach(e => {
-                if (e.family === 'player') e.draw(this.ctx);
-            });
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'lighter';
             this.entities.forEach(e => {
                 if (e.family === 'effect') e.draw(this.ctx);
             });
             this.ctx.restore();
+
+            this.entities.forEach(e => {
+                if (e.family === 'player') e.draw(this.ctx);
+            });
+
             this.phoenixCoreUI.draw(this.ctx);
         }
         this.uiManager.drawOverlay();
@@ -6466,130 +7310,707 @@ window.addEventListener('load', async function () {
     const gameWrapper = document.getElementById('game-wrapper')!;
     const cockpitWrapper = document.getElementById('cockpit-wrapper');
 
-    // Globale Manager
-    (window as any).piManagerInstance = new PiManager();
-    const piManagerInstance = (window as any).piManagerInstance;
-    const globalLocalizationManager = new LocalizationManager();
+    // Globale Manager initialisieren
+    piManagerInstance = new PiManager();
+    (window as any).piManagerInstance = piManagerInstance;
     (window as any).globalLocalizationManager = globalLocalizationManager;
-    const achievementManager = new AchievementManager();
-    const statsManager = new StatsManager();
+    achievementManager = new AchievementManager();
+    statsManager = new StatsManager();
 
     statsManager.loadStats();
-
-    // --- DAILY DEAL (GLOBAL) ---
-    let globalDailyDeal: any = null;
-    let dailyDealTimerInterval: any = null;
-
-    const fetchDailyDeal = async () => {
-        try {
-            // Fetch the daily deal from the server
-            const resp = await fetch(`${API_BASE_URL}/daily-deal`);
-            if (resp.ok) {
-                globalDailyDeal = await resp.json();
-
-                // Calculate local end time based on servers msRemaining to avoid clock sync issues
-                globalDailyDeal.localEndTime = Date.now() + globalDailyDeal.msRemaining;
-
-                console.log("ðŸ›’ Global Daily Deal geladen:", globalDailyDeal.skinId);
-
-                // Update Hub components
-                updateHubDailyDealUI();
-
-                // If a game is currently running, sync its UI manager too
-                if (gameInstance && gameInstance.uiManager) {
-                    gameInstance.uiManager.dailyDeal = globalDailyDeal;
-                    gameInstance.uiManager.updateDailyDealUI();
+    
+    let socialWs: WebSocket | null = null;
+    const connectSocialWS = (uid: string) => {
+        if (socialWs) socialWs.close();
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws?uid=${encodeURIComponent(uid)}`;
+        
+        console.log("🔗 Connecting to Social WebSocket:", wsUrl);
+        socialWs = new WebSocket(wsUrl);
+        
+        socialWs.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'new_message') {
+                    // If we are currently chatting with this person, refresh chat
+                    if (chatTargetUid === data.message.from_uid) {
+                        loadChatHistory();
+                    }
+                    // Show notification or update unread count (not implemented yet, but available for future)
                 }
+            } catch(e) {}
+        };
+        
+        socialWs.onclose = () => {
+            console.warn("🔌 Social WebSocket closed. Retrying in 5s...");
+            setTimeout(() => {
+                const currentUid = getCurrentUid();
+                if (currentUid !== 'UNREGISTERED') connectSocialWS(currentUid);
+            }, 5000);
+        };
+    };
+    (window as any).connectSocialWS = connectSocialWS;
 
-                // Expose to window for UIManager constructor fallback
-                (window as any).globalDailyDeal = globalDailyDeal;
-            }
-        } catch (e) {
-            console.error("âŒ Daily Deal Fetch Error:", e);
+    const startUid = getCurrentUid();
+    if (startUid && startUid !== 'UNREGISTERED') {
+        connectSocialWS(startUid);
+    }
+    let chatTargetUid: string | null = null;
+    let messagePollingInterval: any = null;
+    let socialFeedPollingInterval: any = null;
+    
+    const showSocialTab = (targetId: string) => {
+        const parent = document.getElementById('panel-market');
+        if (!parent) return;
+        
+        parent.querySelectorAll('.monitor-tab').forEach(t => {
+            const el = t as HTMLElement;
+            el.classList.toggle('active', el.dataset.target === targetId);
+        });
+        
+        parent.querySelectorAll('.monitor-view').forEach(v => {
+            v.classList.toggle('active', v.id === targetId);
+        });
+
+        if (socialFeedPollingInterval) { clearInterval(socialFeedPollingInterval); socialFeedPollingInterval = null; }
+
+        if (targetId === 'view-social-feed') {
+            (window as any).loadSocialFeed();
+            socialFeedPollingInterval = setInterval(() => (window as any).loadSocialFeed(), 20000);
+        }
+        if (targetId === 'view-jackpot-leaderboard') (window as any).loadJackpotLeaderboard();
+        if (targetId === 'view-jackpot-profile') (window as any).loadJackpotProfile();
+        if (targetId === 'view-jackpot' && (window as any).refreshJackpotStatus) {
+            // Beim Wechsel in den Jackpot-Tab sofort Status & Timer aktualisieren
+            (window as any).refreshJackpotStatus();
+        }
+        
+        // Stop polling if not in chat
+        if (targetId !== 'view-chat' && messagePollingInterval) {
+            clearInterval(messagePollingInterval);
+            messagePollingInterval = null;
+        }
+    };
+    (window as any).showSocialTab = showSocialTab;
+    
+    // --- PI FORTUNE JACKPOT LOGIC ---
+    let jackpotTickets = 0;
+    let jackpotTimeLeft = { hours: 0, minutes: 0, seconds: 0 };
+    let playersOnlineCount = 0;
+    let jackpotLifecycleStarted = false;
+
+    const updateJackpotUI = () => {
+        const timerEl = document.getElementById('jackpot-countdown');
+        if (timerEl) {
+            timerEl.textContent = `${jackpotTimeLeft.hours.toString().padStart(2, '0')}:${jackpotTimeLeft.minutes.toString().padStart(2, '0')}:${jackpotTimeLeft.seconds.toString().padStart(2, '0')}`;
+        }
+        const ticketsEl = document.getElementById('jackpot-tickets-count');
+        if (ticketsEl) {
+            ticketsEl.textContent = jackpotTickets.toString();
+        }
+        const pilotsEl = document.getElementById('jackpot-online-pilots');
+        if (pilotsEl) {
+            pilotsEl.textContent = playersOnlineCount.toLocaleString();
         }
     };
 
-    const updateHubDailyDealUI = () => {
-        if (!globalDailyDeal) return;
-        const dealWrapper = document.querySelector('.daily-deal-wrapper');
-        if (!dealWrapper) return;
+    const startJackpotLifecycle = async () => {
+        if (jackpotLifecycleStarted) return;
+        jackpotLifecycleStarted = true;
+        // 1. Sync User Data
+        const syncUser = async () => {
+            const uid = getCurrentUid();
+            const username = piManagerInstance?.username || 'Pilot';
+            if (!uid || uid === 'UNREGISTERED') return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/user/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pi_uid: uid, username })
+                });
+                const data = await res.json();
+                jackpotTickets = data.tickets || 0;
+                updateJackpotUI();
+                
+                // Update Profile View if active
+                const balEl = document.getElementById('jackpot-balance');
+                if (balEl) balEl.textContent = (data.pi_balance || 0).toFixed(2);
+                
+                const statusEl = document.getElementById('profile-status');
+                if (statusEl) statusEl.textContent = data.is_vip ? 'VIP Member' : 'Standard';
+                
+                const autoEl = document.getElementById('profile-autoclaim');
+                if (autoEl) autoEl.textContent = data.auto_claimer_active ? 'Active' : 'Offline';
 
-        const skinId = globalDailyDeal.skinId;
-        const skinMap: any = {
-            'skin_goliath': { name: 'shop_skin_goliath_name', desc: 'shop_skin_goliath_desc', img: playerImgSrcGoliath },
-            'skin_sentinel': { name: 'shop_skin_sentinel_name', desc: 'shop_skin_sentinel_desc', img: playerImgSrc2 },
-            'skin_renegade': { name: 'shop_skin_renegade_name', desc: 'shop_skin_renegade_desc', img: playerImgSrc3 },
-            'skin_avenger': { name: 'shop_skin_avenger_name', desc: 'shop_skin_avenger_desc', img: playerImgSrc4 },
-            'skin_spectre': { name: 'shop_skin_spectre_name', desc: 'shop_skin_spectre_desc', img: playerImgSrcSpectre },
-            'skin_gold': { name: 'shop_skin_gold_name', desc: 'shop_skin_gold_desc', img: playerImgSrcGold },
-            'skin_void': { name: 'shop_skin_void_name', desc: 'shop_skin_void_desc', img: playerImgSrcVoid }
+                const nameEl = document.getElementById('profile-name');
+                if (nameEl) nameEl.textContent = (data.username || username).toUpperCase();
+
+                const initialEl = document.getElementById('profile-initial');
+                if (initialEl) initialEl.textContent = (data.username || username || 'P').charAt(0).toUpperCase();
+
+            } catch (e) {
+                console.error("Jackpot Sync Error:", e);
+            }
         };
 
-        const data = skinMap[skinId];
-        if (!data) return;
+        // 2. Fetch Jackpot Status
+        const updatePotStatus = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/jackpot/status`);
+                const data = await res.json();
+                
+                // Real Online Pilots from Server
+                playersOnlineCount = data.online_pilots || 0;
 
-        const t = (k: string) => globalLocalizationManager.translate(k);
+                const daily = (data.jackpots || []).find((j: any) => j.type === 'daily');
+                if (daily) {
+                    // Wallet-Balance (read-only Info)
+                    const walletEl = document.getElementById('jackpot-wallet-pi');
+                    if (walletEl && typeof data.wallet_balance_pi === 'number') {
+                        walletEl.textContent = data.wallet_balance_pi.toFixed(2);
+                    }
 
-        const imgEl = dealWrapper.querySelector('.deal-img') as HTMLImageElement;
-        const nameEl = dealWrapper.querySelector('.deal-name');
-        const descEl = dealWrapper.querySelector('.deal-desc');
-        const timerEl = document.getElementById('daily-deal-timer');
+                    // Aktueller auszuschüttender Jackpot-Topf (nur gesammelte Beträge)
+                    const potValueEl = document.getElementById('jackpot-pot-pi');
+                    if (potValueEl) potValueEl.textContent = `${daily.current_pot.toFixed(2)} Pi`;
+                    
+                    const lastWinnerEl = document.getElementById('jackpot-last-winner');
+                    if (lastWinnerEl) lastWinnerEl.textContent = daily.last_winner_name || '---';
 
-        if (imgEl) imgEl.src = data.img;
-        if (nameEl) {
-            nameEl.setAttribute('data-translate-key', data.name);
-            nameEl.textContent = t(data.name);
-        }
-        if (descEl) {
-            descEl.innerHTML = `
-                <span class="status-offline" style="font-size:0.6rem; opacity:0.8;">${t(data.desc)}</span><br><br>
-                <div style="background:rgba(255,180,0,0.1); border:1px solid #ffcc00; padding:5px; border-radius:4px; margin-top:5px;">
-                    <span style="color:#ffcc00; font-weight:bold; font-size:0.75rem;">FLASH OFFER: ${globalDailyDeal.discountedPrice.toLocaleString()} <img src="${piCoin2ImgSrc}" style="width:14px; vertical-align:middle;"></span>
-                    <span style="text-decoration:line-through; font-size:0.6rem; opacity:0.6; margin-left:10px;">${globalDailyDeal.originalPrice.toLocaleString()}</span>
-                </div>
-            `;
-        }
-
-        if (timerEl) {
-            if (dailyDealTimerInterval) clearInterval(dailyDealTimerInterval);
-            const refreshTimer = () => {
-                const now = Date.now();
-                const diff = (globalDailyDeal.localEndTime || 0) - now;
-                if (diff <= 0) {
-                    timerEl.textContent = "00:00:00";
-                    fetchDailyDeal(); // Auto-refresh next deal
-                    return;
+                    // Update timer based on end_time
+                    const end = new Date(daily.end_time).getTime();
+                    const now = new Date().getTime();
+                    const diff = Math.max(0, end - now);
+                    
+                    jackpotTimeLeft.hours = Math.floor(diff / (1000 * 60 * 60));
+                    jackpotTimeLeft.minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    jackpotTimeLeft.seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 }
-                const h = Math.floor(diff / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                const s = Math.floor((diff % 60000) / 1000);
-                timerEl.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            };
-            refreshTimer();
-            dailyDealTimerInterval = setInterval(refreshTimer, 1000);
-        }
 
-        // Update Button behavior in the Hub too
-        const buyBtn = dealWrapper.querySelector('.retro-btn') as HTMLButtonElement;
-        if (buyBtn) {
-            buyBtn.innerHTML = `<span data-translate-key="btn_buy_now">BUY NOW</span> (-50%)`;
-            buyBtn.onclick = () => {
-                // Flash attention to shop button
-                const shopBtn = document.getElementById('nav-shop');
-                if (shopBtn) {
-                    shopBtn.click();
-                    // Give it a small delay for shop to open, then switch to skin tab
-                    setTimeout(() => {
-                        if (window.game && window.game.uiManager) {
-                            window.game.uiManager.showShopTab('skin');
-                            const item = window.game.shopManager.shopItems.find(i => i.id === skinId);
-                            if (item) window.game.uiManager.showSkinDetails(item);
+                const gfcPot = (data.jackpots || []).find((j: any) => j.type === 'gfc_pot');
+                if (gfcPot) {
+                    const gfcValEl = document.getElementById('gfc-jackpot-value');
+                    if (gfcValEl) gfcValEl.textContent = `${Math.floor(gfcPot.current_pot).toLocaleString()} GFC`;
+                }
+
+                updateJackpotUI();
+            } catch (e) {}
+        };
+
+        // Global verfügbar machen, damit Tabs den Status manuell refreshen können
+        (window as any).refreshJackpotStatus = updatePotStatus;
+
+        (window as any).loadJackpotLeaderboard = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/jackpot/leaderboard`);
+                const data = await res.json();
+                const container = document.getElementById('jackpot-leaderboard-container');
+                if (!container) return;
+
+                container.innerHTML = data.map((item: any, idx: number) => `
+                    <div class="social-item">
+                        <div class="rank-badge">${idx + 1}</div>
+                        <div class="social-avatar-container">
+                            <span class="avatar-emoji">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤'}</span>
+                        </div>
+                        <div class="social-info">
+                            <div class="social-name">${item.username}</div>
+                            <div class="social-status">${item.tickets} TICKETS</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        };
+
+        (window as any).loadJackpotProfile = () => {
+            syncUser();
+        };
+
+        // Initial calls
+        await syncUser();
+        await updatePotStatus();
+
+        // Timer (Pure display decrement, real values synced frequently)
+        setInterval(() => {
+            if (jackpotTimeLeft.seconds > 0 || jackpotTimeLeft.minutes > 0 || jackpotTimeLeft.hours > 0) {
+                jackpotTimeLeft.seconds--;
+                if (jackpotTimeLeft.seconds < 0) {
+                    jackpotTimeLeft.seconds = 59;
+                    jackpotTimeLeft.minutes--;
+                    if (jackpotTimeLeft.minutes < 0) {
+                        jackpotTimeLeft.minutes = 59;
+                        jackpotTimeLeft.hours--;
+                        if (jackpotTimeLeft.hours < 0) {
+                            jackpotTimeLeft.hours = 0;
+                            updatePotStatus(); 
                         }
-                    }, 300);
+                    }
                 }
-            };
+            }
+
+            updateJackpotUI();
+        }, 1000);
+
+        setInterval(updatePotStatus, 5000); 
+        setInterval(syncUser, 10000); 
+
+        // Buttons
+        document.getElementById('btn-claim-free-ticket')?.addEventListener('click', async () => {
+            const uid = getCurrentUid();
+            if (!uid || uid === 'UNREGISTERED') {
+                 alert("Bitte logge dich ein, um Tickets zu sammeln.");
+                 return;
+            }
+
+            try {
+                // INTEGRATE PI ADS
+                console.log("Requesting Reward Ad for Ticket...");
+                const success = await piManagerInstance?.showRewardedAd(async () => {
+                    // This callback is called when the ad is successful
+                    const res = await fetch(`${API_BASE_URL}/user/add-ticket`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: uid })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        jackpotTickets = data.newBalance;
+                        updateJackpotUI();
+                        
+                        const ui = (window as any).game?.uiManager;
+                        if (ui && ui.soundManager) ui.soundManager.play('uiClick');
+                        
+                        const btn = document.getElementById('btn-claim-free-ticket');
+                        if (btn) {
+                            btn.classList.add('sync-flash');
+                            setTimeout(() => btn.classList.remove('sync-flash'), 500);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Ticket claim error:", e);
+                alert("Werbung konnte nicht geladen werden. Bitte versuche es später erneut.");
+            }
+        });
+
+        document.getElementById('btn-jackpot-vip')?.addEventListener('click', () => {
+            alert("VIP PASS: Werbefreiheit & exklusive Belohnungen für 5 Pi/Monat via Pi Platform.");
+        });
+
+        document.getElementById('btn-withdraw-pi')?.addEventListener('click', async () => {
+            const currentBal = parseFloat(document.getElementById('jackpot-balance')?.textContent || '0');
+            if (currentBal < 10) {
+                alert("Mindestauszahlung ist 10 Pi!");
+                return;
+            }
+            const amount = prompt("Betrag zum Auszahlen (Min 10):", currentBal.toString());
+            if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 10) return;
+
+            try {
+                const uid = getCurrentUid();
+                const res = await fetch(`${API_BASE_URL}/user/withdraw`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: uid, amount: parseFloat(amount) })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert("Auszahlungsantrag gesendet!");
+                    syncUser();
+                } else {
+                    alert(result.error || "Fehler bei der Auszahlung");
+                }
+            } catch (e) { alert("Serverfehler"); }
+        });
+
+        document.getElementById('btn-exchange-gfc')?.addEventListener('click', async () => {
+            const uid = getCurrentUid();
+            if (!uid || uid === 'UNREGISTERED') {
+                 alert("Bitte logge dich ein.");
+                 return;
+            }
+
+            const qStr = prompt("Wie viele Tickets möchtest du kaufen? (1 Ticket = 10.000 GFC)", "1");
+            if (!qStr) return;
+            const quantity = parseInt(qStr);
+            if (isNaN(quantity) || quantity <= 0) {
+                alert("Ungültige Anzahl!");
+                return;
+            }
+
+            if (confirm(`${quantity.toLocaleString()} Tickets für ${(quantity * 10000).toLocaleString()} GFC tauschen?`)) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/user/exchange-gfc-ticket`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: uid, quantity: quantity })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        alert(`Tausch erfolgreich! +${quantity} Ticket(s)`);
+                        jackpotTickets = result.newTicketBalance;
+                        syncGlobalGFC(result.newGfcBalance); // Update ALL GFC displays
+                        updateJackpotUI();
+                        updatePotStatus(); // Refresh GFC Pool display
+                    } else {
+                        alert(result.error || "Tausch fehlgeschlagen");
+                    }
+                } catch (e) { alert("Serverfehler"); }
+            }
+        });
+        
+        updateJackpotUI();
+    };
+
+    // Initialisierung wenn DOM bereit oder Hub sichtbar
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        startJackpotLifecycle();
+    } else {
+        window.addEventListener('load', startJackpotLifecycle);
+    }
+
+
+    const loadSocialFeed = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/feed`);
+            const feed = await res.json();
+            const container = document.getElementById('social-feed-container');
+            if (!container) return;
+
+            if (feed.length === 0) {
+                container.innerHTML = `<div class="social-empty-msg">${globalLocalizationManager.translate('social_feed_empty')}</div>`;
+                return;
+            }
+
+            container.innerHTML = feed.map((item: any) => {
+                const name = item.display_name || item.username || 'Pilot';
+                const date = new Date(item.created_at);
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                let avatar = playerImgSrc1;
+                try {
+                    const cosmetics = JSON.parse(item.cosmetics || '{}');
+                    const eq = cosmetics.equipped_skin || 'skin_default';
+                    const sm = (window as any).hubShopManager;
+                    const skin = sm?.shopItems?.find((i: any) => i.id === eq);
+                    if (skin?.iconSrc) avatar = skin.iconSrc;
+                } catch(e) {}
+
+                return `
+                    <div class="social-feed-item" onclick="window.openPublicProfile('${item.pi_uid}')">
+                        <div class="feed-avatar-container">
+                            <img src="${avatar}" class="feed-avatar">
+                        </div>
+                        <div class="feed-main">
+                            <div class="feed-header">
+                                <span class="feed-pilot">${name} <span class="feed-timestamp">${timeStr}</span></span>
+                                <div class="feed-action-btn like-btn" onclick="event.stopPropagation(); window.likeFeedItem(${item.id}, this)">
+                                    <span class="heart-icon">⚡</span> <span class="count">${item.likes_count || 0}</span>
+                                </div>
+                            </div>
+                            <div class="feed-body">${item.content}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error("Feed load error:", e);
         }
     };
+    (window as any).loadSocialFeed = loadSocialFeed;
+
+    (window as any).likeFeedItem = async (id: number, btn: HTMLElement) => {
+        if (btn.classList.contains('liked')) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/feed/like`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedId: id })
+            });
+            if (res.ok) {
+                const countEl = btn.querySelector('.count');
+                if (countEl) countEl.textContent = (parseInt(countEl.textContent || '0') + 1).toString();
+                btn.classList.add('liked');
+            }
+        } catch(e) {}
+    };
+
+    const loadFriendsList = async () => {
+        const uid = getCurrentUid();
+        if (!uid || uid === 'UNREGISTERED') return;
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/friends/list?pi_uid=${uid}`);
+            const friends = await res.json();
+            const container = document.getElementById('friends-list-container');
+            if (!container) return;
+
+            if (friends.length === 0) {
+                container.innerHTML = `<div class="social-empty-msg">${globalLocalizationManager.translate('social_no_friends')}</div>`;
+                return;
+            }
+
+            container.innerHTML = friends.map((f: any) => {
+                let avatar = playerImgSrc1;
+                try {
+                    const cosmetics = JSON.parse(f.cosmetics || '{}');
+                    const eq = cosmetics.equipped_skin || 'skin_default';
+                    const sm = (window as any).hubShopManager;
+                    const skin = sm?.shopItems?.find((i: any) => i.id === eq);
+                    if (skin?.iconSrc) avatar = skin.iconSrc;
+                } catch(e) {}
+
+                return `
+                    <div class="social-item" onclick="window.openPublicProfile('${f.pi_uid}')">
+                        <div class="social-avatar-container">
+                            <img class="social-avatar" src="${avatar}">
+                            <div class="status-indicator ${f.is_online ? 'online' : ''}"></div>
+                        </div>
+                        <div class="social-info">
+                            <div class="social-name">${f.display_name || f.username}</div>
+                            <div class="social-status">
+                                ${f.is_online ? globalLocalizationManager.translate('social_online_now') : globalLocalizationManager.translate('social_last_seen') + ' ' + (f.last_seen ? new Date(f.last_seen).toLocaleDateString() : '---')}
+                            </div>
+                        </div>
+                        <div class="social-actions" style="opacity:1;">
+                            <span style="font-size:0.5rem; color:var(--neon-cyan); text-transform:uppercase; letter-spacing:1px; border:1px solid rgba(0,255,255,0.2); padding:2px 6px; border-radius:4px;">VIEW DOSSIER</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error("Friends list load error:", e);
+        }
+    };
+
+    const loadFriendRequests = async () => {
+        const uid = getCurrentUid();
+        if (!uid || uid === 'UNREGISTERED') return;
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/friends/incoming?pi_uid=${uid}`);
+            const requests = await res.json();
+            const container = document.getElementById('friend-requests-container');
+            if (!container) return;
+
+            if (requests.length === 0) {
+                container.innerHTML = `<div class="social-empty-msg">${globalLocalizationManager.translate('social_no_requests')}</div>`;
+                return;
+            }
+
+            container.innerHTML = requests.map((r: any) => `
+                <div class="social-item">
+                    <div class="social-avatar-container">
+                        <img class="social-avatar" src="${r.avatar || playerImgSrc1}">
+                    </div>
+                    <div class="social-info">
+                        <div class="social-name">${r.display_name || r.username}</div>
+                        <div class="social-status">Incoming Uplink</div>
+                    </div>
+                    <div class="social-actions">
+                        <button class="retro-btn btn-small green" onclick="window.respondToRequest('${r.pi_uid}', 'accept')">✓</button>
+                        <button class="retro-btn btn-small red" onclick="window.respondToRequest('${r.pi_uid}', 'decline')">✗</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Requests load error:", e);
+        }
+    };
+
+    const searchUsers = async () => {
+        const query = (document.getElementById('social-search-input') as HTMLInputElement)?.value;
+        if (!query || query.length < 2) return;
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`);
+            const users = await res.json();
+            const container = document.getElementById('search-results-container');
+            if (!container) return;
+
+            container.innerHTML = users.map((u: any) => `
+                <div class="social-item" onclick="window.openPublicProfile('${u.pi_uid}')">
+                    <div class="social-avatar-container">
+                        <img class="social-avatar" src="${u.avatar || playerImgSrc1}">
+                    </div>
+                    <div class="social-info">
+                        <div class="social-name">${u.display_name || u.username}</div>
+                        <div class="social-status">UID: ${u.pi_uid.substring(0, 8)}...</div>
+                    </div>
+                    <div class="social-actions">
+                        <button class="retro-btn btn-small" onclick="event.stopPropagation(); window.openPublicProfile('${u.pi_uid}')">VIEW</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error("Search error:", e);
+        }
+    };
+
+    (window as any).openChat = (uid: string, name: string) => {
+        chatTargetUid = uid;
+        const chatView = document.getElementById('view-chat');
+        const nameEl = document.getElementById('chat-target-name');
+        if (chatView && nameEl) {
+            nameEl.textContent = name;
+            showSocialTab('view-chat');
+            loadChatHistory();
+            
+            if (messagePollingInterval) clearInterval(messagePollingInterval);
+            // Only poll if WebSocket is not connected/active
+            if (!socialWs || socialWs.readyState !== WebSocket.OPEN) {
+                messagePollingInterval = setInterval(loadChatHistory, 4000);
+            }
+        }
+    };
+
+    const loadChatHistory = async () => {
+        if (!chatTargetUid) return;
+        const myUid = getCurrentUid();
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages/list?pi_uid=${myUid}&friend_uid=${chatTargetUid}`);
+            const messages = await res.json();
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+
+            const atBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+
+            container.innerHTML = messages.map((m: any) => `
+                <div class="msg-bubble ${m.from_uid === myUid ? 'sent' : 'received'}">
+                    ${m.content}
+                    <span class="msg-time">${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+            `).join('');
+
+            if (atBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
+        } catch (e) {
+            console.error("Chat load error:", e);
+        }
+    };
+
+    const sendMessage = async () => {
+        const input = document.getElementById('chat-input') as HTMLInputElement;
+        const content = input?.value.trim();
+        if (!content || !chatTargetUid) return;
+
+        const myUid = getCurrentUid();
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from_uid: myUid, to_uid: chatTargetUid, content })
+            });
+            if (res.ok) {
+                input.value = '';
+                loadChatHistory();
+            }
+        } catch (e) {
+            console.error("Send message error:", e);
+        }
+    };
+
+    const postStatusUpdate = async () => {
+        const input = document.getElementById('social-status-input') as HTMLTextAreaElement;
+        const content = input?.value.trim();
+        const myUid = getCurrentUid();
+        if (!content || !myUid || myUid === 'UNREGISTERED') return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/feed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pi_uid: myUid, type: 'status', content })
+            });
+            if (res.ok) {
+                input.value = '';
+                (window as any).loadSocialFeed();
+            }
+        } catch (e) {
+            console.error("Post status error:", e);
+        }
+    };
+
+    (window as any).respondToRequest = async (from_uid: string, action: string) => {
+        const to_uid = getCurrentUid();
+        try {
+            const res = await fetch(`${API_BASE_URL}/friends/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from_uid, to_uid, action })
+            });
+            if (res.ok) {
+                loadFriendRequests();
+                loadFriendsList();
+            }
+        } catch (e) {
+            console.error("Friend respond error:", e);
+        }
+    };
+
+    (window as any).openGfcTransfer = () => {
+        const overlay = document.getElementById('view-gfc-transfer');
+        const balanceEl = document.getElementById('transfer-wallet-balance');
+        if (overlay && balanceEl) {
+            const coins = (gameInstance) ? gameInstance.coins : ((window as any).dummyGameContext?.coins || 0);
+            balanceEl.textContent = coins.toLocaleString();
+            overlay.style.display = 'flex';
+        }
+    };
+
+    (window as any).closeGfcTransfer = () => {
+        const overlay = document.getElementById('view-gfc-transfer');
+        if (overlay) overlay.style.display = 'none';
+    };
+
+    const confirmGfcTransfer = async () => {
+        const amount = parseInt((document.getElementById('gfc-transfer-amount') as HTMLInputElement)?.value || "0");
+        if (amount <= 0 || !chatTargetUid) return;
+
+        const myUid = getCurrentUid();
+        const btn = document.getElementById('confirm-gfc-transfer-btn') as HTMLButtonElement;
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/friends/send-gfc`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from_uid: myUid, to_uid: chatTargetUid, amount })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                // Update local coins
+                syncGlobalGFC(data.newBalance);
+                if (gameInstance) gameInstance.coins = data.newBalance;
+                if ((window as any).dummyGameContext) (window as any).dummyGameContext.coins = data.newBalance;
+                
+                alert(globalLocalizationManager.translate('social_transfer_success'));
+                (window as any).closeGfcTransfer();
+            } else {
+                alert(data.error || "Transfer failed");
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error("GFC transfer error:", e);
+            btn.disabled = false;
+        }
+    };
+
+    // Event listeners
+    document.getElementById('social-post-btn')?.addEventListener('click', postStatusUpdate);
+    document.getElementById('social-search-btn')?.addEventListener('click', searchUsers);
+    document.getElementById('social-search-input')?.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') searchUsers();
+    });
+    document.getElementById('chat-send-btn')?.addEventListener('click', sendMessage);
+    document.getElementById('chat-input')?.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    document.getElementById('confirm-gfc-transfer-btn')?.addEventListener('click', confirmGfcTransfer);
 
     let gameInstance: Game | null = null;
 
@@ -6649,6 +8070,121 @@ window.addEventListener('load', async function () {
         }
         lastTouchEnd = now;
     }, { passive: false });
+
+    // === GLOBAL: Pinch-to-Zoom (Accessibility) ===
+    // Outside active gameplay, allow a temporary 2-finger zoom. When fingers lift, it returns to normal size.
+    const getZoomRoot = (): HTMLElement | null => {
+        // Higher priority overlays (Shop & Pause Menu)
+        const shop = document.getElementById('shop-container');
+        if (shop && shop.style.display !== 'none') return shop;
+
+        const pause = document.getElementById('menu-container');
+        if (pause && pause.style.display !== 'none') return pause;
+
+        // Cockpit monitor panels (Check which is in the center)
+        const pilot = document.getElementById('panel-pilot');
+        if (pilot && pilot.classList.contains('pos-center')) return pilot;
+
+        const market = document.getElementById('panel-market');
+        if (market && market.classList.contains('pos-center')) return market;
+
+        const gamePanel = document.getElementById('panel-game');
+        if (gamePanel && gamePanel.classList.contains('pos-center')) {
+            return document.getElementById('app-viewport');
+        }
+
+        // Fallback
+        return document.getElementById('app-viewport');
+    };
+
+    const isActiveGameplay = (): boolean => {
+        const g = (window as any).game as any;
+        // Zoom is allowed if we're not in the middle of active unpaused gameplay
+        return !!g && (g.gameState === 'PLAYING' && !g.isPaused);
+    };
+
+    const touchDist = (a: Touch, b: Touch) => {
+        const dx = a.clientX - b.clientX;
+        const dy = a.clientY - b.clientY;
+        return Math.hypot(dx, dy);
+    };
+
+    let pinchActive = false;
+    let pinchStartDist = 0;
+    let currentZoomTarget: HTMLElement | null = null;
+
+    const applyZoom = (scale: number, animate: boolean) => {
+        const root = currentZoomTarget || getZoomRoot();
+        if (!root) return;
+
+        // Cache the target when pinch starts to prevent jumping if panels rotate/change
+        if (pinchActive && !currentZoomTarget) currentZoomTarget = root;
+
+        root.style.transformOrigin = 'center center';
+        root.style.transition = animate ? 'transform 140ms ease-out' : 'none';
+        root.style.transform = scale === 1 ? '' : `scale(${scale})`;
+
+        // Ensure z-index is high during zoom if it's a cockpit panel
+        if (root.classList.contains('cockpit-panel')) {
+            root.style.zIndex = scale === 1 ? '' : '100';
+        }
+    };
+
+    const resetZoom = () => {
+        if (!pinchActive) return;
+        const targetToReset = currentZoomTarget;
+        pinchActive = false;
+        pinchStartDist = 0;
+        currentZoomTarget = null;
+
+        if (targetToReset) {
+            targetToReset.style.transition = 'transform 140ms ease-out';
+            targetToReset.style.transform = '';
+            window.setTimeout(() => {
+                targetToReset.style.transition = '';
+                targetToReset.style.zIndex = '';
+            }, 160);
+        }
+    };
+
+    document.addEventListener('touchstart', (e: TouchEvent) => {
+        if (isActiveGameplay()) return;
+        if (e.touches.length === 2) {
+            pinchActive = true;
+            pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+            currentZoomTarget = getZoomRoot();
+            applyZoom(1, false);
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e: TouchEvent) => {
+        if (!pinchActive) return;
+        if (isActiveGameplay()) {
+            resetZoom();
+            return;
+        }
+        if (e.touches.length !== 2) return;
+        if (pinchStartDist <= 0) return;
+
+        const d = touchDist(e.touches[0], e.touches[1]);
+        const rawScale = d / pinchStartDist;
+        const scale = Math.max(1, Math.min(2.5, rawScale)); // Limit zoom to 2.5x
+        applyZoom(scale, false);
+
+        // Only prevent default if we are actually zooming to avoid blocking scroll if pinch didn't start well
+        if (scale > 1.01) {
+            if (e.cancelable) e.preventDefault();
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e: TouchEvent) => {
+        if (!pinchActive) return;
+        if (e.touches.length < 2) resetZoom();
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', () => {
+        resetZoom();
+    }, { passive: true });
 
 
     // =========================================================================
@@ -6712,7 +8248,8 @@ window.addEventListener('load', async function () {
         const totalMissions = statsMgr.stats.missions_completed + sessionMissions;
 
         // Coins: Immer den aktuellen Stand (Wallet) anzeigen
-        const currentCoins = game ? game.coins : (parseInt(localStorage.getItem('galaxyFallCoins') || '0'));
+        const currentCoins = game ? game.coins : ((window as any).dummyGameContext?.coins || 0);
+
 
         // 5. DOM-Elemente befÃ¼llen (Tabelle)
         const elTableKills = document.getElementById('table-kills');
@@ -6995,9 +8532,20 @@ window.addEventListener('load', async function () {
     };
 
     const dummyGameContext: any = {
-        get coins() { return parseInt(localStorage.getItem('galaxyFallCoins') || '0'); },
-        set coins(v) { syncGlobalGFC(v, this); },
-        hasPremiumLicense: localStorage.getItem('galaxyFallHasPremium') === '1',
+        _coins: 0,
+        get coins() { return this._coins; },
+        set coins(v) {
+            if (this._coins === v) return;
+            this._coins = v;
+            syncGlobalGFC(v, this);
+        },
+        _hasPremium: false,
+        get hasPremiumLicense() { return this._hasPremium; },
+        set hasPremiumLicense(v: boolean) {
+            if (this._hasPremium === v) return;
+            this._hasPremium = v;
+            syncGlobalPremium(v, this);
+        },
         shopManager: null as any,
         piManager: piManagerInstance,
         achievementManager: achievementManager,
@@ -7036,10 +8584,10 @@ window.addEventListener('load', async function () {
                 const res = await fetch(`${API_BASE_URL}/load-data?pi_uid=${uid}`);
                 if (res.ok) {
                     const data = await res.json();
+                    // Nutze die Setter, damit interner State UND UI synchronisiert werden
                     this.coins = data.coins || 0;
-                    (this as any).highscore = data.highscore || 0;
                     this.hasPremiumLicense = !!data.has_premium_license;
-                    localStorage.setItem('galaxyFallHasPremium', this.hasPremiumLicense ? '1' : '0');
+                    (this as any).highscore = data.highscore || 0;
                     this.shopManager.playerUpgrades = data.upgrades || {};
                     this.shopManager.playerCosmetics = data.cosmetics || {};
                     this.shopManager.playerCollectibles = data.collectibles || {};
@@ -7050,8 +8598,17 @@ window.addEventListener('load', async function () {
                     (window as any).trophyData = ensureAllTrophiesExist(serverTrophies);
                     achievementManager.syncFromServer(serverTrophies);
                     console.log("âœ… Hub Cloud-Load erfolgreich.");
+                    // Settings sync (server canonical across devices)
+                    if (this.uiManager && typeof (this.uiManager as any).applySettingsFromServer === 'function') {
+                        this.uiManager.applySettingsFromServer(data.settings || {}, data.settings_updated_at || 0);
+                    }
+
                     if (typeof updateHubUI === 'function') updateHubUI();
                     if (typeof updateHangarDisplay === 'function') updateHangarDisplay();
+                    // Shop ebenfalls neu rendern, damit Kauf-Status (grau/gekauft) aktuell ist
+                    if (this.uiManager && typeof this.uiManager.renderShop === 'function') {
+                        this.uiManager.renderShop();
+                    }
                 }
             } catch (e) { console.error("âŒ Hub Cloud-Load fehlgeschlagen:", e); }
         }
@@ -7068,6 +8625,7 @@ window.addEventListener('load', async function () {
     (async () => {
         try { await piManagerInstance.authenticate(true); } catch { }
         try { await dummyGameContext.loadPlayerDataFromServer(); } catch { }
+        loadFriendsList(); 
     })();
 
     // =========================================================================
@@ -7082,18 +8640,27 @@ window.addEventListener('load', async function () {
         const displayName = data.display_name || data.username || 'PILOT';
         const bio = data.bio || '';
         const visibility = data.profile_visibility || 'public';
+        const sm = (window as any).game?.shopManager || (window as any).dummyGameContext?.shopManager;
+        const eq = sm?.playerCosmetics?.equipped_skin || 'skin_default';
+        const skin = sm?.shopItems?.find((i: any) => i.id === eq);
+        const avatarSrc = skin ? skin.iconSrc : playerImgSrc1;
 
         view.innerHTML = `
             <div class="profile-dashboard">
                 <div class="pilot-identity-header">
-                    <div class="pilot-avatar-frame">
-                        <img src="${playerImgSrc1}" alt="Avatar">
+                    <div class="pilot-avatar-frame" id="profile-editor-avatar-box">
+                        <img src="${avatarSrc}" alt="Avatar">
+                        <div class="edit-avatar-hint" style="font-size:0.4rem; position:absolute; bottom:-10px; width:100%; text-align:center; color:var(--pi-yellow); text-transform:uppercase;">${t('hub_hangar')}</div>
                     </div>
                     <div class="pilot-header-info">
                         <label class="profile-label">PILOT NAME</label>
-                        <input id="profile-display-name" class="profile-input" maxlength="24" value="${displayName}">
-                        <label class="profile-label" style="margin-top:10px;">BIO</label>
-                        <textarea id="profile-bio" class="profile-textarea" maxlength="500">${bio}</textarea>
+                        <input id="profile-display-name" class="profile-input" maxlength="24" placeholder="Enter Name..." value="${displayName}">
+                        <div style="font-size:0.35rem; color:rgba(255,255,255,0.3); margin-top:4px; font-family:monospace; display:flex; flex-direction:column; gap:1px; margin-bottom:10px;">
+                            <div>PI USER: <span style="color:var(--neon-purple);">${data.username || 'unknown'}</span></div>
+                            <div>UID: <span style="color:var(--neon-cyan); opacity:0.6;">${uid}</span></div>
+                        </div>
+                        <label class="profile-label">BIO</label>
+                        <textarea id="profile-bio" class="profile-textarea" maxlength="500" placeholder="Biographical Data...">${bio}</textarea>
                         <label class="profile-label" style="margin-top:10px;">VISIBILITY</label>
                         <select id="profile-visibility" class="profile-input">
                             <option value="public" ${visibility === 'public' ? 'selected' : ''}>PUBLIC</option>
@@ -7102,8 +8669,12 @@ window.addEventListener('load', async function () {
                         </select>
                     </div>
                 </div>
-                <div style="margin-top:20px; text-align:right;">
-                    <button class="retro-btn big" id="profile-save-btn">SAVE</button>
+                <div class="profile-editor-controls" style="margin-top:20px; text-align:right; display:flex; gap:10px; justify-content: flex-end;">
+                    <button class="retro-btn secondary" onclick="document.getElementById('profile-back-button')?.click()" style="font-size:0.5rem; padding:8px 15px;">CANCEL</button>
+                    <button class="retro-btn big" id="profile-save-btn" style="padding:10px 30px;">SAVE</button>
+                </div>
+                <div style="font-size:0.4rem; color:rgba(255,255,255,0.4); margin-top:15px; text-align:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    UPLINK STATUS: <span style="color:#0f0;">ENCRYPTED & PERSISTENT</span>
                 </div>
             </div>
         `;
@@ -7118,9 +8689,11 @@ window.addEventListener('load', async function () {
                 const bioEl = document.getElementById('profile-bio') as HTMLTextAreaElement;
                 const visEl = document.getElementById('profile-visibility') as HTMLSelectElement;
                 saveBtn.disabled = true;
-                saveBtn.textContent = t('msg_syncing') || 'SAVING...';
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'ENCRYPTING...';
+
                 try {
-                    await fetch(`${API_BASE_URL}/profile`, {
+                    const res = await fetch(`${API_BASE_URL}/profile`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -7130,9 +8703,20 @@ window.addEventListener('load', async function () {
                             profile_visibility: visEl.value
                         })
                     });
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                    // Close and Refresh
                     container.style.display = 'none';
                     document.body.style.overflow = 'auto';
+
+                    // Update Hub & UI
                     if (typeof (window as any).updateHubUI === 'function') (window as any).updateHubUI();
+
+                    // If we're in a game context with a UI Manager, refresh his view too
+                    const ui = (window as any).game?.uiManager || (window as any).dummyGameContext?.uiManager;
+                    if (ui && typeof ui.populateProfile === 'function') ui.populateProfile();
+
                 } catch (e) {
                     console.error('Profile save failed', e);
                     saveBtn.disabled = false;
@@ -7257,6 +8841,7 @@ window.addEventListener('load', async function () {
                     <div class="stat-card-epic"><div class="card-icon">💰</div><div class="card-content"><div class="card-label">${t('hub_wallet')}</div><div class="card-value">${Number(stats.total_coins_collected || 0).toLocaleString()}</div></div></div>
                     <div class="stat-card-epic"><div class="card-icon">⏱️</div><div class="card-content"><div class="card-label">${t('hub_playtime')}</div><div class="card-value">${hours}h ${minutes}m</div></div></div>
                     <div class="stat-card-epic"><div class="card-icon">🚀</div><div class="card-content"><div class="card-label">${t('hub_missions')}</div><div class="card-value">${Number(stats.missions_completed || 0).toLocaleString()}</div></div></div>
+                    <div class="stat-card-epic"><div class="card-icon">⚡</div><div class="card-content"><div class="card-label">${t('social_reputation')}</div><div class="card-value">${data.reputation || 0}</div></div></div>
                     <div class="stat-card-epic"><div class="card-icon">🏆</div><div class="card-content"><div class="card-label">${t('hub_trophies')}</div><div class="card-value">${trophyCount}</div></div></div>
                     <div class="stat-card-epic"><div class="card-icon">⭐</div><div class="card-content"><div class="card-label">${t('profile_premium')}</div><div class="card-value">${data.has_premium_license ? t('hub_on') : t('hub_off')}</div></div></div>
                 </div>
@@ -7290,11 +8875,14 @@ window.addEventListener('load', async function () {
 
                 <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
                     ${canRequest ? `
-                        ${rel.is_friend ? `<button class="retro-btn big" disabled style="flex:1; min-width:220px;">${t('profile_friend_status_friends')}</button>` : ''}
+                        ${rel.is_friend ? `
+                            <button class="retro-btn big" id="btn-profile-chat" style="flex:1; min-width:110px;">💬 CHAT</button>
+                            <button class="retro-btn big" id="btn-profile-gfc" style="flex:1; min-width:110px; border-color:var(--pi-yellow); color:var(--pi-yellow);">💰 GFC</button>
+                        ` : ''}
                         ${(!rel.is_friend && rel.outgoing_request_pending) ? `<button class="retro-btn big" disabled style="flex:1; min-width:220px;">${t('profile_friend_status_request_sent')}</button>` : ''}
                         ${(!rel.is_friend && rel.incoming_request_pending) ? `
-                            <button class="retro-btn big" id="btn-accept-friend" style="flex:1; min-width:220px;">${t('profile_friend_accept')}</button>
-                            <button class="retro-btn big" id="btn-decline-friend" style="flex:1; min-width:220px; border-color:#ff4444; color:#ff4444;">${t('profile_friend_decline')}</button>
+                            <button class="retro-btn big" id="btn-accept-friend" style="flex:1; min-width:110px;">${t('profile_friend_accept')}</button>
+                            <button class="retro-btn big" id="btn-decline-friend" style="flex:1; min-width:110px; border-color:#ff4444; color:#ff4444;">${t('profile_friend_decline')}</button>
                         ` : ''}
                         ${(!rel.is_friend && !rel.outgoing_request_pending && !rel.incoming_request_pending) ? `<button class="retro-btn big" id="btn-send-friend-request" style="flex:1; min-width:220px;">${t('profile_send_friend_request')}</button>` : ''}
                     ` : ''}
@@ -7304,6 +8892,19 @@ window.addEventListener('load', async function () {
 
             contentEl.querySelector('#btn-close-public-profile')?.addEventListener('click', () => {
                 overlay.style.display = 'none';
+            });
+
+            contentEl.querySelector('#btn-profile-chat')?.addEventListener('click', () => {
+                overlay.style.display = 'none';
+                (window as any).openChat(data.pi_uid, name);
+            });
+
+            contentEl.querySelector('#btn-profile-gfc')?.addEventListener('click', () => {
+                // To send GFC, we reuse chat logic which sets the target
+                chatTargetUid = data.pi_uid;
+                const balanceEl = document.getElementById('chat-target-name');
+                if (balanceEl) balanceEl.textContent = name; 
+                (window as any).openGfcTransfer();
             });
 
             const reqBtn = contentEl.querySelector('#btn-send-friend-request') as HTMLButtonElement | null;
@@ -7424,11 +9025,14 @@ window.addEventListener('load', async function () {
     (window as any).refreshAllSelections = () => {
         if (typeof updateHubUI === 'function') updateHubUI();
         if (typeof updateHangarDisplay === 'function') updateHangarDisplay();
-        if (window.game && window.game.uiManager) {
-            window.game.uiManager.renderShop();
-            window.game.uiManager.populateGalerie();
-            window.game.uiManager.populateProfile();
-            window.game.uiManager.populateArsenal();
+
+        // Sync with active game context if exists
+        const bestGame = window.game || (window as any).dummyGameContext;
+        if (bestGame && bestGame.uiManager) {
+            if (typeof bestGame.uiManager.renderShop === 'function') bestGame.uiManager.renderShop();
+            if (typeof bestGame.uiManager.populateGalerie === 'function') bestGame.uiManager.populateGalerie();
+            if (typeof bestGame.uiManager.populateProfile === 'function') bestGame.uiManager.populateProfile();
+            if (typeof bestGame.uiManager.populateArsenal === 'function') bestGame.uiManager.populateArsenal();
         }
     };
 
@@ -7436,7 +9040,7 @@ window.addEventListener('load', async function () {
     const getAllHangarItems = () => {
         const skins = hubShopManager.shopItems.filter(i => i.type === 'SKIN');
         if (!skins.find(s => s.id === 'skin_default')) {
-            skins.unshift({ id: 'skin_default', nameKey: 'shop_skin_default_name', iconSrc: playerImgSrc1, type: 'SKIN', descKey: '', cost: [0], cosmeticType: 'player_skin' } as any);
+            skins.unshift({ id: 'skin_default', nameKey: 'shop_skin_default_name', iconSrc: playerImgSrc1, type: 'SKIN', descKey: 'shop_skin_default_desc', cost: [0], cosmeticType: 'player_skin' } as any);
         }
         const collectibles = hubShopManager.shopItems.filter(i => i.type === 'COLLECTIBLE');
         return [...skins, ...collectibles];
@@ -7505,7 +9109,8 @@ window.addEventListener('load', async function () {
 
     // --- UPDATE HUB UI (MIT RESUME LOGIK) ---
     updateHubUI = async () => {
-        let localCoins = parseInt(localStorage.getItem('galaxyFallCoins') || '0');
+        let localCoins = (window as any).dummyGameContext?.coins || 0;
+
 
         const hasActiveGame = gameInstance && gameInstance.player && gameInstance.player.isAlive() &&
             gameInstance.gameState !== 'GAME_OVER' && gameInstance.gameState !== 'WIN';
@@ -7517,8 +9122,25 @@ window.addEventListener('load', async function () {
         const hubCoinEl = document.getElementById('hub-coins-display');
         if (hubCoinEl) hubCoinEl.textContent = localCoins.toLocaleString();
 
+        const marketCoinEl = document.querySelector('.coin-value-display');
+        if (marketCoinEl) marketCoinEl.textContent = localCoins.toLocaleString();
+
+        const shopCoinEl = document.getElementById('shop-coins');
+        if (shopCoinEl) shopCoinEl.textContent = localCoins.toLocaleString();
+
         const profileName = document.getElementById('pi-username-placeholder');
         if (profileName) profileName.textContent = piManagerInstance.username || globalLocalizationManager.translate('hub_commander');
+
+        // --- AVATAR SYNC ---
+        const avatarSmall = document.getElementById('hub-avatar-small') as HTMLImageElement;
+        if (avatarSmall) {
+            const sm = hubShopManager || (window as any).dummyGameContext?.shopManager;
+            if (sm) {
+                const eq = sm.playerCosmetics?.equipped_skin || 'skin_default';
+                const skin = sm.shopItems?.find((i: any) => i.id === eq);
+                avatarSmall.src = skin ? skin.iconSrc : playerImgSrc1;
+            }
+        }
 
         const startBtnText = document.querySelector('#start-pi-edition .launch-title');
         if (startBtnText) {
@@ -7546,9 +9168,12 @@ window.addEventListener('load', async function () {
             trophyBadge.style.display = claimable > 0 ? 'block' : 'none';
         }
 
-        if (gameInstance) {
-            gameInstance.uiManager.updateWheelUI();
-        } else {
+        const activeWheelUI = gameInstance?.uiManager || (window as any).dummyGameContext?.uiManager;
+        if (activeWheelUI) {
+            activeWheelUI.updateWheelUI();
+        }
+
+        if (!gameInstance) {
             // Falls das Spiel noch nicht bereit ist, setzen wir trotzdem den Click-Handler
             const teaserBtn = document.getElementById('hub-wheel-teaser-btn');
             if (teaserBtn) teaserBtn.onclick = () => {
@@ -7652,6 +9277,7 @@ window.addEventListener('load', async function () {
                 if (titleSpan) titleSpan.textContent = globalLocalizationManager.translate('hub_start_mission');
                 centerCol?.classList.remove('launch-shake');
                 panelPilot?.classList.remove('launch-hide-left');
+                panelMarket?.classList.remove('launch-hide-right');
                 appViewport?.classList.remove('hyper-jump');
                 shipContainer?.classList.remove('launch-blast');
             }
@@ -7687,6 +9313,7 @@ window.addEventListener('load', async function () {
         // dass die Spielinstanz die neuesten Upgrades/MÃ¼nzen vom Hub-Context Ã¼bernimmt.
         if (gameWrapper.dataset.fromHub === 'true') {
             game.loadGameData(); // LÃ¤dt coins & highscore
+            game.loadGameData(); // Lädt coins & highscore
             if (typeof (window as any).dummyGameContext !== 'undefined') {
                 const dummy = (window as any).dummyGameContext;
                 game.shopManager.playerUpgrades = { ...dummy.shopManager.playerUpgrades };
@@ -7725,21 +9352,41 @@ window.addEventListener('load', async function () {
 
     // --- HUB PROFILE WIDGET -> OWN PROFILE EDITOR ---
     const profileWidget = document.getElementById('profile-widget');
-    if (profileWidget) {
-        profileWidget.addEventListener('click', async () => {
-            if (!(window as any).requireLogin()) return;
-            const { uid } = getHubPlayerIdentity();
-            if (!uid || uid === 'UNREGISTERED') return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/profile?pi_uid=${uid}`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                (window as any).openOwnProfileEditor?.(data, uid);
-            } catch (e) {
-                console.error('Profile load failed', e);
+    const avatarSmall = document.getElementById('hub-avatar-small');
+
+    const onProfileClick = async (e?: Event) => {
+        if (e) e.stopPropagation();
+        console.log("=== Profile Click Triggered ===");
+        if (!(window as any).requireLogin()) {
+            console.log("Profile click aborted: Login required");
+            return;
+        }
+
+        const ident = getHubPlayerIdentity();
+        const uid = ident.uid;
+        console.log("Profile click for UID:", uid);
+        if (!uid || uid === 'UNREGISTERED') return;
+
+        if (gameInstance?.uiManager?.soundManager) {
+            gameInstance.uiManager.soundManager.play('uiClick');
+        }
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/profile?pi_uid=${encodeURIComponent(uid)}`);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `HTTP ${res.status}`);
             }
-        });
-    }
+            const data = await res.json();
+            (window as any).openOwnProfileEditor?.(data, uid);
+        } catch (e) {
+            console.error('Profile load failed', e);
+            alert(`Error loading profile: ${e}`);
+        }
+    };
+
+    if (profileWidget) profileWidget.onclick = onProfileClick;
+    if (avatarSmall) avatarSmall.onclick = onProfileClick;
 
     document.getElementById('hangar-prev')?.addEventListener('click', () => {
         currentHangarIndex = (currentHangarIndex - 1 + allHangarItems.length) % allHangarItems.length;
@@ -7858,7 +9505,7 @@ window.addEventListener('load', async function () {
                     (window as any).dummyGameContext.coins = data.newCoins;
                 }
                 showTrophyClaimFeedback(trophyId, data.reward);
-                console.log(`ðŸ’° Trophy '${trophyId}' claimed! +${data.reward.toLocaleString()} ${globalLocalizationManager.translate('msg_gfc')} | Balance: ${data.newCoins.toLocaleString()}`);
+                console.log(`💰 Trophy '${trophyId}' claimed! +${data.reward.toLocaleString()} ${globalLocalizationManager.translate('msg_gfc')} | Balance: ${data.newCoins.toLocaleString()}`);
             } else if (data.error === 'already_claimed') {
                 trophyState.claimed = true;
                 renderHallOfFame();
@@ -7912,7 +9559,7 @@ window.addEventListener('load', async function () {
         const t = (k: string) => globalLocalizationManager.translate(k);
         popup.className = 'trophy-claim-popup';
         popup.innerHTML = `
-            <div class="tcp-icon">${def?.icon || '🏆'}</div>
+            <div class="tcp-icon">${def?.icon || '\uD83C\uDFC6'}</div>
             <div class="tcp-text">
                 <div class="tcp-name">${def ? t(def.nameKey) : trophyId}</div>
                 <div class="tcp-reward">+${reward.toLocaleString()} ${t('msg_gfc_credited')}</div>
@@ -7963,7 +9610,7 @@ window.addEventListener('load', async function () {
                         <div class="tc-rarity-badge">${t('hub_rarity_' + def.rarity)}</div>
                         <div class="tc-icon">${def.icon}</div>
                         <div class="tc-name">${t(def.nameKey)}</div>
-                        <div class="tc-reward">ðŸª™ ${TROPHY_REWARDS[def.id].toLocaleString()} ${t('msg_gfc')}</div>
+                        <div class="tc-reward">\uD83E\uDE99 ${TROPHY_REWARDS[def.id].toLocaleString()} ${t('msg_gfc')}</div>
                         ${canClaim
                     ? `<button class="tc-claim-btn" id="claim-btn-${def.id}"
                                 onclick="event.stopPropagation(); window._claimTrophy('${def.id}')">${t('hub_claim_reward')}</button>`
@@ -7982,10 +9629,10 @@ window.addEventListener('load', async function () {
                 ${locked.map(def => `
                 <div class="trophy-card rarity-${def.rarity} locked" id="tc-${def.id}" onclick="window._showTrophyInfo('${def.id}', false, '${def.rarity}')" style="cursor:pointer">
                     <div class="tc-rarity-badge">${t('hub_rarity_' + def.rarity)}</div>
-                    <div class="tc-icon locked-icon">ðŸ”’</div>
+                    <div class="tc-icon locked-icon">\uD83D\uDD12</div>
                     <div class="tc-name">${t(def.nameKey)}</div>
                     <div class="tc-hint">â„¹ï¸ ${t(def.descKey)}</div>
-                    <div class="tc-reward locked-reward">ðŸª™ ${TROPHY_REWARDS[def.id].toLocaleString()} ${t('msg_gfc')}</div>
+                    <div class="tc-reward locked-reward">\uD83E\uDE99 ${TROPHY_REWARDS[def.id].toLocaleString()} ${t('msg_gfc')}</div>
                 </div>`).join('')}
             </div>` : ''}
         `;
@@ -7994,7 +9641,7 @@ window.addEventListener('load', async function () {
 
     /**
      
-     * Ã–ffnet das Hall-of-Fame-Overlay â€“ lÃ¤dt TrophÃ¤en LIVE vom Server.
+     * Öffnet das Hall-of-Fame-Overlay – lädt Trophäen LIVE vom Server.
      * So gibt es keine Race Conditions zwischen Award und Claim.
      */
     async function showHallOfFameOverlay() {
@@ -8214,7 +9861,8 @@ window.addEventListener('load', async function () {
                     // Animate counter from old balance â†’ new total balance
                     clearInterval(teaseInterval);
 
-                    const oldBalance = (gameInstance) ? gameInstance.coins : parseInt(localStorage.getItem('galaxyFallCoins') || '0');
+                    const oldBalance = (gameInstance) ? gameInstance.coins : ((window as any).dummyGameContext?.coins || 0);
+
                     const newBalance = data.newBalance !== undefined ? data.newBalance : oldBalance + amount;
 
                     let currentAnim = oldBalance;
@@ -8322,14 +9970,6 @@ window.addEventListener('load', async function () {
 
             const { uid, username } = getHubPlayerIdentity();
 
-            if (gameInstance) {
-                // Perform full sync
-                await gameInstance.loadPlayerDataFromServer();
-            } else if ((window as any).dummyGameContext) {
-                // Sync ALL data (coins, upgrades, cosmetics, trophies) in the Hub context
-                await (window as any).dummyGameContext.loadPlayerDataFromServer();
-            }
-
             updateHubUI();
             renderHallOfFame();
 
@@ -8430,6 +10070,10 @@ window.addEventListener('load', async function () {
                 if (parent.id === 'panel-pilot') {
                     (window as any).rotateTo('pilot');
 
+                    // Make Pilot Systems Gallery visually match the full-screen Gallery overlay.
+                    const mc = parent.querySelector('.monitor-content') as HTMLElement | null;
+                    if (mc) mc.classList.toggle('pilot-gallery-mode', targetId === 'view-pilot-gallery');
+
                     const ui = getActiveUIManager();
                     if (targetId === 'view-pilot-gallery' && ui) {
                         // Small delay to let the view become visible first
@@ -8439,7 +10083,10 @@ window.addEventListener('load', async function () {
                         setTimeout(() => ui.populateNetwork('pilot-network-root'), 50);
                     }
                 }
-                if (parent.id === 'panel-market') (window as any).rotateTo('market');
+                if (parent.id === 'panel-market') {
+                    (window as any).rotateTo('market');
+                    showSocialTab(targetId);
+                }
             }
         });
     });
@@ -8555,6 +10202,9 @@ window.addEventListener('load', async function () {
         let currentHubLangIdx = hubLangs.findIndex(l => l.code === globalLocalizationManager.language);
         if (currentHubLangIdx === -1) currentHubLangIdx = 0;
 
+        // Prevent language selector clicks from bubbling up to profile widget
+        document.getElementById('hub-lang-selector')?.addEventListener('click', (e) => e.stopPropagation());
+
         const updateHubLangUI = () => {
             const flagIcon = document.getElementById('hub-flag-icon') as HTMLImageElement;
             if (flagIcon) {
@@ -8562,7 +10212,8 @@ window.addEventListener('load', async function () {
             }
         };
 
-        document.getElementById('hub-lang-prev')?.addEventListener('click', () => {
+        document.getElementById('hub-lang-prev')?.addEventListener('click', (e) => {
+            e.stopPropagation();
             currentHubLangIdx = (currentHubLangIdx - 1 + hubLangs.length) % hubLangs.length;
             globalLocalizationManager.setLanguage(hubLangs[currentHubLangIdx].code);
             globalLocalizationManager.applyTranslationsToUI();
@@ -8571,7 +10222,8 @@ window.addEventListener('load', async function () {
             updateHubLangUI();
         });
 
-        document.getElementById('hub-lang-next')?.addEventListener('click', () => {
+        document.getElementById('hub-lang-next')?.addEventListener('click', (e) => {
+            e.stopPropagation();
             currentHubLangIdx = (currentHubLangIdx + 1) % hubLangs.length;
             globalLocalizationManager.setLanguage(hubLangs[currentHubLangIdx].code);
             globalLocalizationManager.applyTranslationsToUI();
@@ -8696,10 +10348,6 @@ window.addEventListener('load', async function () {
                 // Render Ads in Hub
                 piManagerInstance.renderBanner('pi-ad-banner-container');
 
-                // Schritt 2: Daily Deal laden (immer, ohne Login)
-                await fetchDailyDeal();
-                console.log("âœ… Daily Deal geladen.");
-
                 // Schritt 3: Auto-Login Versuch
                 try {
                     console.log("ðŸ” Checking for existing Pi session...");
@@ -8707,6 +10355,7 @@ window.addEventListener('load', async function () {
                     if (user) {
                         console.log("âœ¨ Auto-Login successful.");
                         await performUnifiedLogin();
+                        loadFriendsList();
                     }
                 } catch (e) {
                     console.log("No previous session found, staying as guest.");
@@ -8715,14 +10364,27 @@ window.addEventListener('load', async function () {
             } catch (e) {
                 console.error("Sync Fehler:", e);
             } finally {
-                // Finales UI-Refresh
+                // Finaler GFC-Sync falls noch nicht geschehen
+                if ((window as any).dummyGameContext) {
+                    await (window as any).dummyGameContext.loadPlayerDataFromServer();
+                }
+
+                // Finales UI-Refresh (Inklusiv Hangar & Carousel)
                 updateHubUI();
                 updateHangarDisplay();
                 updateCarouselPositions();
                 (window as any).updateHubUI = updateHubUI;
                 (window as any).ensureGameInstance = ensureGameInstance;
+                (window as any).openExplorer = (url: string, network: string) => {
+                    const ui = (window as any).dummyGameContext?.uiManager || (window as any).gameInstance?.uiManager;
+                    if (ui) {
+                        ui.showExplorerModal(url, network);
+                    } else {
+                        window.open(url, '_blank');
+                    }
+                };
 
-                // Initialisiere die Spiel-Instanz im Hintergrund (fÃ¼r Lucky Wheel & UI)
+                // Initialisiere die Spiel-Instanz im Hintergrund (für Lucky Wheel & UI)
                 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
                 if (canvas) ensureGameInstance(canvas);
 

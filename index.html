@@ -142,49 +142,63 @@
                 </div>
                 <div class="monitor-content cyber-grid-bg">
                     <div id="view-pilot-main" class="monitor-view active">
-                        <div class="id-card-visual">
-                            <div class="id-avatar-holo">
-                                <img id="pilot-ship-preview" src=""
-                                    style="width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 0 10px #0ff);">
-                                <div class="holo-scanline"></div>
-                            </div>
-                            <div class="id-details">
-                                <span class="label">ID:// <span class="value cyan text-truncate"
-                                        id="ext-username">GUEST</span></span>
-                                <span class="label" data-translate-key="hub_class">CLASS</span>:// <span
-                                    class="value yellow pulse-slow" id="ext-rank">ROOKIE</span></span>
+                        <!-- PILOT LICENSE / RANK HEADER -->
+                        <div class="rank-license-header tech-border">
+                            <div class="license-glitch" data-text="PILOT LICENSE">PILOT LICENSE</div>
+                            <div class="rank-identity">
+                                <div class="rank-emblem" id="rank-tier-emblem">I</div>
+                                <div class="rank-titles">
+                                    <span class="rank-tier" id="ext-rank-tier" data-translate-key="hub_rank_tier_1">BRONZE</span>
+                                    <span class="rank-name" id="ext-rank-name" data-translate-key="hub_rank_1">RECRUIT</span>
+                                </div>
+                                <div class="pilot-id-box">
+                                    <span class="label">ID://</span>
+                                    <span class="value cyan text-truncate" id="ext-username-v2">GUEST</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- XP / PROGRESS SECTION -->
-                        <div class="progress-section tech-border" style="margin-top:10px; padding: 10px;">
-                            <div class="bar-header"><label
-                                    data-translate-key="pilot_level_label">PILOT.LEVEL</label><span id="val-xp">LVL 1 -
-                                    0%</span></div>
-                            <div class="bar-track cyber-track-xp">
-                                <div class="bar-fill-xp" id="bar-xp" style="width: 0%"></div>
+                        <div class="progression-block tech-border">
+                            <div class="block-header">
+                                <span class="header-label" data-translate-key="hub_rank_progress">PROGRESSION</span>
+                                <span class="xp-val" id="val-xp-v2">LVL 1 - 0%</span>
+                            </div>
+                            <div class="bar-track v2">
+                                <div class="bar-fill-xp v2" id="bar-xp-v2" style="width: 0%"></div>
+                                <div class="xp-markers">
+                                    <span></span><span></span><span></span><span></span>
+                                </div>
+                            </div>
+                            <div class="next-rank-info">
+                                <span class="label" data-translate-key="hub_rank_next">NEXT RANK</span>
+                                <span class="value yellow" id="val-next-rank">PRIVATE</span>
                             </div>
                         </div>
 
-                        <div class="separator glitch-sep"></div>
-                        <div class="chart-section tech-border">
-                            <div class="stat-bar-group">
-                                <div class="bar-header"><label
-                                        data-translate-key="shield_capacity_label">SHIELD.CAPACITY</label><span
-                                        id="val-shield">100%</span>
-                                </div>
-                                <div class="bar-track cyber-track">
-                                    <div class="bar-fill cyber-fill" style="width: 100%" id="bar-shield"></div>
-                                </div>
+                        <!-- SECONDARY METRICS -->
+                        <div class="metrics-grid">
+                            <div class="metric-card tech-border">
+                                <div class="m-label" data-translate-key="hub_rank_standing">SECTOR STANDING</div>
+                                <div class="m-value cyan" id="val-standing">TOP 100%</div>
+                                <div class="m-sub">GLOBAL PILOT NETWORK</div>
                             </div>
-                            <div class="stat-bar-group" style="margin-top:10px;">
-                                <div class="bar-header"><label
-                                        data-translate-key="weapon_calib_label">WEAPON.CALIB</label><span
-                                        id="val-weapon">OFFLINE</span>
-                                </div>
-                                <div class="bar-track cyber-track">
-                                    <div class="bar-fill cyber-fill-alt" style="width: 0%" id="bar-weapon"></div>
-                                </div>
+                            <div class="metric-card tech-border">
+                                <div class="m-label" data-translate-key="hub_rank_medals">COMBAT MEDALS</div>
+                                <div class="m-value gold" id="val-medals">00</div>
+                                <div class="m-sub" id="val-ach-ratio">0/18 SECURED</div>
+                            </div>
+                        </div>
+
+                        <!-- SYSTEM STATUS (COMPACT) -->
+                        <div class="system-status-mini">
+                            <div class="mini-row">
+                                <label data-translate-key="shield_capacity_label">SHIELD.CAPACITY</label>
+                                <div class="mini-track"><div class="mini-fill" style="width: 100%" id="bar-shield-v2"></div></div>
+                            </div>
+                            <div class="mini-row">
+                                <label data-translate-key="weapon_calib_label">WEAPON.CALIB</label>
+                                <div class="mini-track"><div class="mini-fill alt" style="width: 0%" id="bar-weapon-v2"></div></div>
                             </div>
                         </div>
                     </div>
@@ -235,7 +249,7 @@
                         </div>
                     </div>
                     <div id="view-pilot-gallery" class="monitor-view">
-                        <div id="pilot-gallery-root" style="padding: 5px; height: 100%; overflow-y: auto;">
+                        <div id="pilot-gallery-root" class="shop-scroll-area padded-view">
                             <!-- Gallery content injected via populateGalerie('pilot-gallery-root') -->
                         </div>
                     </div>
@@ -370,7 +384,7 @@
                                             <button class="nav-arrow next" id="hangar-next">❯</button>
                                         </div>
                                         <div class="ship-data">
-                                            <h2 id="ship-name" style="margin: 0; font-size: 0.8rem;">PHOENIX MK. I</h2>
+                                            <h2 id="ship-name" style="margin: 0; font-size: 0.8rem;" data-translate-key="shop_skin_default_name">PHOENIX MK. I</h2>
                                             <div id="ship-bonus" class="ship-bonus"
                                                 style="color:var(--pi-yellow); font-size: 0.6rem; margin: 8px 0; min-height: 2.8em; display: flex; align-items: center; justify-content: center; line-height: 1.2; padding: 0 10px; text-align: center;">
                                             </div>
@@ -488,8 +502,8 @@
                                                 <div class="card-label" data-translate-key="tab_spiel">PROFILE</div>
                                             </button>
                                             <button id="btn-open-gallery" class="launcher-card">
-                                                <div class="card-icon">💾</div>
-                                                <div class="card-label" data-translate-key="hub_data">DATA</div>
+                                                <div class="card-icon">🖼️</div>
+                                                <div class="card-label" data-translate-key="tab_galerie">GALLERY</div>
                                             </button>
                                             <button id="btn-open-arsenal" class="launcher-card">
                                                 <div class="card-icon">⚔️</div>
@@ -635,79 +649,224 @@
                 </div>
             </div>
 
-            <!-- PANEL 3: MARKET (RECHTS) -->
+            <!-- PANEL 3: FRIENDSHIP AREA (RECHTS) -->
             <div class="cockpit-panel side-monitor pos-right has-scanlines" id="panel-market"
                 onclick="rotateTo('market')">
-                <div class="holo-header neon-purple glitch-text" data-text="SCHWARZMARKT"
-                    data-translate-key="hub_nexus_market">SCHWARZMARKT</div>
+                <div class="holo-header neon-yellow glitch-text" data-text="PI FORTUNE JACKPOT"
+                    data-translate-key="hub_nexus_market">PI FORTUNE JACKPOT</div>
                 <div class="monitor-tabs cyber-tabs alt">
-                    <button class="monitor-tab" data-target="view-market-live"
-                        data-translate-key="hub_live">LIVE</button>
-                    <button class="monitor-tab active" data-target="view-market-offers"
-                        data-translate-key="hub_daily_deal">DAILY DEAL</button>
+                    <button class="monitor-tab active" data-target="view-jackpot" data-translate-key="social_tab_jackpot">JACKPOT</button>
+                    <button class="monitor-tab" data-target="view-social-feed" data-translate-key="social_tab_social">SOCIAL</button>
+                    <button class="monitor-tab" data-target="view-jackpot-leaderboard" data-translate-key="social_tab_leaderboard">RÄNGE</button>
+                    <button class="monitor-tab" data-target="view-jackpot-profile" data-translate-key="social_tab_profile">PROFIL</button>
                 </div>
-                <div class="monitor-content cyber-grid-bg dark">
-                    <div id="view-market-live" class="monitor-view">
-
-                        <!-- NPC Vendor Element! -->
-                        <div class="vendor-npc-box">
-                            <div class="vendor-avatar">
-                                <div class="vendor-eye"></div>
-                            </div>
-                            <div class="vendor-speech typing-loop" data-translate-key="hub_vendor_greet">
-                                [SYS_VEND] > "Fresh supplies, Commander."
-                            </div>
-                        </div>
-
-                        <div class="data-row large wallet-box">
-                            <span class="label" style="color:#ffcc00;"><span
-                                    data-translate-key="hub_credits">CREDITS</span> <span
-                                    class="currency-label">GFC</span></span>
-                            <div class="currency-wrapper">
-                                <img src="./assets/images/pi_coin2.png" class="holo-coin"
-                                    style="filter: drop-shadow(0 0 5px #ffcc00);">
-                                <span class="value gold text-truncate coin-value-display">0</span>
-                            </div>
-                        </div>
-                        <div class="separator glitch-sep purple"></div>
-                        <div class="data-grid cyber-grid-2">
-                            <div class="grid-cell tech-border" style="grid-column: span 2;">
-                                <div class="value green" id="pi-rate">+1.2%</div>
-                                <div class="label" style="font-size:0.5rem; color:#888;"
-                                    data-translate-key="hub_pi_rate">PI.RATE</div>
-                            </div>
-                        </div>
-                        <div class="news-ticker hacker-term no-bg">
-                            <div class="ticker-header" style="color:#df00ff; border-bottom:1px solid #df00ff;"><span
-                                    class="blinking-dot purple"></span><span
-                                    data-translate-key="hub_market_log">BLACK_MARKET.LOG</span></div>
-                            <ul class="ticker-list scrolling-fast" id="market-news-list" style="color:#df00ff;">
-                                <li data-translate-key="hub_nexus_online_msg">> Nexus is online.</li>
-                                <li data-translate-key="hub_rare_drops_msg">> Rare drops confirmed.</li>
-                                <li data-translate-key="hub_pi_bridge_msg">> PI bridge active.</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div id="view-market-offers" class="monitor-view active">
-                        <div class="daily-deal-wrapper">
-                            <div class="deal-header"><span class="blinking-dot red"></span> <span
-                                    data-translate-key="hub_flash_deal_label">FLASH DEAL</span></div>
-                            <div class="deal-timer" id="daily-deal-timer">05:14:23</div>
-                            <div class="deal-item-box holo-levitate">
-                                <img src="./assets/images/player_skin_gold.png" class="deal-img">
-                                <div class="deal-name" data-translate-key="hub_skin_gold_name">ROYAL GOLD SKIN</div>
-                                <div class="deal-desc" data-translate-key="hub_skin_gold_desc">Black Market Exclusive
+                <div class="monitor-content cyber-grid-bg dark no-padding">
+                    <!-- JACKPOT VIEW -->
+                    <div id="view-jackpot" class="monitor-view active">
+                        <div class="jackpot-container">
+                            <div class="jackpot-header">
+                                <span class="jackpot-label">APP WALLET BALANCE</span>
+                                <div class="jackpot-amount-glow">
+                                    <span class="jackpot-value" id="jackpot-wallet-pi">---</span>
+                                    <span class="jackpot-currency">Pi</span>
                                 </div>
-                                <button class="retro-btn"
-                                    style="width:100%; margin-top:10px; padding:8px; font-size:0.5rem;"
-                                    onclick="document.getElementById('nav-shop')?.click()"
-                                    data-translate-key="hub_open_shop">OPEN SHOP</button>
+                                <div class="jackpot-subtitle">Real Pi balance of the game wallet (read-only).</div>
+                                
+                                <div class="jackpot-pot-display">
+                                    <span class="jackpot-pot-label">CURRENT JACKPOT POT:</span>
+                                    <span class="jackpot-pot-value" id="jackpot-pot-pi">0.00 Pi</span>
+                                </div>
+                                
+                                <div class="gfc-pool-display">
+                                    <span class="gfc-label">GFC BONUS POOL:</span>
+                                    <span class="gfc-value" id="gfc-jackpot-value">0 GFC</span>
+                                </div>
+                            </div>
+                            
+                            <div class="jackpot-timer-box tech-border">
+                                <div class="timer-label">NEXT DRAW IN:</div>
+                                <div class="timer-value" id="jackpot-countdown">00:00:00</div>
+                                <div class="jackpot-info-text">
+                                    Tickets feed the pot. On each draw, only the collected pot is paid out, proportionally to active entries.
+                                </div>
+                            </div>
+
+                            <div class="jackpot-stats-row">
+                                <div class="stat-box">
+                                    <span class="stat-label">YOUR ENTRIES</span>
+                                    <span class="stat-value" id="jackpot-tickets-count">0</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-label">PILOTS ONLINE</span>
+                                    <span class="stat-value" id="jackpot-online-pilots">---</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-label">YOUR GFC</span>
+                                    <span class="stat-value" id="jackpot-user-gfc">0</span>
+                                </div>
+                            </div>
+                            <div class="jackpot-stat-footer">
+                                <span class="stat-label">LAST WINNER:</span>
+                                <span class="stat-value" id="jackpot-last-winner">---</span>
+                            </div>
+
+                            <div class="jackpot-actions">
+                                <button id="btn-claim-free-ticket" class="jackpot-btn primary pulse-gold">
+                                    <span class="btn-icon">🎟️</span>
+                                    <div class="btn-text">
+                                        <span class="btn-title">FREE TICKET</span>
+                                        <span class="btn-sub">Claim entry</span>
+                                    </div>
+                                </button>
+                                <button id="btn-jackpot-vip" class="jackpot-btn secondary">
+                                    <span class="btn-icon">👑</span>
+                                    <div class="btn-text">
+                                        <span class="btn-title">VIP PASS</span>
+                                        <span class="btn-sub">Ad-free gaming</span>
+                                    </div>
+                                </button>
+                                <button id="btn-exchange-gfc" class="jackpot-btn secondary gfc-exchange">
+                                    <span class="btn-icon">🪙</span>
+                                    <div class="btn-text">
+                                        <span class="btn-title">EXCHANGE GFC</span>
+                                        <span class="btn-sub">10K GFC = 1 Ticket</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- SOCIAL FEED -->
+                    <div id="view-social-feed" class="monitor-view">
+                        <div class="social-post-box">
+                            <textarea id="social-status-input" maxlength="280" placeholder="Broadcast status..."></textarea>
+                            <button id="social-post-btn" class="retro-btn btn-small">SEND</button>
+                        </div>
+                        <div id="social-feed-container" class="social-list">
+                            <div class="social-empty-msg" data-translate-key="social_feed_empty">NO RECENT BROADCASTS.</div>
+                        </div>
+                    </div>
+                    <!-- RANGLISTE (JACKPOT) -->
+                    <div id="view-jackpot-leaderboard" class="monitor-view">
+                        <div class="leaderboard-podium">
+                            <div class="podium-item silver">
+                                <div class="podium-rank">#2</div>
+                                <div class="podium-avatar">👤</div>
+                            </div>
+                            <div class="podium-item gold">
+                                <div class="podium-rank">#1</div>
+                                <div class="podium-avatar">🥇</div>
+                                <div class="podium-crown">👑</div>
+                            </div>
+                            <div class="podium-item bronze">
+                                <div class="podium-rank">#3</div>
+                                <div class="podium-avatar">👤</div>
+                            </div>
+                        </div>
+                        <div id="jackpot-leaderboard-container" class="social-list">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- PROFIL (JACKPOT) -->
+                    <div id="view-jackpot-profile" class="monitor-view">
+                        <div class="jackpot-profile-header">
+                            <div class="profile-avatar-large">
+                                <div class="avatar-ring"></div>
+                                <span class="avatar-letter" id="profile-initial">P</span>
+                            </div>
+                            <h2 id="profile-name">PI PILOT</h2>
+                            <p class="profile-tag">VERIFIED PI MEMBER</p>
+                        </div>
+                        
+                        <div class="jackpot-wallet-box tech-border">
+                            <div class="wallet-label">WON REWARDS</div>
+                            <div class="wallet-balance"><span id="jackpot-balance">0.00</span> <span class="pi-symbol">Pi</span></div>
+                            <button id="btn-withdraw-pi" class="withdraw-btn">PI AUSZAHLEN</button>
+                            <p class="wallet-hint">Mind. 10 Pi erforderlich</p>
+                        </div>
+
+                        <div class="profile-stats-grid">
+                            <div class="stat-card">
+                                <span class="card-icon">👑</span>
+                                <span class="card-label">STATUS</span>
+                                <span class="card-value" id="profile-status">Standard</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="card-icon">⚡</span>
+                                <span class="card-label">AUTO-CLAIM</span>
+                                <span class="card-value" id="profile-autoclaim">Offline</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- FRIENDS LIST -->
+                    <div id="view-friends-list" class="monitor-view">
+                        <div id="friends-list-container" class="social-list">
+                            <!-- Populated via JS -->
+                            <div class="social-empty-msg" data-translate-key="social_no_friends">NO FRIENDS YET.</div>
+                        </div>
+                    </div>
+
+                    <!-- FRIEND REQUESTS -->
+                    <div id="view-friends-requests" class="monitor-view">
+                        <div id="friend-requests-container" class="social-list">
+                            <!-- Populated via JS -->
+                            <div class="social-empty-msg" data-translate-key="social_no_requests">NO PENDING REQUESTS.</div>
+                        </div>
+                    </div>
+
+                    <!-- USER SEARCH -->
+                    <div id="view-friends-search" class="monitor-view">
+                        <div class="social-search-bar">
+                            <input type="text" id="social-search-input" placeholder="Search pilots..." data-translate-placeholder-key="social_search_placeholder">
+                            <button id="social-search-btn" class="retro-btn btn-small">🔍</button>
+                        </div>
+                        <div id="search-results-container" class="social-list">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- CHAT INTERFACE (Overlay inside panel) -->
+                    <div id="view-chat" class="monitor-view chat-overlay">
+                        <div class="chat-header">
+                            <button class="back-btn" onclick="showSocialTab('view-friends-list')">⤶</button>
+                            <div class="chat-header-info">
+                                <span id="chat-target-name" class="chat-header-name">Pilot Name</span>
+                                <span class="chat-header-status" data-translate-key="social_online_now">ONLINE NOW</span>
+                            </div>
+                            <button class="gfc-btn" onclick="openGfcTransfer()">💸</button>
+                        </div>
+                        <div id="chat-messages" class="chat-history">
+                            <!-- Messages -->
+                        </div>
+                        <div class="chat-input-box">
+                            <input type="text" id="chat-input" placeholder="Type a message..." data-translate-placeholder-key="social_message_placeholder">
+                            <button id="chat-send-btn" class="retro-btn btn-small" data-translate-key="social_send">SEND</button>
+                        </div>
+                    </div>
+
+                    <!-- GFC TRANSFER OVERLAY -->
+                    <div id="view-gfc-transfer" class="monitor-view transfer-overlay">
+                        <div class="chat-header">
+                            <button class="back-btn" onclick="closeGfcTransfer()">⤶</button>
+                            <div class="chat-header-info">
+                                <span class="chat-header-name" data-translate-key="social_send_gfc">SEND GFC</span>
+                            </div>
+                        </div>
+                        <div class="transfer-box">
+                            <label data-translate-key="social_gfc_amount">Amount</label>
+                            <input type="number" id="gfc-transfer-amount" value="1000" min="1">
+                            <div class="transfer-view">
+                                <span class="label">WALLET:</span>
+                                <span class="value gold" id="transfer-wallet-balance">0</span>
+                                <span class="currency">GFC</span>
+                            </div>
+                            <button id="confirm-gfc-transfer-btn" class="btn-premium" data-translate-key="social_send">SEND</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="holo-footer cyber-footer purple">ENC_LINK: <span style="color:#df00ff; margin-left:5px;"
-                        data-translate-key="hub_secure">SECURE</span></div>
+                <div class="holo-footer cyber-footer purple">COM_LINK: <span style="color:#df00ff; margin-left:5px;"
+                        id="com-link-status">ONLINE</span></div>
             </div>
 
         </div>
@@ -759,8 +918,8 @@
     <!-- GALLERY SCREEN (DATA) -->
     <div id="gallery-container" style="display:none;" class="full-screen-overlay">
         <header class="shop-header-compact">
-            <div class="shop-branding"><span class="glitch-text" data-text="GALLERY"
-                    data-translate-key="hub_data">GALLERY</span></div>
+            <div class="shop-branding"><span class="glitch-text" data-text="GALERIE"
+                    data-translate-key="tab_galerie">GALERIE</span></div>
         </header>
         <div id="galerie-list" class="shop-scroll-area padded-view">
             <!-- Gallery Content Injected Here -->
@@ -773,8 +932,8 @@
     <!-- ARSENAL SCREEN (ARMORY) -->
     <div id="arsenal-container" style="display:none;" class="full-screen-overlay">
         <header class="shop-header-compact">
-            <div class="shop-branding"><span class="glitch-text" data-text="INFO AREA"
-                    data-translate-key="hub_armory">INFO AREA</span></div>
+            <div class="shop-branding"><span class="glitch-text" data-text="ARSENAL"
+                    data-translate-key="hub_armory">ARSENAL</span></div>
         </header>
         <div id="arsenal-list" class="shop-scroll-area padded-view">
             <!-- Arsenal Content Injected Here -->
@@ -910,6 +1069,22 @@
                     <button class="retro-toggle-epic active" id="epic-toggle-bloom"
                         data-translate-key="hub_on">ON</button>
                 </div>
+                <div class="setting-group-epic" style="display:flex; flex-direction:column; align-items:center;">
+                    <label data-translate-key="hub_settings_flame_color">FLAME COLOR</label>
+                    <p class="setting-desc" data-translate-key="hub_settings_flame_color_desc">Customize your engine thrust color.</p>
+                    
+                    <div class="modern-color-picker">
+                        <div class="wheel-container">
+                            <canvas id="flame-color-wheel" width="220" height="220"></canvas>
+                            <div id="color-wheel-cursor"></div>
+                            <div class="flame-preview-box">
+                                <canvas id="flame-preview-canvas" width="100" height="140"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="retro-btn" id="btn-reset-flame-color" style="margin-top:15px; padding:8px 20px;">RESET TO DEFAULT</button>
+                </div>
             </div>
 
             <!-- GAMEPLAY SETTINGS -->
@@ -1015,27 +1190,59 @@
             data-translate-key="btn_back">BACK</button>
     </div>
 
-    <!-- NFT MODAL -->
     <div id="collectible-modal" class="modal-overlay" style="display: none;">
-        <div class="pixel-modal modal-content">
-            <button class="modal-close" id="collectible-modal-close">X</button>
-            <div class="modal-body">
-                <div class="skin-preview-large">
-                    <img id="modal-img" src="" alt="NFT Art" />
+        <div class="pixel-modal" style="max-width: 800px; width: 95%;">
+            <div class="epic-modal-layout">
+                <!-- Header -->
+                <div class="epic-modal-header">
+                    <h2 id="modal-title" class="epic-modal-title">PILOT_LICENSE_V1</h2>
+                    <div class="epic-modal-subtitle">HULL CLASSIFICATION: <span id="modal-hull-type" style="color:#fff;">UNKNOWN</span></div>
                 </div>
-                <div class="skin-info-col">
-                    <h2 id="modal-title" class="pixel-title"></h2>
-                    <p id="modal-story" class="pixel-text"></p>
-                    <div id="modal-bonus" class="skin-stats"></div>
+
+                <!-- Main Content -->
+                <div class="epic-modal-main">
+                    <!-- Left: Ship Display -->
+                    <div class="holographic-display">
+                        <img id="modal-img" src="" class="holographic-ship" alt="Ship Render" />
+                        <div class="display-status-tags">
+                            <span class="status-tag">SHIELD: ACTIVE</span>
+                            <span class="status-tag">CORE: STABLE</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Info & Stats -->
+                    <div class="epic-info-panels">
+                        <!-- Narrative -->
+                        <div class="narrative-protocol">
+                            <div class="protocol-header">
+                                <span class="protocol-label">NARRATIVE_PROTOCOL_0.8</span>
+                                <span style="color:#0f0; font-size:0.4rem;">ENCRYPTED_LOG</span>
+                            </div>
+                            <div id="modal-story" class="protocol-text"></div>
+                        </div>
+
+
+
+                        <!-- Bonus Box -->
+                        <div id="modal-bonus" style="margin-top:15px;"></div>
+                    </div>
+                </div>
+
+                <!-- Blockchain Integration -->
+                <div class="nft-minting-area"></div>
+                <div class="nft-info-area"></div>
+
+                <!-- Actions -->
+                <div class="epic-action-footer">
+                    <button id="collectible-modal-action-btn" class="retro-btn big glow-cyan neon-btn-glow" data-translate-key="hub_equip">EQUIP</button>
+                    <button class="retro-btn secondary" onclick="document.getElementById('collectible-modal').style.display='none'" data-translate-key="btn_back">BACK</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SKIN DETAIL MODAL -->
     <div id="skin-detail-modal" class="modal-overlay" style="display: none;">
         <div class="pixel-modal">
-            <button class="modal-close" id="skin-modal-close">X</button>
             <div class="modal-body">
                 <div class="skin-preview-large">
                     <img id="skin-modal-img" src="" alt="Skin Preview">
@@ -1048,6 +1255,7 @@
                     <div class="modal-actions">
                         <button id="skin-modal-action-btn" class="retro-btn"
                             data-translate-key="hub_equip">EQUIP</button>
+                        <button class="retro-btn secondary" onclick="document.getElementById('skin-detail-modal').style.display='none'" data-translate-key="btn_back">CLOSE</button>
                     </div>
                     <div class="nft-info-area"></div>
                 </div>
@@ -1055,10 +1263,8 @@
         </div>
     </div>
 
-    <!-- TROPHY DETAIL MODAL -->
     <div id="trophy-detail-modal" class="modal-overlay" style="display: none;">
         <div class="pixel-modal" style="border-image: linear-gradient(45deg, #FFD700, #FFA500) 1;">
-            <button class="modal-close" id="trophy-modal-close">X</button>
             <div class="modal-header" style="text-align:center; padding: 20px 0 10px;">
                 <div class="tier-label" id="trophy-modal-tier"
                     style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: #FFD700; text-transform: uppercase;">
@@ -1076,6 +1282,173 @@
                         style="font-family: 'Press Start 2P'; font-size: 0.4rem; color: #aaa; margin-top: 10px;"><span
                             data-translate-key="hub_dated">DATED:</span>
                         2026-03-08</div>
+                    <div class="modal-actions" style="margin-top:20px;">
+                        <button class="retro-btn secondary" onclick="document.getElementById('trophy-detail-modal').style.display='none'" data-translate-key="btn_back">CLOSE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WELCOME BONUS OVERLAY -->
+    <div id="welcome-bonus-overlay" style="display:none;">
+        <canvas id="bonus-particle-canvas"></canvas>
+        <div id="welcome-bonus-inner">
+            <div id="welcome-bonus-rays"></div>
+            <div id="welcome-bonus-glow-ring"></div>
+
+            <div id="welcome-bonus-header">
+                <div id="welcome-bonus-badge" data-translate-key="hub_first_pioneer">✦ FIRST-TIME PIONEER ✦</div>
+                <h1 id="welcome-bonus-title" data-translate-key="hub_welcome_bonus_title">GALAXY FALL<br><span>WELCOME
+                        BONUS</span></h1>
+            </div>
+
+            <div id="welcome-bonus-pilot-name" data-translate-key="hub_loading_pilot">LOADING PILOT DATA...</div>
+
+            <div id="welcome-bonus-coin-display">
+                <div id="welcome-bonus-coin-icon">⬡</div>
+                <div id="welcome-bonus-amount-wrap">
+                    <span id="welcome-bonus-label" data-translate-key="hub_gfc_label">GALAXY FALL CREDITS</span>
+                    <div id="welcome-bonus-counter">0</div>
+                </div>
+            </div>
+
+            <div id="welcome-bonus-desc">
+                Your account has been pre-loaded with<br>
+                <strong>31,415 GFC</strong> to begin your journey across the galaxy.
+            </div>
+
+            <button id="welcome-bonus-claim-btn">
+                <span id="claim-btn-text" data-translate-key="hub_claim_credits">⚡ CLAIM YOUR CREDITS ⚡</span>
+            </button>
+
+            <div id="welcome-bonus-footer" data-translate-key="hub_secured_by_pi">SECURED BY PI NETWORK · ONE-TIME
+                REWARD</div>
+        </div>
+    </div>
+
+    <!-- LUCKY WHEEL MODAL -->
+    <div id="lucky-wheel-modal" class="modal-overlay" style="display: none; z-index: 10001;">
+        <div class="pixel-modal wheel-modal-content">
+            <button class="modal-close" id="wheel-modal-close">X</button>
+            <div class="wheel-panel">
+                <h2 class="pixel-title" data-translate-key="wheel_title"
+                    style="color:var(--cyan-glow); margin-bottom:15px; font-size:0.8rem;">LUCKY GALAXY WHEEL</h2>
+                <div class="wheel-main-container"
+                    style="position:relative; width:300px; height:300px; margin:0 auto; padding:10px;">
+                    <div id="wheel-pointer"
+                        style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:30px; height:30px; background:white; clip-path:polygon(0% 0%, 100% 0%, 50% 100%); z-index:10; filter:drop-shadow(0 0 5px cyan);">
+                    </div>
+                    <canvas id="wheel-canvas" width="300" height="300"
+                        style="display:block; border-radius:50%; filter:drop-shadow(0 0 15px rgba(0,255,255,0.3));"></canvas>
+                </div>
+                <div class="wheel-controls"
+                    style="margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                    <div id="wheel-status-text" class="pixel-text"
+                        style="font-size:0.5rem; text-align:center; min-height:1.2rem;"
+                        data-translate-key="wheel_ready">Ready for spin!</div>
+                    <button id="wheel-spin-btn" class="retro-btn big" style="width:200px;"></button>
+                    <!-- BOMB TIMER DISPLAY -->
+                    <div id="wheel-bomb-timer" style="
+                        display:none;
+                        flex-direction:column;
+                        align-items:center;
+                        gap:6px;
+                        background: #000;
+                        border: 2px solid #ff3300;
+                        border-radius: 8px;
+                        padding: 10px 18px;
+                        box-shadow: 0 0 20px rgba(255,50,0,0.6), inset 0 0 10px rgba(255,50,0,0.1);
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <!-- Scan line overlay -->
+                        <div
+                            style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);pointer-events:none;z-index:1;">
+                        </div>
+                        <div id="wheel-timer-label" class="pixel-text"
+                            style="font-size:0.35rem; color:#ff3300; letter-spacing:2px; text-shadow:0 0 8px #ff3300; z-index:2;">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px; z-index:2;">
+                            <!-- Hours -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-h1">0</div>
+                                <div class="bomb-digit" id="bt-h2">0</div>
+                            </div>
+                            <div class="bomb-colon" id="bt-colon1">:</div>
+                            <!-- Minutes -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-m1">0</div>
+                                <div class="bomb-digit" id="bt-m2">0</div>
+                            </div>
+                            <div class="bomb-colon" id="bt-colon2">:</div>
+                            <!-- Seconds -->
+                            <div style="display:flex; gap:2px;">
+                                <div class="bomb-digit" id="bt-s1">0</div>
+                                <div class="bomb-digit" id="bt-s2">0</div>
+                            </div>
+                        </div>
+                        <div id="wheel-ads-left-display" class="pixel-text"
+                            style="font-size:0.33rem; color:#ff8800; letter-spacing:1px; z-index:2;"></div>
+                    </div>
+                    <!-- READY DISPLAY (shown when free spin available) -->
+                    <div id="wheel-ready-display"
+                        style="display:none; font-family:'Press Start 2P'; font-size:0.9rem; color:#00ff88; text-shadow:0 0 15px #00ff88, 0 0 30px #00ff88; animation: pulse-green 1s ease-in-out infinite alternate; letter-spacing:3px;">
+                    </div>
+                    <div id="wheel-timer-info" class="pixel-text" style="display:none; font-size:0.45rem; opacity:0.7;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PI NETWORK SDK -->
+
+
+    <div id="skin-detail-modal" class="modal-overlay" style="display: none;">
+        <div class="pixel-modal">
+            <div class="modal-body">
+                <div class="skin-preview-large">
+                    <img id="skin-modal-img" src="" alt="Skin Preview">
+                </div>
+                <div class="skin-info-col">
+                    <h2 id="skin-modal-title" class="pixel-title">SKIN NAME</h2>
+                    <p id="skin-modal-desc" class="pixel-text">Skin description goes here.</p>
+                    <div class="skin-stats" id="skin-modal-stats"></div>
+                    <div class="nft-minting-area"></div>
+                    <div class="modal-actions">
+                        <button id="skin-modal-action-btn" class="retro-btn"
+                            data-translate-key="hub_equip">EQUIP</button>
+                        <button class="retro-btn secondary" onclick="document.getElementById('skin-detail-modal').style.display='none'" data-translate-key="btn_back">CLOSE</button>
+                    </div>
+                    <div class="nft-info-area"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="trophy-detail-modal" class="modal-overlay" style="display: none;">
+        <div class="pixel-modal" style="border-image: linear-gradient(45deg, #FFD700, #FFA500) 1;">
+            <div class="modal-header" style="text-align:center; padding: 20px 0 10px;">
+                <div class="tier-label" id="trophy-modal-tier"
+                    style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: #FFD700; text-transform: uppercase;">
+                    GOLD</div>
+            </div>
+            <div class="modal-body">
+                <div class="skin-preview-large"
+                    style="background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);">
+                    <img id="trophy-modal-img" src="" alt="Trophy Preview" style="filter: drop-shadow(0 0 15px gold);">
+                </div>
+                <div class="skin-info-col">
+                    <h2 id="trophy-modal-title" class="pixel-title" style="color: gold;">TROPHY NAME</h2>
+                    <p id="trophy-modal-desc" class="pixel-text" style="color: #ccc;">How to get this trophy.</p>
+                    <div id="trophy-modal-date"
+                        style="font-family: 'Press Start 2P'; font-size: 0.4rem; color: #aaa; margin-top: 10px;"><span
+                            data-translate-key="hub_dated">DATED:</span>
+                        2026-03-08</div>
+                    <div class="modal-actions" style="margin-top:20px;">
+                        <button class="retro-btn secondary" onclick="document.getElementById('trophy-detail-modal').style.display='none'" data-translate-key="btn_back">CLOSE</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1219,29 +1592,32 @@
         })();
     </script>
 
-    <!-- HAUPTLOGIK -->
-    <script type="module" src="./index.js"></script>
-
-    <!-- CONNECTING OVERLAY (TOP LEVEL - position:fixed works correctly here) -->
-    <div id="connecting-overlay" class="connecting-overlay">
-        <div class="warp-ring-container">
-            <div class="warp-ring"></div>
-            <div class="warp-ring"></div>
-            <div class="warp-ring"></div>
-        </div>
-        <div class="connecting-content">
-            <div class="ship-loading-track">
-                <img src="./assets/images/player_tier1.png" class="ship-loading-img-overlay" alt="MK-I Pioneer">
-                <div class="neural-links">
-                    <div class="neural-fill"></div>
+    <!-- BLOCKCHAIN EXPLORER MODAL -->
+    <div id="explorer-modal" class="modal-overlay" style="display: none; z-index: 10002;">
+        <div class="pixel-modal explorer-modal-content" style="max-width: 900px; width: 95%; height: 90%; display: flex; flex-direction: column; padding: 0; background: #000; overflow: hidden; border: 2px solid #0ff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);">
+            <div class="explorer-header" style="padding: 10px 15px; background: #050505; border-bottom: 2px solid #0ff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="blinking-dot"></div>
+                    <span style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: #0ff; letter-spacing: 1px;">LEDGER_STATUS: VIEWING_TX</span>
                 </div>
+                <button id="explorer-close-btn" class="retro-btn mini" style="padding: 6px 12px; margin: 0; border-color: #ff4444; color: #ff4444;" data-translate-key="hub_back_to_game">BACK TO GAME</button>
             </div>
-            <div class="connecting-text" data-translate-key="hub_connecting">CONNECTING...</div>
-            <div class="connecting-subtext" data-translate-key="hub_neural_link">STABILIZING NEURAL LINK // BYPASSING
-                ENCRYPTION</div>
+            
+            <div id="explorer-iframe-container" style="flex-grow: 1; position: relative; background: #000;">
+                <div id="explorer-loading-spinner" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; z-index: 5;">
+                    <div class="loading-spinner" style="width: 40px; height: 40px; border: 3px solid rgba(0, 255, 255, 0.1); border-top-color: #0ff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="font-size: 0.4rem; color: #0ff; margin-top: 15px; font-family: 'Press Start 2P'; text-align:center; padding: 0 20px;">LINKING TO PI CHAIN...<br><br><span style="font-size:0.3rem; opacity:0.6;">If the screen remains white, use the link below.</span></p>
+                </div>
+                <iframe id="explorer-iframe" style="width: 100%; height: 100%; border: none; background: #000;" src="about:blank"></iframe>
+            </div>
+
+            <div class="explorer-footer" style="padding: 10px 15px; background: #050505; border-top: 1px solid #0ff; display: flex; justify-content: space-between; align-items: center; font-size: 0.4rem;">
+                <span style="color: #444;">NETWORK: <span id="explorer-network-val" style="color: #0ff; font-family: monospace;">PI_TESTNET</span></span>
+                <a id="explorer-external-link" href="#" target="_blank" class="retro-btn mini" style="text-decoration: none; border-color: #0ff; color: #0ff; margin: 0; padding: 5px 15px;">EXTERNAL_RESERVE</a>
+            </div>
         </div>
     </div>
 
+    <script type="module" src="./index.tsx"></script>
 </body>
-
 </html>

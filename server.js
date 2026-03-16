@@ -5,10 +5,14 @@ const cors = require('cors');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const StellarSdk = require('stellar-sdk');
+const http = require('http');
+const WebSocket = require('ws');
+const crypto = require('crypto');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+
 
 // ==================================================================
 // KONFIGURATION (Automatische Wahl nach Prozess-Name)
@@ -65,6 +69,19 @@ function normalizeUid(uid) {
     return uid;
 }
 
+function generateSecureTicketNumber(pi_uid) {
+    const ts = Date.now().toString();
+    const rand = crypto.randomBytes(8).toString('hex').toUpperCase();
+    const base = `${pi_uid}|${ts}|${rand}`;
+    const secret = process.env.TICKET_SECRET || PI_API_KEY || 'FALLBACK_TICKET_SECRET';
+    const sig = crypto.createHmac('sha256', secret).update(base).digest('hex').slice(0, 16).toUpperCase();
+    return `TKT-${rand}-${ts}-${sig}`;
+}
+
+function orderedPair(u1, u2) {
+    return [String(u1).toLowerCase(), String(u2).toLowerCase()].sort();
+}
+
 // ==================================================================
 // MIDDLEWARE
 // ==================================================================
@@ -74,97 +91,202 @@ app.use(express.json());
 // ==================================================================
 // DATENBANK INITIALISIEREN
 // ==================================================================
-const db = new sqlite3.Database('./leaderboard.db', (err) => {
+const dbFileName = (Number(port) === 3001) ? './leaderboard_testnet.db' : './leaderboard.db';
+const db = new sqlite3.Database(dbFileName, (err) => {
     if (err) {
         console.error("❌ Datenbank-Fehler:", err.message);
     } else {
         console.log("✅ SQLite-Datenbank bereit.");
 
-        // Tabelle für User-Fortschritt (Collectibles als Objekt für index.tsx)
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            pi_uid TEXT PRIMARY KEY,
-            username TEXT,
-            coins INTEGER DEFAULT 0,
-            upgrades TEXT DEFAULT '{}',      
-            cosmetics TEXT DEFAULT '{}',     
-            collectibles TEXT DEFAULT '{"unlocked_collectibles":[],"equipped_collectible":null}',  
-            total_kills INTEGER DEFAULT 0,
-            total_coins_collected INTEGER DEFAULT 0,
-            playtime_seconds INTEGER DEFAULT 0,
-            missions_completed INTEGER DEFAULT 0,
-            language TEXT DEFAULT NULL,
-            welcome_bonus_claimed INTEGER DEFAULT 0,
-            trophies TEXT DEFAULT '{}',
-            last_free_spin INTEGER DEFAULT 0,
-            ad_spins_today INTEGER DEFAULT 0,
-            last_ad_reset INTEGER DEFAULT 0,
-            has_premium_license INTEGER DEFAULT 0
-        )`);
+        // Serielles Setup: Alle Tabellen und Migrationen nacheinander ausführen
+        db.serialize(() => {
+            // 1. Users Tabelle
+            db.run(`CREATE TABLE IF NOT EXISTS users (
+                pi_uid TEXT PRIMARY KEY,
+                username TEXT,
+                coins INTEGER DEFAULT 0,
+                upgrades TEXT DEFAULT '{}',      
+                cosmetics TEXT DEFAULT '{}',     
+                collectibles TEXT DEFAULT '{"unlocked_collectibles":[],"equipped_collectible":null}',  
+                settings TEXT DEFAULT '{}',
+                settings_updated_at INTEGER DEFAULT 0,
+                total_kills INTEGER DEFAULT 0,
+                total_coins_collected INTEGER DEFAULT 0,
+                playtime_seconds INTEGER DEFAULT 0,
+                missions_completed INTEGER DEFAULT 0,
+                language TEXT DEFAULT NULL,
+                welcome_bonus_claimed INTEGER DEFAULT 0,
+                trophies TEXT DEFAULT '{}',
+                last_free_spin INTEGER DEFAULT 0,
+                ad_spins_today INTEGER DEFAULT 0,
+                last_ad_reset INTEGER DEFAULT 0,
+                has_premium_license INTEGER DEFAULT 0,
+                display_name TEXT DEFAULT NULL,
+                bio TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                last_seen TEXT DEFAULT NULL,
+                profile_visibility TEXT DEFAULT 'public',
+                is_vip INTEGER DEFAULT 0,
+                jackpot_tickets INTEGER DEFAULT 0,
+                pi_balance REAL DEFAULT 0.0,
+                auto_claimer_active INTEGER DEFAULT 0
+            )`);
 
-        // Rückwärtskompatibel: Spalten nachrüsten falls DB schon existiert
-        db.run(`ALTER TABLE users ADD COLUMN welcome_bonus_claimed INTEGER DEFAULT 0`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN trophies TEXT DEFAULT '{}'`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN last_free_spin INTEGER DEFAULT 0`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN ad_spins_today INTEGER DEFAULT 0`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN last_ad_reset INTEGER DEFAULT 0`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN has_premium_license INTEGER DEFAULT 0`, () => { });
+            // Spalten-Migration für bestehende DBs
+            const columns = [
+                { n: 'welcome_bonus_claimed', t: 'INTEGER', d: '0' },
+                { n: 'trophies', t: 'TEXT', d: "'{}'" },
+                { n: 'last_free_spin', t: 'INTEGER', d: '0' },
+                { n: 'ad_spins_today', t: 'INTEGER', d: '0' },
+                { n: 'last_ad_reset', t: 'INTEGER', d: '0' },
+                { n: 'has_premium_license', t: 'INTEGER', d: '0' },
+                { n: 'settings', t: 'TEXT', d: "'{}'" },
+                { n: 'settings_updated_at', t: 'INTEGER', d: '0' },
+                { n: 'display_name', t: 'TEXT', d: 'NULL' },
+                { n: 'bio', t: 'TEXT', d: 'NULL' },
+                { n: 'created_at', t: 'TEXT', d: "'2026-03-11 00:00:00'" },
+                { n: 'last_seen', t: 'TEXT', d: 'NULL' },
+                { n: 'profile_visibility', t: 'TEXT', d: "'public'" },
+                { n: 'is_vip', t: 'INTEGER', d: '0' },
+                { n: 'jackpot_tickets', t: 'INTEGER', d: '0' },
+                { n: 'pi_balance', t: 'REAL', d: '0.0' },
+                { n: 'auto_claimer_active', t: 'INTEGER', d: '0' }
+            ];
+            columns.forEach(col => {
+                db.run(`ALTER TABLE users ADD COLUMN ${col.n} ${col.t} DEFAULT ${col.d}`, (err) => {
+                    // Fehler "duplicate column name" ignorieren wir einfach
+                });
+            });
 
-        // Tabelle für Highscores
-        db.run(`CREATE TABLE IF NOT EXISTS scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pi_uid TEXT NOT NULL,
-            username TEXT NOT NULL,
-            score INTEGER NOT NULL,
-            waves INTEGER NOT NULL,
-            mode TEXT NOT NULL,
-            UNIQUE(pi_uid, mode)
-        )`);
+            // 2. Highscores Tabelle
+            db.run(`CREATE TABLE IF NOT EXISTS scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pi_uid TEXT NOT NULL,
+                username TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                waves INTEGER NOT NULL,
+                mode TEXT NOT NULL,
+                UNIQUE(pi_uid, mode)
+            )`);
 
-        // Tabelle für Blockchain-Transaktionen (TXIDs)
-        db.run(`CREATE TABLE IF NOT EXISTS payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pi_uid TEXT NOT NULL,
-            payment_id TEXT,
-            txid TEXT NOT NULL,
-            bundle_id TEXT,
-            amount_coins INTEGER DEFAULT 0,
-            network TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            explorer_url TEXT
-        )`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_payments_pi_uid ON payments (pi_uid)`);
+            // 3. Payments Tabelle
+            db.run(`CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pi_uid TEXT NOT NULL,
+                payment_id TEXT,
+                txid TEXT NOT NULL,
+                bundle_id TEXT,
+                amount_coins INTEGER DEFAULT 0,
+                network TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                explorer_url TEXT
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_payments_pi_uid ON payments (pi_uid)`);
 
-        // ── Profile / Social (Public Profiles + Friend Requests) ─────────────
-        // Add optional profile fields (safe if columns already exist)
-        db.run(`ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT NULL`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (datetime('now'))`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT DEFAULT NULL`, () => { });
-        db.run(`ALTER TABLE users ADD COLUMN profile_visibility TEXT DEFAULT 'public'`, () => { });
+            // 4. Social Tabellen
+            db.run(`CREATE TABLE IF NOT EXISTS friend_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                from_uid TEXT NOT NULL,
+                to_uid TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(from_uid, to_uid)
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_friendreq_to ON friend_requests (to_uid, status)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_friendreq_from ON friend_requests (from_uid, status)`);
 
-        // Friend requests: minimal workflow (pending -> accepted/declined/cancelled)
-        db.run(`CREATE TABLE IF NOT EXISTS friend_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            from_uid TEXT NOT NULL,
-            to_uid TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(from_uid, to_uid)
-        )`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_friendreq_to ON friend_requests (to_uid, status)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_friendreq_from ON friend_requests (from_uid, status)`);
+            db.run(`CREATE TABLE IF NOT EXISTS friends (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uid_a TEXT NOT NULL,
+                uid_b TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(uid_a, uid_b)
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_friends_a ON friends (uid_a)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_friends_b ON friends (uid_b)`);
 
-        // Friends table: store undirected relationship (uid_a < uid_b)
-        db.run(`CREATE TABLE IF NOT EXISTS friends (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            uid_a TEXT NOT NULL,
-            uid_b TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(uid_a, uid_b)
-        )`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_friends_a ON friends (uid_a)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_friends_b ON friends (uid_b)`);
+            // 5. Messages Tabelle
+            db.run(`CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                from_uid TEXT NOT NULL,
+                to_uid TEXT NOT NULL,
+                content TEXT NOT NULL,
+                is_read INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_msg_to ON messages (to_uid, is_read)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages (from_uid, to_uid)`);
+
+            // 6. Feed Tabelle
+            db.run(`CREATE TABLE IF NOT EXISTS feed (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pi_uid TEXT NOT NULL,
+                type TEXT NOT NULL,
+                content TEXT,
+                metadata TEXT,
+                likes_count INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_feed_pi_uid ON feed (pi_uid)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_feed_time ON feed (created_at DESC)`);
+
+            // 7. Jackpots Tabelle & Initialer Status
+            db.run(`CREATE TABLE IF NOT EXISTS jackpots (
+                type TEXT PRIMARY KEY,
+                current_pot REAL DEFAULT 0,
+                end_time TEXT,
+                last_winner_uid TEXT,
+                last_winner_name TEXT
+            )`);
+            
+            // 8. Tickets Tabelle für fälschungssichere Speicherung
+            db.run(`CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pi_uid TEXT NOT NULL,
+                ticket_number TEXT NOT NULL UNIQUE,
+                created_at TEXT DEFAULT (datetime('now'))
+            )`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_uid ON tickets (pi_uid)`);
+            
+            // Default Jackpots anlegen (Mini entfernt)
+            db.run(`INSERT OR IGNORE INTO jackpots (type, current_pot, end_time) VALUES ('daily', 100.00, datetime('now', '+120 seconds'))`);
+            db.run(`INSERT OR IGNORE INTO jackpots (type, current_pot, end_time) VALUES ('gfc_pot', 0, datetime('now', '+120 seconds'))`);
+            
+            // Radikale Bereinigung der alten Mock-Daten
+            db.run(`UPDATE jackpots SET current_pot = 100.00 WHERE type = 'daily' AND current_pot >= 50000`);
+            db.run(`DELETE FROM jackpots WHERE type = 'mini'`);
+            
+            console.log("✅ [JACKPOT] Status-Werte wurden auf App-Wallet Balance (Real) synchronisiert.");
+
+            // 7. Migrationen / Cleanup
+            if (Number(port) === 3001) {
+                // Delete orphaned/duplicate records that would block migration
+                db.run(`DELETE FROM users WHERE pi_uid NOT LIKE 'test_%' AND 'test_' || pi_uid IN (SELECT pi_uid FROM users)`, (err) => {
+                    if (err) console.error("Migration Delete Users Error:", err.message);
+                });
+                db.run(`UPDATE users SET pi_uid = 'test_' || pi_uid WHERE pi_uid NOT LIKE 'test_%'`, (err) => {
+                    if (err) console.error("Migration Update Users Error:", err.message);
+                });
+
+                db.run(`DELETE FROM scores WHERE pi_uid NOT LIKE 'test_%' AND EXISTS (SELECT 1 FROM scores s2 WHERE s2.pi_uid = 'test_' || scores.pi_uid AND s2.mode = scores.mode)`, (err) => {
+                    if (err) console.error("Migration Delete Scores Error:", err.message);
+                });
+                db.run(`UPDATE scores SET pi_uid = 'test_' || pi_uid WHERE pi_uid NOT LIKE 'test_%'`, (err) => {
+                    if (err) console.error("Migration Update Scores Error:", err.message);
+                });
+
+                db.run(`UPDATE OR IGNORE payments SET pi_uid = 'test_' || pi_uid WHERE pi_uid NOT LIKE 'test_%'`, (err) => {
+                    if (err) console.error("Migration Update Payments Error:", err.message);
+                });
+
+                console.log("🛠️  [TESTNET] UID Migration check complete.");
+            } else {
+                db.run(`DELETE FROM users WHERE pi_uid LIKE 'test_%'`);
+                db.run(`DELETE FROM scores WHERE pi_uid LIKE 'test_%'`);
+                console.log("🧹 [MAINNET] Datenbank bereinigt (Test-Einträge entfernt).");
+            }
+        });
     }
 });
 
@@ -180,6 +302,56 @@ const piApi = axios.create({
 // PAYMENT ROUTEN
 // ==================================================================
 
+// Precheck: verhindert doppelte Collectible-Käufe und illegales Minting (ohne Kauf / ohne Premium / doppelt).
+app.get('/api/can-purchase', (req, res) => {
+    const rawUid = req.query.pi_uid;
+    const bundleId = req.query.bundle_id;
+
+    if (!rawUid || !bundleId) {
+        return res.status(400).json({ allowed: false, reason: "missing_params" });
+    }
+
+    const pi_uid = normalizeUid(String(rawUid));
+    const id = String(bundleId);
+
+    db.get("SELECT collectibles, has_premium_license FROM users WHERE pi_uid = ?", [pi_uid], (err, row) => {
+        if (err) return res.status(500).json({ allowed: false, reason: "db_error" });
+
+        let collectibles = { unlocked_collectibles: [], equipped_collectible: null, minted_collectibles: [], minted_metadata: {} };
+        if (row && row.collectibles) {
+            try {
+                const parsed = JSON.parse(row.collectibles);
+                collectibles.unlocked_collectibles = parsed.unlocked_collectibles || [];
+                collectibles.equipped_collectible = parsed.equipped_collectible || null;
+                collectibles.minted_collectibles = parsed.minted_collectibles || [];
+                collectibles.minted_metadata = parsed.minted_metadata || {};
+            } catch { }
+        }
+
+        if (id === 'premium_license') {
+            const hasPremium = row && row.has_premium_license === 1;
+            return res.status(200).json({ allowed: !hasPremium, reason: hasPremium ? "already_premium" : "ok" });
+        }
+        if (id.startsWith('collectible_')) {
+            const alreadyOwned = collectibles.unlocked_collectibles.includes(id);
+            return res.status(200).json({ allowed: !alreadyOwned, reason: alreadyOwned ? "already_owned" : "ok" });
+        }
+
+        if (id.startsWith('mint_')) {
+            const collId = id.replace('mint_', '');
+            const owns = collectibles.unlocked_collectibles.includes(collId);
+            const alreadyMinted = collectibles.minted_collectibles.includes(collId);
+            const hasPremium = row && row.has_premium_license === 1;
+
+            if (!owns) return res.status(200).json({ allowed: false, reason: "not_owned" });
+            if (!hasPremium) return res.status(200).json({ allowed: false, reason: "license_required" });
+            if (alreadyMinted) return res.status(200).json({ allowed: false, reason: "already_minted" });
+            return res.status(200).json({ allowed: true, reason: "ok" });
+        }
+
+        return res.status(200).json({ allowed: true, reason: "ok" });
+    });
+});
 // 1. APPROVE
 app.post('/api/approve-payment', async (req, res) => {
     const { paymentId } = req.body;
@@ -233,19 +405,20 @@ app.post('/api/complete-payment', async (req, res) => {
 
         db.serialize(() => {
             db.run(`INSERT OR IGNORE INTO users (pi_uid, username, coins) VALUES (?, 'Pilot', 0)`, [finalUid]);
-            db.get("SELECT collectibles FROM users WHERE pi_uid = ?", [finalUid], (err, row) => {
+            db.get("SELECT collectibles, has_premium_license FROM users WHERE pi_uid = ?", [finalUid], (err, row) => {
                 if (err) {
                     console.error("❌ DB Fehler beim Laden:", err.message);
                     return res.status(500).json({ error: "Internal DB Error" });
                 }
 
-                let collectiblesObj = { unlocked_collectibles: [], equipped_collectible: null, minted_collectibles: [] };
+                let collectiblesObj = { unlocked_collectibles: [], equipped_collectible: null, minted_collectibles: [], minted_metadata: {} };
                 if (row && row.collectibles) {
                     try {
                         const parsed = JSON.parse(row.collectibles);
                         collectiblesObj.unlocked_collectibles = parsed.unlocked_collectibles || [];
                         collectiblesObj.equipped_collectible = parsed.equipped_collectible || null;
                         collectiblesObj.minted_collectibles = parsed.minted_collectibles || [];
+                        collectiblesObj.minted_metadata = parsed.minted_metadata || {};
                     } catch (e) { }
                 }
 
@@ -258,20 +431,23 @@ app.post('/api/complete-payment', async (req, res) => {
                     }
                 } else if (bundleId && bundleId.startsWith('mint_')) {
                     const collId = bundleId.replace('mint_', '');
-                    // Ensure the new structure exists
-                    if (!collectiblesObj.minted_metadata) {
-                        collectiblesObj.minted_metadata = {};
-                    }
-                    if (!collectiblesObj.minted_collectibles.includes(collId)) {
+                    const hasPremium = row && row.has_premium_license === 1;
+                    const owns = collectiblesObj.unlocked_collectibles.includes(collId);
+                    const alreadyMinted = collectiblesObj.minted_collectibles.includes(collId);
+
+                    if (!owns) {
+                        console.warn('[MINT] Refused: collectible not owned (uid=' + finalUid + ', coll=' + collId + ')');
+                    } else if (!hasPremium) {
+                        console.warn('[MINT] Refused: premium license required (uid=' + finalUid + ')');
+                    } else if (!alreadyMinted) {
                         collectiblesObj.minted_collectibles.push(collId);
+                        collectiblesObj.minted_metadata[collId] = {
+                            txid: txid,
+                            minted_at: new Date().toISOString(),
+                            network: mode,
+                            paymentId: paymentId
+                        };
                     }
-                    // Save blockchain proof
-                    collectiblesObj.minted_metadata[collId] = {
-                        txid: txid,
-                        minted_at: new Date().toISOString(),
-                        network: mode,
-                        paymentId: paymentId
-                    };
                 }
 
                 const updateSql = `
@@ -331,7 +507,8 @@ app.post('/api/complete-payment', async (req, res) => {
                     message: "Already completed",
                     newBalance: finalRow ? finalRow.coins : 0,
                     addedCoins: 0,
-                    bundleId: paymentObj.metadata?.bundleId || "Unbekannt"
+                    bundleId: paymentObj.metadata?.bundleId || "Unbekannt",
+                    has_premium_license: finalRow ? finalRow.has_premium_license === 1 : false
                 });
             });
             return;
@@ -558,7 +735,7 @@ app.get('/api/node-stats', async (req, res) => {
         latestLedger = data._embedded?.records?.[0] || data?.records?.[0] || null;
         dataSource = source;
         if (latestLedger) {
-            console.log(`✅ [node-stats] Ledger #${latestLedger.sequence} via ${source}`);
+            // Log moved to end of function
         }
     } catch (e) {
         console.error(`❌ [node-stats] Ledger fehlgeschlagen:`, e.message);
@@ -572,7 +749,6 @@ app.get('/api/node-stats', async (req, res) => {
             if (nativeBal) {
                 piBalance = parseFloat(nativeBal.balance).toFixed(4) + ' PI';
                 walletExists = true;
-                console.log(`✅ [node-stats] Wallet: ${piBalance}`);
             }
         } catch (e) {
             if (e.response?.status === 404) console.warn(`⚠️ Wallet nicht on-chain: ${APP_WALLET_PUBLIC_KEY}`);
@@ -608,7 +784,7 @@ app.get('/api/node-stats', async (req, res) => {
         fetched_at: new Date().toISOString()
     };
     setCache('nodeStats', stats);
-    console.log(`✅ [node-stats] Block: #${stats.block_height} | Source: ${dataSource} | Balance: ${stats.app_balance}`);
+    console.log(`✅ [API] /node-stats | Block: #${stats.block_height} | Wallet: ${stats.app_balance || 'N/A'}`);
     res.json(stats);
 });
 
@@ -640,7 +816,7 @@ app.get('/api/fee-stats', async (req, res) => {
             fetched_at: new Date().toISOString()
         };
         setCache('feeStats', result);
-        console.log(`✅ [fee-stats] Capacity: ${result.ledger_capacity_usage} | Base: ${result.last_ledger_base_fee}`);
+        console.log(`✅ [API] /fee-stats | Capacity: ${result.ledger_capacity_usage} | Base: ${result.last_ledger_base_fee}`);
         res.json(result);
     } catch (e) {
         console.error(`❌ [fee-stats]:`, e.message);
@@ -674,7 +850,7 @@ app.get('/api/network-feed', async (req, res) => {
         }));
         const result = { source, ops, fetched_at: new Date().toISOString() };
         setCache('networkFeed', result);
-        console.log(`✅ [network-feed] ${ops.length} Ops via ${source}`);
+        console.log(`✅ [API] /network-feed | ${ops.length} Operations`);
         res.json(result);
     } catch (e) {
         console.error(`❌ [network-feed]:`, e.message);
@@ -819,32 +995,94 @@ app.get('/api/load-data', (req, res) => {
     // Create a default row on first contact so the client can always bootstrap from DB.
     db.serialize(() => {
         db.run(
-            `INSERT OR IGNORE INTO users (pi_uid, username, coins) VALUES (?, 'Pilot', 0)`,
+            `INSERT OR IGNORE INTO users (pi_uid, username, last_seen, coins) VALUES (?, 'Pilot', datetime('now'), 0)`,
             [pi_uid]
         );
+        db.run(`UPDATE users SET last_seen = datetime('now') WHERE pi_uid = ?`, [pi_uid]);
 
         db.get("SELECT * FROM users WHERE pi_uid = ?", [pi_uid], (err, row) => {
             if (err || !row) return res.status(500).json({ error: "DB Fehler beim Laden" });
 
-            let upgrades = {}, cosmetics = {}, collectibles = { unlocked_collectibles: [], equipped_collectible: null }, trophies = {};
-            try { upgrades = JSON.parse(row.upgrades || '{}'); } catch (e) { }
-            try { cosmetics = JSON.parse(row.cosmetics || '{}'); } catch (e) { }
-            try { collectibles = JSON.parse(row.collectibles || '{"unlocked_collectibles":[],"equipped_collectible":null}'); } catch (e) { }
-            try { trophies = JSON.parse(row.trophies || '{}'); } catch (e) { }
+            // Auch Highscore laden
+            db.get("SELECT MAX(score) as highscore FROM scores WHERE pi_uid = ?", [pi_uid], (err, scoreRow) => {
+                const highscore = (scoreRow && scoreRow.highscore) || 0;
 
-            res.json({
-                coins: row.coins,
-                upgrades,
-                cosmetics,
-                collectibles,
-                trophies,
-                total_kills: row.total_kills,
-                total_coins_collected: row.total_coins_collected,
-                playtime_seconds: row.playtime_seconds,
-                missions_completed: row.missions_completed,
-                language: row.language,
-                has_premium_license: row.has_premium_license === 1
+                let upgrades = {}, cosmetics = {}, collectibles = { unlocked_collectibles: [], equipped_collectible: null }, trophies = {}, settings = {};
+                try { upgrades = JSON.parse(row.upgrades || '{}'); } catch (e) { }
+                try { cosmetics = JSON.parse(row.cosmetics || '{}'); } catch (e) { }
+                try { collectibles = JSON.parse(row.collectibles || '{"unlocked_collectibles":[],"equipped_collectible":null}'); } catch (e) { }
+                try { trophies = JSON.parse(row.trophies || '{}'); } catch (e) { }
+                try { settings = JSON.parse(row.settings || '{}'); } catch (e) { }
+
+                res.json({
+                    coins: row.coins,
+                    highscore: highscore,
+                    upgrades,
+                    cosmetics,
+                    collectibles,
+                    trophies,
+                    settings,
+                    settings_updated_at: row.settings_updated_at || 0,
+                    total_kills: row.total_kills,
+                    total_coins_collected: row.total_coins_collected,
+                    playtime_seconds: row.playtime_seconds,
+                    missions_completed: row.missions_completed,
+                    language: row.language,
+                    has_premium_license: row.has_premium_license === 1
+                });
             });
+        });
+    });
+});
+
+// ==================================================================
+// SETTINGS SYNC (Server canonical across devices)
+// ==================================================================
+app.post('/api/save-settings', (req, res) => {
+    const pi_uid = normalizeUid(req.body.pi_uid);
+    const username = (req.body.username || 'Pilot').toString().slice(0, 32);
+    const incoming = req.body.settings;
+    const incomingUpdatedAt = Number(req.body.settings_updated_at) || Date.now();
+
+    if (!pi_uid) return res.status(400).json({ error: "UID fehlt" });
+    if (!incoming || typeof incoming !== 'object') return res.status(400).json({ error: "settings_invalid" });
+
+    // Whitelist + sanitize to avoid storing arbitrary junk.
+    const cleaned = {};
+    try {
+        if (typeof incoming.masterVolume === 'number') cleaned.masterVolume = Math.max(0, Math.min(1, incoming.masterVolume));
+        if (typeof incoming.music === 'boolean') cleaned.music = incoming.music;
+        if (typeof incoming.sfx === 'boolean') cleaned.sfx = incoming.sfx;
+        if (typeof incoming.particles === 'number') cleaned.particles = Math.max(0, Math.min(2, Math.floor(incoming.particles)));
+        if (typeof incoming.screenShake === 'boolean') cleaned.screenShake = incoming.screenShake;
+        if (typeof incoming.crt === 'boolean') cleaned.crt = incoming.crt;
+        if (typeof incoming.vibration === 'boolean') cleaned.vibration = incoming.vibration;
+        if (typeof incoming.autoFire === 'string' && ['always', 'move', 'off'].includes(incoming.autoFire)) cleaned.autoFire = incoming.autoFire;
+        if (typeof incoming.autoFire === 'boolean') cleaned.autoFire = incoming.autoFire ? 'always' : 'off';
+    } catch { }
+
+    // Hard cap (just in case)
+    const json = JSON.stringify(cleaned);
+    if (json.length > 2000) return res.status(400).json({ error: "settings_too_large" });
+
+    db.serialize(() => {
+        db.run(`INSERT OR IGNORE INTO users (pi_uid, username, coins) VALUES (?, ?, 0)`, [pi_uid, username]);
+
+        db.get(`SELECT settings_updated_at FROM users WHERE pi_uid = ?`, [pi_uid], (err, row) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const currentTs = row?.settings_updated_at || 0;
+            if (currentTs > incomingUpdatedAt) {
+                return res.status(409).json({ error: "stale_settings", settings_updated_at: currentTs });
+            }
+
+            db.run(
+                `UPDATE users SET settings = ?, settings_updated_at = ? WHERE pi_uid = ?`,
+                [json, incomingUpdatedAt, pi_uid],
+                function (err2) {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ success: true, settings_updated_at: incomingUpdatedAt });
+                }
+            );
         });
     });
 });
@@ -958,7 +1196,8 @@ app.post('/api/save-data', (req, res) => {
                 playtime_seconds = playtime_seconds + ?,
                 total_coins_collected = total_coins_collected + ?,
                 missions_completed = missions_completed + ?,
-                language = COALESCE(?, language)
+                language = COALESCE(?, language),
+                last_seen = datetime('now')
             WHERE pi_uid = ?`;
 
         db.run(sql, [
@@ -1271,13 +1510,26 @@ app.post('/api/equip-item', (req, res) => {
 });
 
 app.post('/api/submit-score', (req, res) => {
-    const { pi_uid, username, score, waves, mode } = req.body;
+    const pi_uid = normalizeUid(req.body.pi_uid);
+    const { username, score, waves, mode } = req.body;
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
     db.get(`SELECT score FROM scores WHERE pi_uid = ? AND mode = ?`, [pi_uid, mode], (err, row) => {
         if (!row || score > row.score) {
             const sql = `INSERT INTO scores (pi_uid, username, score, waves, mode) 
                 VALUES (?, ?, ?, ?, ?) ON CONFLICT(pi_uid, mode) DO UPDATE SET 
                 score = excluded.score, waves = excluded.waves, username = excluded.username`;
-            db.run(sql, [pi_uid, username, score, waves, mode], () => {
+            db.run(sql, [pi_uid, username, score, waves, mode], function(err) {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Post to Social Feed
+                const feedMsg = mode === 'endless'
+                    ? `erreichte eine neue Bestleistung: Welle ${waves} mit ${score.toLocaleString()} Punkten im Endlos-Modus!`
+                    : `erzielte ein neues Rekordergebnis von ${score.toLocaleString()} Punkten in der Kampagne!`;
+
+                db.run(`INSERT INTO feed (pi_uid, type, content, metadata) VALUES (?, 'highscore', ?, ?)`,
+                    [pi_uid, feedMsg, JSON.stringify({ score, waves, mode })]);
+
                 db.get(`SELECT COUNT(*) + 1 as rank FROM scores WHERE mode = ? AND score > ?`, [mode, score], (err, r) => {
                     res.json({ rank: r ? r.rank : 1, score: score });
                 });
@@ -1300,8 +1552,8 @@ app.get('/api/leaderboard', (req, res) => {
 // PUBLIC PROFILE (View other pilots)
 // ==================================================================
 app.get('/api/public-profile', (req, res) => {
-    const pi_uid = normalizeUid(req.query.pi_uid);
-    const viewer_uid = normalizeUid(req.query.viewer_uid);
+    const pi_uid = normalizeUid(req.query.pi_uid).toLowerCase();
+    const viewer_uid = normalizeUid(req.query.viewer_uid)?.toLowerCase();
     if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
 
     // Ensure user exists for consistent response shape
@@ -1310,9 +1562,17 @@ app.get('/api/public-profile', (req, res) => {
         db.run(`UPDATE users SET last_seen = datetime('now') WHERE pi_uid = ?`, [pi_uid]);
 
         db.get(`SELECT pi_uid, username, display_name, bio, total_kills, total_coins_collected, playtime_seconds,
-                       missions_completed, trophies, cosmetics, collectibles, has_premium_license, created_at, last_seen
+                       missions_completed, trophies, cosmetics, collectibles, has_premium_license, created_at, last_seen,
+                       (SELECT COALESCE(SUM(likes_count), 0) FROM feed WHERE pi_uid = users.pi_uid) as reputation
                 FROM users WHERE pi_uid = ?`, [pi_uid], (err, u) => {
-            if (err || !u) return res.status(500).json({ error: 'DB error' });
+            if (err) {
+                console.error("❌ DB SELECT Error:", err);
+                return res.status(500).json({ error: 'Database query error' });
+            }
+            if (!u) {
+                console.warn("⚠️ User not found after registration Attempt:", pi_uid);
+                return res.status(404).json({ error: 'User registration failed or not found' });
+            }
 
             let trophies = {}, cosmetics = {}, collectibles = { unlocked_collectibles: [], equipped_collectible: null };
             try { trophies = JSON.parse(u.trophies || '{}'); } catch (e) { }
@@ -1334,6 +1594,7 @@ app.get('/api/public-profile', (req, res) => {
                         pi_uid: u.pi_uid,
                         username: u.username,
                         display_name: u.display_name,
+                        reputation: u.reputation || 0,
                         bio: u.bio,
                         created_at: u.created_at,
                         last_seen: u.last_seen,
@@ -1473,6 +1734,344 @@ app.post('/api/profile', (req, res) => {
 });
 
 // ==================================================================
+// PI FORTUNE JACKPOT API
+// ==================================================================
+
+// Sync/Get User Status for Jackpot
+app.post('/api/user/sync', (req, res) => {
+    const rawUid = req.body.id || req.body.pi_uid;
+    const pi_uid = normalizeUid(rawUid);
+    const username = req.body.username || 'Pilot';
+
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    db.serialize(() => {
+        // Register if not exists
+        db.run(`INSERT OR IGNORE INTO users (pi_uid, username, coins) VALUES (?, ?, 0)`, [pi_uid, username]);
+        
+        db.get(
+            `SELECT pi_uid, username, jackpot_tickets as tickets, is_vip, pi_balance as balance, auto_claimer_active 
+             FROM users WHERE pi_uid = ?`, 
+            [pi_uid], 
+            (err, row) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json(row);
+            }
+        );
+    });
+});
+
+// Add Ticket (Free or VIP)
+app.post('/api/user/add-ticket', (req, res) => {
+    const rawUid = req.body.userId || req.body.pi_uid;
+    const pi_uid = normalizeUid(rawUid);
+
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    db.run(
+        `UPDATE users SET jackpot_tickets = jackpot_tickets + 1 WHERE pi_uid = ?`,
+        [pi_uid],
+        function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Pots erhöhen (Werbeeinnahmen simulieren)
+            db.run(`UPDATE jackpots SET current_pot = current_pot + 0.10 WHERE type = 'daily'`);
+            
+            // Kryptographisch signiertes Ticket erstellen
+            const ticketNumber = generateSecureTicketNumber(pi_uid);
+            db.run(`INSERT INTO tickets (pi_uid, ticket_number) VALUES (?, ?)`, [pi_uid, ticketNumber]);
+            
+            db.get(`SELECT jackpot_tickets FROM users WHERE pi_uid = ?`, [pi_uid], (err2, row) => {
+                if (err2) return res.status(500).json({ error: 'Failed to fetch tickets' });
+                res.json({ success: true, newBalance: row.jackpot_tickets });
+            });
+        }
+    );
+});
+
+// Buy VIP
+app.post('/api/user/buy-vip', (req, res) => {
+    const rawUid = req.body.userId || req.body.pi_uid;
+    const pi_uid = normalizeUid(rawUid);
+
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    // Mockup: VIP Status einfach aktivieren
+    db.run(`UPDATE users SET is_vip = 1 WHERE pi_uid = ?`, [pi_uid], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// Exchange GFC for Ticket
+app.post('/api/user/exchange-gfc-ticket', (req, res) => {
+    const rawUid = req.body.userId || req.body.pi_uid;
+    const pi_uid = normalizeUid(rawUid);
+    const quantity = parseInt(req.body.quantity) || 1;
+    const costPerTicket = 10000;
+    const totalCost = costPerTicket * quantity;
+
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+    if (quantity <= 0) return res.status(400).json({ error: 'Ungültige Anzahl' });
+
+    db.get(`SELECT coins, jackpot_tickets FROM users WHERE pi_uid = ?`, [pi_uid], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'User nicht gefunden' });
+        if (row.coins < totalCost) return res.status(400).json({ error: 'Nicht genügend GFC' });
+
+        db.serialize(() => {
+            db.run(`UPDATE users SET coins = coins - ?, jackpot_tickets = jackpot_tickets + ? WHERE pi_uid = ?`, [totalCost, quantity, pi_uid]);
+            db.run(`UPDATE jackpots SET current_pot = current_pot + ? WHERE type = 'gfc_pot'`, [totalCost]);
+
+            // Mehrere kryptographisch signierte Tickets in der neuen Tabelle speichern
+            const stmt = db.prepare(`INSERT INTO tickets (pi_uid, ticket_number) VALUES (?, ?)`);
+            for (let i = 0; i < quantity; i++) {
+                const ticketNumber = generateSecureTicketNumber(pi_uid);
+                stmt.run([pi_uid, ticketNumber]);
+            }
+            stmt.finalize();
+            
+            db.get(`SELECT coins, jackpot_tickets FROM users WHERE pi_uid = ?`, [pi_uid], (err2, row2) => {
+                res.json({ 
+                    success: true, 
+                    newGfcBalance: row2.coins, 
+                    newTicketBalance: row2.jackpot_tickets,
+                    quantity: quantity
+                });
+            });
+        });
+    });
+});
+
+// Withdraw Winnings
+app.post('/api/user/withdraw', (req, res) => {
+    const rawUid = req.body.userId || req.body.pi_uid;
+    const pi_uid = normalizeUid(rawUid);
+    const amount = parseFloat(req.body.amount);
+
+    if (!pi_uid || isNaN(amount) || amount < 10) return res.status(400).json({ error: 'Ungültiger Betrag' });
+
+    db.get(`SELECT pi_balance FROM users WHERE pi_uid = ?`, [pi_uid], (err, row) => {
+        if (err || !row) return res.status(500).json({ error: 'User nicht gefunden' });
+        if (row.pi_balance < amount) return res.status(400).json({ error: 'Nicht genügend Pi balance' });
+
+        db.run(
+            `UPDATE users SET pi_balance = pi_balance - ? WHERE pi_uid = ?`,
+            [amount, pi_uid],
+            function(err2) {
+                if (err2) return res.status(500).json({ error: 'Auszahlung fehlgeschlagen' });
+                res.json({ success: true, newBalance: row.pi_balance - amount });
+            }
+        );
+    });
+});
+
+// Jackpot Status
+app.get('/api/jackpot/status', async (req, res) => {
+    try {
+        let realWalletBalance = 0;
+        if (APP_WALLET_PUBLIC_KEY) {
+            try {
+                const { data } = await horizonGet(`/accounts/${APP_WALLET_PUBLIC_KEY}`);
+                const nativeBal = (data.balances || []).find(b => b.asset_type === 'native');
+                if (nativeBal) {
+                    realWalletBalance = parseFloat(nativeBal.balance);
+                    console.log(`💰 [JACKPOT] Real Wallet Balance fetched: ${realWalletBalance} Pi`);
+                }
+            } catch (e) {
+                if (e.response?.status === 404) {
+                    realWalletBalance = 0;
+                } else {
+                    console.warn("⚠️ Jackpot Wallet Fetch Error:", e.message);
+                }
+            }
+        }
+
+        db.get(`SELECT COUNT(*) as active_count FROM users WHERE jackpot_tickets > 0`, (err, countRow) => {
+            db.all(`SELECT * FROM jackpots`, (err2, rows) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+
+                const updatedRows = rows.map(j => {
+                    // Ausschüttungs-Topf bleibt immer j.current_pot.
+                    // Die reale Wallet-Balance wird nicht mehr in den Pot gespiegelt,
+                    // damit nur das ausgezahlt werden kann, was dafür zurückgelegt wurde.
+                    let potValue = j.current_pot;
+                    
+                    // Return end_time as ISO 8601 UTC string if it exists
+                    let isoEndTime = j.end_time;
+                    if (j.end_time && !j.end_time.includes('T')) {
+                        // SQLite datetime('now') is like 'YYYY-MM-DD HH:MM:SS'
+                        isoEndTime = j.end_time.replace(' ', 'T') + 'Z';
+                    }
+
+                    return { ...j, current_pot: potValue, end_time: isoEndTime };
+                });
+
+                res.json({
+                    jackpots: updatedRows,
+                    online_pilots: global.connectedClients ? global.connectedClients.size : 0,
+                    wallet_balance_pi: realWalletBalance,
+                    active_ticket_pilots: countRow ? countRow.active_count : 0
+                });
+            });
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Jackpot Ranking (Top Ticket Holders)
+app.get('/api/jackpot/leaderboard', (req, res) => {
+    db.all(`SELECT username, jackpot_tickets as tickets FROM users WHERE jackpot_tickets > 0 ORDER BY jackpot_tickets DESC LIMIT 50`, (err, rows) => {
+        if (err) return res.status(500).json([]);
+        res.json(rows || []);
+    });
+});
+
+// --- JACKPOT DRAW LOGIC (BACKGROUND) ---
+async function runJackpotDraw() {
+    // Aktuelle Balance abholen
+    let realWalletBalance = 0;
+    if (APP_WALLET_PUBLIC_KEY) {
+        try {
+            const { data } = await horizonGet(`/accounts/${APP_WALLET_PUBLIC_KEY}`);
+            const nativeBal = (data.balances || []).find(b => b.asset_type === 'native');
+            if (nativeBal) realWalletBalance = parseFloat(nativeBal.balance);
+        } catch (e) {
+            if (e.response?.status === 404) {
+                realWalletBalance = 0;
+            } else {
+                console.warn("⚠️ Draw Wallet Fetch Error:", e.message);
+            }
+        }
+    }
+
+    db.all(`SELECT * FROM jackpots WHERE type = 'daily' AND end_time <= datetime('now')`, (err, rows) => {
+        if (err) return;
+        if (!rows || rows.length === 0) return; // nichts fällig, kein Log-Spam
+
+        console.log("🎲 [JACKPOT] Prüfe auf fällige Ziehungen (fällige Jackpots gefunden)...");
+        
+        rows.forEach(jackpot => {
+            // Ausschüttungs-Topf: nur das, was explizit in current_pot gesammelt wurde
+            const currentPot = jackpot.current_pot;
+
+            console.log(`🎰 [JACKPOT] Ziehung für Typ: ${jackpot.type}`);
+            
+            // Ziehung: bis zu 10 unterschiedliche Gewinner, gewichtet nach Tickets
+            db.all(`SELECT t.pi_uid, u.username FROM tickets t JOIN users u ON t.pi_uid = u.pi_uid ORDER BY RANDOM()`, (err2, rowsTickets) => {
+                if (err2) return;
+
+                if (rowsTickets && rowsTickets.length > 0) {
+                    const winners = [];
+                    const seen = new Set();
+                    for (const row of rowsTickets) {
+                        if (!seen.has(row.pi_uid)) {
+                            winners.push(row);
+                            seen.add(row.pi_uid);
+                            if (winners.length >= 10) break;
+                        }
+                    }
+
+                    if (winners.length === 0) {
+                        console.log(`⚠️ [JACKPOT] Keine eindeutigen Gewinner-Einträge für ${jackpot.type}.`);
+                        const nextTime = "+120 seconds";
+                        db.run(`UPDATE jackpots SET end_time = datetime('now', ?) WHERE type = ?`, [nextTime, jackpot.type]);
+                        db.run(`UPDATE jackpots SET end_time = datetime('now', ?) WHERE type = 'gfc_pot'`, [nextTime]);
+                        return;
+                    }
+
+                    // Shares von 1 bis N (oder 10), höchster Rang bekommt die meisten Anteile
+                    const maxRanks = winners.length;
+                    let totalShares = 0;
+                    for (let rank = 1; rank <= maxRanks; rank++) {
+                        totalShares += rank;
+                    }
+
+                    db.get(`SELECT current_pot FROM jackpots WHERE type = 'gfc_pot'`, (errG, gfcRow) => {
+                        const gfcAmountTotal = (gfcRow && gfcRow.current_pot) ? gfcRow.current_pot : 0;
+
+                        winners.forEach((winner, index) => {
+                            const rank = maxRanks - index; // Erster Gewinner = höchster Rang
+                            const share = rank / totalShares;
+
+                            const piWinRaw = currentPot * share;
+                            const gfcWinRaw = gfcAmountTotal * share;
+
+                            const piWin = Math.round(piWinRaw * 100) / 100; // 2 Nachkommastellen
+                            const gfcWin = Math.round(gfcWinRaw); // ganze GFC
+
+                            if (piWin > 0) {
+                                db.run(`UPDATE users SET pi_balance = pi_balance + ? WHERE pi_uid = ?`, [piWin, winner.pi_uid]);
+                            }
+                            if (gfcWin > 0) {
+                                db.run(`UPDATE users SET coins = coins + ? WHERE pi_uid = ?`, [gfcWin, winner.pi_uid]);
+                            }
+
+                            const label = 'MEGA';
+                            let feedContent = `Hat den ${label} Jackpot-Anteil (Rang ${rank}) von ${piWin.toFixed(2)} Pi gewonnen! 🏆`;
+                            if (gfcWin > 0) feedContent += ` (+ ${gfcWin.toLocaleString()} GFC Bonus!)`;
+                            db.run(`INSERT INTO feed (pi_uid, type, content) VALUES (?, 'win', ?)`, [winner.pi_uid, feedContent]);
+                        });
+
+                        // GFC-Pot leeren
+                        if (gfcAmountTotal > 0) {
+                            db.run(`UPDATE jackpots SET current_pot = 0 WHERE type = 'gfc_pot'`);
+                        }
+
+                        const topWinner = winners[0];
+                        const nextTime = "+120 seconds";
+                        const nextPot = 0;
+
+                        db.run(
+                            `UPDATE jackpots SET 
+                                current_pot = ?, 
+                                end_time = datetime('now', ?), 
+                                last_winner_uid = ?, 
+                                last_winner_name = ?
+                             WHERE type = ?`,
+                            [nextPot, nextTime, topWinner.pi_uid, topWinner.username, jackpot.type]
+                        );
+
+                        // GFC-Pot-Timer synchron mitziehen
+                        db.run(`UPDATE jackpots SET end_time = datetime('now', ?) WHERE type = 'gfc_pot'`, [nextTime]);
+
+                        // Tickets entladen (alle Tickets aus der tickets Tabelle löschen)
+                        db.run(`DELETE FROM tickets`);
+                        db.run(`UPDATE users SET jackpot_tickets = 0`);
+
+                        // Broadcast an alle verbundenen Clients (mit allen Gewinnern)
+                        if (global.connectedClients) {
+                            const winMsg = JSON.stringify({
+                                type: 'jackpot_win',
+                                jackpot_type: jackpot.type,
+                                winners: winners.map((w, index) => ({
+                                    pi_uid: w.pi_uid,
+                                    username: w.username,
+                                    rank: maxRanks - index
+                                }))
+                            });
+                            global.connectedClients.forEach(ws => {
+                                if (ws.readyState === WebSocket.OPEN) ws.send(winMsg);
+                            });
+                        }
+                    });
+                } else {
+                    console.log(`⚠️ [JACKPOT] Keine Teilnehmer für ${jackpot.type}. Verlängere Jackpot.`);
+                    const nextTime = "+120 seconds";
+                    db.run(`UPDATE jackpots SET end_time = datetime('now', ?) WHERE type = ?`, [nextTime, jackpot.type]);
+                    db.run(`UPDATE jackpots SET end_time = datetime('now', ?) WHERE type = 'gfc_pot'`, [nextTime]);
+                }
+            });
+        });
+    });
+}
+
+// Alle 5 Sekunden prüfen
+setInterval(runJackpotDraw, 5000);
+setTimeout(runJackpotDraw, 2000); // Initialer Check nach Start
+
+
+// ==================================================================
 // FRIENDS API (minimal)
 // ==================================================================
 function orderedPair(a, b) {
@@ -1547,30 +2146,270 @@ app.get('/api/friends/incoming', (req, res) => {
     const pi_uid = normalizeUid(req.query.pi_uid);
     if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
     db.all(
-        `SELECT from_uid, created_at FROM friend_requests WHERE to_uid = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 50`,
+        `SELECT u.pi_uid, u.username, u.display_name, u.last_seen, r.created_at 
+         FROM friend_requests r
+         JOIN users u ON r.from_uid = u.pi_uid
+         WHERE r.to_uid = ? AND r.status = 'pending' 
+         ORDER BY r.created_at DESC LIMIT 50`,
         [pi_uid],
         (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ incoming: rows || [] });
+            res.json(rows || []);
         }
     );
 });
 
 app.get('/api/friends/list', (req, res) => {
-    const pi_uid = normalizeUid(req.query.pi_uid);
+    const pi_uid = normalizeUid(req.query.pi_uid).toLowerCase();
     if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+    console.log(`[social] Loading friends for: ${pi_uid}`);
     db.all(
-        `SELECT uid_a, uid_b, created_at FROM friends
-         WHERE uid_a = ? OR uid_b = ?
-         ORDER BY created_at DESC LIMIT 200`,
+        `SELECT u.pi_uid, u.username, u.display_name, u.last_seen, u.cosmetics 
+         FROM friends f
+         JOIN users u ON (f.uid_a = ? AND u.pi_uid = f.uid_b) OR (f.uid_b = ? AND u.pi_uid = f.uid_a)
+         ORDER BY f.created_at DESC LIMIT 200`,
         [pi_uid, pi_uid],
         (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            const list = (rows || []).map(r => (r.uid_a === pi_uid ? r.uid_b : r.uid_a));
-            res.json({ friends: list });
+            
+            // Add is_online flag based on last_seen (last 5 minutes)
+            const now = Date.now();
+            const list = (rows || []).map(u => ({
+                ...u,
+                is_online: u.last_seen ? (now - new Date(u.last_seen).getTime() < 300000) : false
+            }));
+            res.json(list);
         }
     );
 });
 
-app.listen(port, () => { console.log(`🚀 Galaxy Fall Backend aktiv auf Port ${port}`); });
+// User Search (by username, display_name or UID)
+app.get('/api/users/search', (req, res) => {
+    const query = req.query.query;
+    if (!query || query.length < 2) return res.json({ users: [] });
+    
+    const searchPattern = `%${query}%`;
+    db.all(
+        `SELECT pi_uid, username, display_name, last_seen 
+         FROM users 
+         WHERE (username LIKE ? OR display_name LIKE ? OR pi_uid LIKE ?)
+         LIMIT 20`,
+        [searchPattern, searchPattern, searchPattern],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        }
+    );
+});
+
+// GFC Transfer between friends
+app.post('/api/friends/send-gfc', (req, res) => {
+    const from_uid = normalizeUid(req.body.from_uid);
+    const to_uid = normalizeUid(req.body.to_uid);
+    const amount = parseInt(req.body.amount);
+
+    if (!from_uid || !to_uid || isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+    }
+
+    db.serialize(() => {
+        // Verify friendship
+        const [uid_a, uid_b] = orderedPair(from_uid, to_uid);
+        db.get(`SELECT 1 FROM friends WHERE uid_a = ? AND uid_b = ?`, [uid_a, uid_b], (err, isFriend) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!isFriend) return res.status(403).json({ error: 'Only friends can send GFC' });
+
+            db.get(`SELECT coins FROM users WHERE pi_uid = ?`, [from_uid], (err2, row) => {
+                if (err2 || !row) return res.status(500).json({ error: 'Sender not found' });
+                if (row.coins < amount) return res.status(400).json({ error: 'not_enough_gfc' });
+
+                // Perform transfer
+                db.run(`BEGIN TRANSACTION`);
+                db.run(`UPDATE users SET coins = coins - ? WHERE pi_uid = ?`, [amount, from_uid]);
+                db.run(`UPDATE users SET coins = coins + ? WHERE pi_uid = ?`, [amount, to_uid], (err3) => {
+                    if (err3) {
+                        db.run(`ROLLBACK`);
+                        return res.status(500).json({ error: 'Transfer failed' });
+                    }
+                    db.run(`COMMIT`, () => {
+                        console.log(`💸 GFC Transfer: ${from_uid} sent ${amount} to ${to_uid}`);
+                        res.json({ success: true, newBalance: row.coins - amount });
+                    });
+                });
+            });
+        });
+    });
+});
+
+// Send Message
+app.post('/api/messages/send', (req, res) => {
+    const from_uid = normalizeUid(req.body.from_uid);
+    const to_uid = normalizeUid(req.body.to_uid);
+    const content = String(req.body.content || '').trim().slice(0, 1000);
+
+    if (!from_uid || !to_uid || !content) return res.status(400).json({ error: 'Invalid message' });
+
+    // Optional: Verify friendship
+    const [uid_a, uid_b] = orderedPair(from_uid, to_uid);
+    db.get(`SELECT 1 FROM friends WHERE uid_a = ? AND uid_b = ?`, [uid_a, uid_b], (err, isFriend) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!isFriend) return res.status(403).json({ error: 'Only friends can message each other' });
+
+        db.run(
+            `INSERT INTO messages (from_uid, to_uid, content) VALUES (?, ?, ?)`,
+            [from_uid, to_uid, content],
+            function(err2) {
+                if (err2) return res.status(500).json({ error: err2.message });
+                const messageId = this.lastID;
+
+                // Echtzeit-Übermittlung via WebSocket
+                if (global.connectedClients) {
+                    const targetWs = global.connectedClients.get(to_uid);
+                    if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                        targetWs.send(JSON.stringify({
+                            type: 'new_message',
+                            message: {
+                                id: messageId,
+                                from_uid,
+                                to_uid,
+                                content,
+                                created_at: new Date().toISOString()
+                            }
+                        }));
+                    }
+                }
+
+                res.json({ success: true, messageId: messageId });
+            }
+        );
+    });
+});
+
+// Get Messages (Conversation)
+app.get('/api/messages/list', (req, res) => {
+    const pi_uid = normalizeUid(req.query.pi_uid);
+    const friend_uid = normalizeUid(req.query.friend_uid);
+    if (!pi_uid || !friend_uid) return res.status(400).json({ error: 'Missing parameters' });
+
+    db.all(
+        `SELECT * FROM messages 
+         WHERE (from_uid = ? AND to_uid = ?) OR (from_uid = ? AND to_uid = ?)
+         ORDER BY created_at ASC LIMIT 100`,
+        [pi_uid, friend_uid, friend_uid, pi_uid],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Mark as read
+            db.run(`UPDATE messages SET is_read = 1 WHERE from_uid = ? AND to_uid = ?`, [friend_uid, pi_uid]);
+            
+            res.json(rows || []);
+        }
+    );
+});
+
+// Get unread counts
+app.get('/api/messages/unread', (req, res) => {
+    const pi_uid = normalizeUid(req.query.pi_uid);
+    if (!pi_uid) return res.status(400).json({ error: 'UID fehlt' });
+
+    db.all(
+        `SELECT from_uid, COUNT(*) as count 
+         FROM messages 
+         WHERE to_uid = ? AND is_read = 0 
+         GROUP BY from_uid`,
+        [pi_uid],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ unread: rows || [] });
+        }
+    );
+});
+
+// Social Feed
+app.get('/api/feed', (req, res) => {
+    db.all(
+        `SELECT f.*, u.username, u.display_name, u.cosmetics
+         FROM feed f
+         JOIN users u ON f.pi_uid = u.pi_uid
+         ORDER BY f.created_at DESC LIMIT 50`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        }
+    );
+});
+
+app.post('/api/feed', (req, res) => {
+    const pi_uid = normalizeUid(req.body.pi_uid);
+    let { type, content, metadata } = req.body;
+    if (!pi_uid || !type) return res.status(400).json({ error: 'Missing data' });
+
+    // Anti-Spam: No links allowed in public feed
+    if (content && typeof content === 'string') {
+        const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi;
+        if (urlRegex.test(content)) {
+            return res.status(400).json({ error: 'Links are not allowed in the public chat' });
+        }
+    }
+
+    db.run(
+        `INSERT INTO feed (pi_uid, type, content, metadata) VALUES (?, ?, ?, ?)`,
+        [pi_uid, type, content, metadata ? JSON.stringify(metadata) : null],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Limit to last 50 entries for public chat efficiency
+            db.run(`DELETE FROM feed WHERE id NOT IN (SELECT id FROM feed ORDER BY created_at DESC LIMIT 50)`);
+            
+            res.json({ success: true, id: this.lastID });
+        }
+    );
+});
+
+app.post('/api/feed/like', (req, res) => {
+    const { feedId } = req.body;
+    if (!feedId) return res.status(400).json({ error: 'Missing ID' });
+
+    db.run(`UPDATE feed SET likes_count = likes_count + 1 WHERE id = ?`, [feedId], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: '/api/ws' });
+global.connectedClients = new Map();
+
+wss.on('connection', (ws, req) => {
+    try {
+        const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const pi_uid = normalizeUid(url.searchParams.get('uid'));
+
+        if (pi_uid) {
+            global.connectedClients.set(pi_uid, ws);
+            // Letzten Online-Status aktualisieren
+            db.run(`UPDATE users SET last_seen = ? WHERE pi_uid = ?`, [Date.now(), pi_uid]);
+        }
+
+        ws.on('message', (msg) => {
+            try {
+                const data = JSON.parse(msg.toString());
+                if (data.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+            } catch (e) {}
+        });
+
+        ws.on('close', () => {
+            if (pi_uid && global.connectedClients.get(pi_uid) === ws) {
+                global.connectedClients.delete(pi_uid);
+            }
+        });
+    } catch (err) {
+        console.error("WS Connection Error:", err);
+    }
+});
+
+server.listen(port, () => { 
+    console.log(`🚀 Galaxy Fall Backend aktiv auf Port ${port} (${mode})`); 
+});
+
 
