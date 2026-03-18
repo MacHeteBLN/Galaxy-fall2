@@ -10,8 +10,8 @@ export default defineConfig({
       '/api': {
         // ...wird an dein Backend auf Port 3000 weitergeleitet.
         target: 'http://localhost:3000',
-        // Dies ist wichtig, damit die Anfrage korrekt ankommt.
         changeOrigin: true,
+        ws: true,
       },
     },
   },
