@@ -1,0 +1,264 @@
+*******************************************************************************
+*                     G A L A C T I C   M A N D A T E                         *
+*                         (TERMS OF SERVICE)                                  *
+*                                                                             *
+*******************************************************************************
+[ STATUS: UPLINK ESTABLISHED ]
+[ VERSION: 3.5.1-MULTILANG ]
+[ SECTOR: GALACTIC-9 ]
+
+
+===============================================================================
+[ ENGLISH ]
+===============================================================================
+
+1. PROTOCOL ACCEPTANCE
+By accessing the Galactic Mandate and Neural Network, the Pilot agrees to 
+these terms. If not desired, disconnect immediately.
+
+2. PILOT IDENTITY (ACCOUNT & PI-AUTH)
+Access requires PI NETWORK AUTHENTICATION. Your UID and system name are 
+utilized for synchronization with the central fleet register.
+
+3. VIRTUAL RESOURCES (VIRTUAL ASSETS)
+GFC, upgrades, and skins are virtual assets with no real-world value. 
+Transfer between IDs is strictly prohibited.
+
+4. PI TRANSACTIONS
+Blockchain transactions are final. No refunds are provided once the data 
+uplink is completed.
+
+5. INTELLECTUAL PROPERTY
+Source code and designs are the property of Galaxy Fall. Decompilation 
+is strictly forbidden by fleet security.
+
+6. CODE OF CONDUCT / CHEATING
+No hacks or exploits. Manipulation of combat data results in a 
+permanent ban. Leaderboards are public.
+
+7. DATA SECURITY (SAVE DATA)
+Data is stored on distributed server nodes. No liability for loss in 
+black holes or due to EMP events.
+
+8. DISCLAIMER
+Use at your own risk. Command is not liable for any physical or 
+mental damage to the pilot's neural core.
+
+9. MANDATE AMENDMENTS
+The Mandate may be updated by high command. Continued use constitutes 
+acceptance of new protocols.
+
+10. CONTACT (SECTOR SUPPORT)
+Uplink to: danieldieske@icloud.com
+
+===============================================================================
+[ DEUTSCH / GERMAN ]
+===============================================================================
+
+1. PROTOKOLL-ZUSTIMMUNG (ACCEPTANCE)
+Diese Bedingungen regeln den Zugriff auf das GALAXY FALL NEURAL NETWORK. Durch 
+den Verbindungsaufbau zum System akzeptierst du das Galaktische Mandat.
+
+2. PILOTEN-IDENTITÄT (ACCOUNT & PI-AUTH)
+Der Zugriff erfordert eine PI NETWORK AUTHENTIFIZIERUNG. Dein Systemname und 
+deine UID werden zur Synchronisation mit dem zentralen Flottenregister genutzt.
+
+3. VIRTUELLE RESSOURCEN (VIRTUAL ASSETS)
+GFC, Upgrades und Skins sind rein virtuelle Güter ohne realen Geldwert. 
+Ein Transfer zwischen IDs ist nicht möglich.
+
+4. PI-TRANSAKTIONEN
+Blockchain-Transaktionen sind endgültig. Nach der Datenübertragung besteht kein 
+Anspruch auf Rückerstattung.
+
+5. INTELLEKTUELLES EIGENTUM
+Der Quellcode und die Designs gehören Galaxy Fall. Jede unbefugte 
+Dekompilierung ist untersagt.
+
+6. CODE OF CONDUCT / CHEATING
+Keine Hacks oder Exploits. Permanente Sperre bei Manipulation. 
+Bestenlisten sind öffentlich.
+
+7. DATENSICHERHEIT (SAVE DATA)
+Gespeichert auf Serverknoten. Keine Haftung für Verluste in Schwarzen Löchern 
+oder durch EMP.
+
+8. HAFTUNGSAUSSCHLUSS
+Nutzung auf eigene Gefahr. Das Kommando haftet nicht für physische 
+oder mentale Schäden.
+
+9. ÄNDERUNG DES MANDATS
+Das Mandat kann jederzeit aktualisiert werden. Fortgesetzte Nutzung gilt 
+als Zustimmung.
+
+10. KONTAKT (SECTOR SUPPORT)
+Uplink an: danieldieske@icloud.com
+
+===============================================================================
+[ ESPAÑOL / SPANISH ]
+===============================================================================
+
+1. ACEPTACIÓN DEL PROTOCOLO
+Al acceder al Mandato Galáctico y a la Red Neuronal, el Piloto acepta estos 
+términos. Si no está de acuerdo, desconéctese de inmediato.
+
+2. IDENTIDAD DEL PILOTO (CUENTA Y PI-AUTH)
+Se requiere autenticación de PI NETWORK. Se utilizan el UID y el nombre del 
+sistema para la sincronización con el registro de la flota.
+
+3. RECURSOS VIRTUALES
+GFC, mejoras y aspectos son activos virtuales sin valor en el mundo real. 
+Queda prohibida la transferencia entre IDs.
+
+4. TRANSACCIONES PI
+Las transacciones en la cadena de bloques son definitivas. No hay 
+reembolsos tras la transferencia de datos.
+
+5. PROPIEDAD INTELECTUAL
+El código fuente y los diseños son propiedad de Galaxy Fall. Queda 
+estrictamente prohibida la decompilación.
+
+6. CÓDIGO DE CONDUCTA / TRAMPAS
+Sin hacks ni exploits. La manipulación conlleva la expulsión permanente. 
+Las tablas de clasificación son públicas.
+
+7. SEGURIDAD DE DATOS
+Los datos se almacenan en nodos de servidores. Sin responsabilidad por 
+pérdida en agujeros negros o pulsos electromagnéticos (EMP).
+
+8. DESCARGO DE RESPONSABILIDAD
+Uso bajo su propio riesgo. El Comando no se hace responsable de daños 
+físicos o mentales del núcleo neural.
+
+9. ENMIENDAS AL MANDATO
+El Mandato puede cambiar. El uso continuado constituye la aceptación de 
+los nuevos protocolos.
+
+10. CONTACTO (SOPORTE DE SECTOR)
+Enlace ascendente a: danieldieske@icloud.com
+
+===============================================================================
+[ 简体中文 / CHINESE SIMPLIFIED ]
+===============================================================================
+
+1. 协议接受
+接入银河宪章 (Galactic Mandate) 和神经网络即表示飞行员同意本条款。
+如果不接受，请立即断开连接。
+
+2. 飞行员身份 (账户与 PI 验证)
+需要 PI NETWORK 身份验证。UID 和系统名称将用于与中央舰队登记处同步。
+
+3. 虚拟资源
+GFC、升级和皮肤均为虚拟资产，无现实价值。严禁在 ID 之间转移。
+
+4. PI 交易
+区块链交易为最终结果。数据上行完成后，不予退款。
+
+5. 知识产权
+源代码和设计归 Galaxy Fall 所有。严禁进行任何形式的反编译。
+
+6. 行为准则 / 作弊
+严禁使用黑客手段或漏洞。任何数据操纵将导致永久封禁。排行榜公开。
+
+7. 数据安全
+数据存储在分布式服务器节点上。对于黑洞或电磁脉冲 (EMP) 导致的数据
+丢失概不负责。
+
+8. 免责声明
+使用风险自担。指挥部对飞行员神经核心的任何生理或心理损害概不负责。
+
+9. 宪章修订
+最高指挥部可能会更新宪章。继续使用即视为接受新协议。
+
+10. 联系方式 (部门支持)
+上行链路至: danieldieske@icloud.com
+
+===============================================================================
+[ 日本語 / JAPANESE ]
+===============================================================================
+
+1. プロトコルへの同意
+銀河憲章 (Galactic Mandate) へのアクセスにより、パイロットは本規約に
+同意したものとみなされます。同意できない場合は直ちに切断してください。
+
+2. パイロット・アイデンティティ (アカウントと PI 認証)
+PI NETWORK による認証が必要です。UID およびシステム名は、中央艦隊
+レジストリとの同期に使用されます。
+
+3. 仮想リソース
+GFC、アップグレード、およびスキンは仮想資産であり、現実世界での
+価値はありません。ID 間での譲渡は厳禁です。
+
+4. PI トランザクション
+ブロックチェーン上の取引は最終的なものです。データ転送完了後の
+払い戻しは行われません。
+
+5. 知的財産
+ソースコードおよびデザインは Galaxy Fall の所有物です。フリート
+セキュリティにより逆コンパイルは禁止されています。
+
+6. 行動規範 / チート行為
+ハックや脆弱性の悪用は禁止です。不正操作は永久追放の対象となります。
+リーダーボードは公開されます。
+
+7. データセキュリティ
+データは分散サーバーノードに保存されます。ブラックホールや電磁パルス
+(EMP) によるデータ消失に責任は負いません。
+
+8. 免責事項
+自己責任で利用してください。司令部は、パイロットの神経核への
+肉体的または精神的な損害に責任を負いません。
+
+9. 憲章の改訂
+憲章は司令部によって更新される場合があります。継続的な利用は新プロトコル
+への同意とみなされます。
+
+10. 連絡先 (セクター・サポート)
+アップリンク先: danieldieske@icloud.com
+
+===============================================================================
+[ ITALIANO / ITALIAN ]
+===============================================================================
+
+1. ACCETTAZIONE DEL PROTOCOLLO
+Accedendo al Mandato Galattico e alla Rete Neurale, il Pilota accetta questi 
+termini. In caso contrario, interrompere l'uplink immediatamente.
+
+2. IDENTITÀ DEL PILOTA (ACCOUNT E PI-AUTH)
+È richiesta l'autenticazione PI NETWORK. L'UID e il nome del sistema vengono 
+utilizzati per la sincronizzazione con il registro della flotta.
+
+3. RISORSE VIRTUALI
+GFC, potenziamenti e skin sono risorse virtuali senza valore reale. Il 
+trasferimento tra ID è rigorosamente proibito.
+
+4. TRANSAZIONI PI
+Le transazioni sulla blockchain sono definitive. Nessun rimborso una volta 
+completato il trasferimento dei dati.
+
+5. PROPIEDÀ INTELLETTUALE
+Il codice sorgente e i design sono di proprietà di Galaxy Fall. La 
+decompilazione è vietata dai servizi di sicurezza della flotta.
+
+6. CODICE DI CONDOTTA / CHEATING
+Nessun hack o exploit. La manipolazione dei dati comporta il ban permanente. 
+Le classifiche sono pubbliche.
+
+7. SICUREZZA DEI DATI
+Dati memorizzati sui nodi del server. Nessuna responsabilità per perdite in 
+buchi neri o a causa di eventi EMP.
+
+8. ESCLUSIONE DI RESPONSABILITÀ
+Uso a proprio rischio. Il Comando non è responsabile per danni fisici o 
+mentali al nucleo neurale dell'utente.
+
+9. MODIFICHE AL MANDATO
+Il Mandato può essere aggiornato dal Comando Superiore. L'uso continuato 
+costituisce accettazione dei nuovi protocolli.
+
+10. CONTATTO (SUPPORTO SETTORE)
+Uplink a: danieldieske@icloud.com
+
+-------------------------------------------------------------------------------
+[ END OF TRANSMISSION ]
+-------------------------------------------------------------------------------

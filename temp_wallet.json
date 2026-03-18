@@ -1,0 +1,73 @@
+{
+  "_links": {
+    "self": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2"
+    },
+    "transactions": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/transactions{?cursor,limit,order}",
+      "templated": true
+    },
+    "operations": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/operations{?cursor,limit,order}",
+      "templated": true
+    },
+    "payments": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/payments{?cursor,limit,order}",
+      "templated": true
+    },
+    "effects": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/effects{?cursor,limit,order}",
+      "templated": true
+    },
+    "offers": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/offers{?cursor,limit,order}",
+      "templated": true
+    },
+    "trades": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/trades{?cursor,limit,order}",
+      "templated": true
+    },
+    "data": {
+      "href": "https://api.testnet.minepi.com/accounts/GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2/data/{key}",
+      "templated": true
+    }
+  },
+  "id": "GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2",
+  "account_id": "GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2",
+  "sequence": "100891487612436494",
+  "sequence_ledger": 23576010,
+  "sequence_time": "1772905600",
+  "subentry_count": 0,
+  "last_modified_ledger": 23705190,
+  "last_modified_time": "2026-03-15T17:42:37Z",
+  "thresholds": {
+    "low_threshold": 0,
+    "med_threshold": 0,
+    "high_threshold": 0
+  },
+  "flags": {
+    "auth_required": false,
+    "auth_revocable": false,
+    "auth_immutable": false,
+    "auth_clawback_enabled": false
+  },
+  "balances": [
+    {
+      "balance": "373.6600000",
+      "buying_liabilities": "0.0000000",
+      "selling_liabilities": "0.0000000",
+      "asset_type": "native"
+    }
+  ],
+  "signers": [
+    {
+      "weight": 1,
+      "key": "GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2",
+      "type": "ed25519_public_key"
+    }
+  ],
+  "data": {},
+  "num_sponsoring": 0,
+  "num_sponsored": 0,
+  "paging_token": "GAQ37IIBSPWSDQTKEYKJHRJ5V2RIACZXNJH5YAIVRMJIG6D7JVSZM5G2"
+}
